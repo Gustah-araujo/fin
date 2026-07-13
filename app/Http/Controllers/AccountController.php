@@ -43,6 +43,8 @@ class AccountController extends Controller
 
     public function edit(Workspace $workspace, Account $account): Response
     {
+        abort_if($account->workspace_id !== $workspace->id, 404);
+
         $this->authorize("update", [$account, $workspace]);
 
         return inertia("Accounts/Edit", [
@@ -52,6 +54,8 @@ class AccountController extends Controller
 
     public function update(UpdateAccountRequest $request, Workspace $workspace, Account $account, AccountService $accountService)
     {
+        abort_if($account->workspace_id !== $workspace->id, 404);
+
         $this->authorize("update", [$account, $workspace]);
 
         $accountService->update($account, $request->validated());
@@ -61,6 +65,8 @@ class AccountController extends Controller
 
     public function destroy(Workspace $workspace, Account $account, AccountService $accountService)
     {
+        abort_if($account->workspace_id !== $workspace->id, 404);
+
         $this->authorize("delete", [$account, $workspace]);
 
         $accountService->archive($account);
