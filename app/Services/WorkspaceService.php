@@ -13,6 +13,10 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class WorkspaceService
 {
+    public function __construct(
+        private readonly CategoryService $categoryService,
+    ) {}
+
     public function create(User $creator, array $data): Workspace
     {
         $workspace = Workspace::create([
@@ -25,6 +29,8 @@ class WorkspaceService
             "role" => WorkspaceRole::Admin->value,
             "last_visited_at" => now(),
         ]);
+
+        $this->categoryService->ensureDefaultExists($workspace);
 
         return $workspace;
     }

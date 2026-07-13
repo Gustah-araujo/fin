@@ -8,7 +8,7 @@
 | -------------------- | -------- | ------ |
 | Auth & Onboarding    | AUTH-01  | 🟢     |
 | Contas Bancárias     | ACCT-01  | 🟢     |
-| Categorias e Tags    | CAT-01   | 🔴     |
+| Categorias e Tags    | CAT-01  | 🟢     |
 | Despesas em Débito   | DEBT-01  | 🔴     |
 | Cartões de Crédito   | CARD-01  | 🔴     |
 | Despesas de Cartão   | CCXP-01  | 🔴     |

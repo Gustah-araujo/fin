@@ -10,7 +10,9 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\InviteController;
+use App\Http\Controllers\TagController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\WorkspaceMemberController;
 use Illuminate\Support\Facades\Route;
@@ -72,5 +74,7 @@ Route::middleware(["auth", "verified", "ensure.has.workspace"])->group(function 
         Route::post("invites", [InviteController::class, "store"])->name("workspace.invites.store");
 
         Route::resource("accounts", AccountController::class);
+        Route::resource("categories", CategoryController::class);
+        Route::resource("tags", TagController::class);
     });
 });

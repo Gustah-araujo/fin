@@ -11,6 +11,8 @@ import {
     Upload,
     ChevronLeft,
     ChevronRight,
+    Tags,
+    Folders,
     type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -50,8 +52,22 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
                               href: route('accounts.index', { workspace: workspaceUuid }),
                               icon: Building2,
                           },
+                          {
+                              label: 'Categorias',
+                              href: route('categories.index', { workspace: workspaceUuid }),
+                              icon: Folders,
+                          },
+                          {
+                              label: 'Tags',
+                              href: route('tags.index', { workspace: workspaceUuid }),
+                              icon: Tags,
+                          },
                       ]
-                    : [{ label: 'Contas', href: '/accounts', icon: Building2 }]),
+                    : [
+                          { label: 'Contas', href: '/accounts', icon: Building2 },
+                          { label: 'Categorias', href: '/categories', icon: Folders },
+                          { label: 'Tags', href: '/tags', icon: Tags },
+                      ]),
                 { label: 'Despesas', href: '/expenses', icon: ArrowLeftRight },
                 { label: 'Receitas', href: '/incomes', icon: TrendingUp },
             ],
