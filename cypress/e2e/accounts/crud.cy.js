@@ -2,31 +2,8 @@ describe('Account CRUD', () => {
     let workspaceUuid;
 
     before(() => {
-        const email = `e2e-accounts-${Date.now()}@example.com`;
-
-        cy.visit('/register');
-        cy.get('#name').type('Account Tester');
-        cy.get('#email').type(email);
-        cy.get('#password').type('password123');
-        cy.get('#password_confirmation').type('password123');
-        cy.get('button[type="submit"]').click();
-
-        cy.wait(1000);
-        cy.request(`http://localhost:8026/api/v1/search?kind=to&query=${encodeURIComponent(email)}`).then((resp) => {
-            const msg = (resp.body.messages || [])[0];
-            if (!msg) throw new Error(`No message for ${email}`);
-            return cy.request(`http://localhost:8026/api/v1/message/${msg.ID}`);
-        }).then((resp) => {
-            const html = resp.body.HTML || resp.body.Text || '';
-            const match = html.match(/href="([^"]*verify-email[^"]*)"/i);
-            cy.visit(match[1].replace(/&amp;/g, '&'));
-        });
-
-        cy.url().should('include', '/workspace');
-        cy.get('#name').type('Workspace Accounts');
-        cy.get('button[type="submit"]').click();
-        cy.url().should('match', /\/w\/([a-f0-9-]+)/).then((url) => {
-            workspaceUuid = url.match(/\/w\/([a-f0-9-]+)/)[1];
+        cy.registerAndCreateWorkspace('Workspace Accounts').then((uuid) => {
+            workspaceUuid = uuid;
         });
     });
 
