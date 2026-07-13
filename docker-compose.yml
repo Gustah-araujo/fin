@@ -1,0 +1,74 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fin-app
+    ports:
+      - "8090:8000"
+    volumes:
+      - .:/var/www
+    depends_on:
+      db:
+        condition: service_started
+      mailpit:
+        condition: service_started
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: fin
+      DB_USERNAME: fin
+      DB_PASSWORD: fin_secret
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+
+  db:
+    image: mariadb:11
+    container_name: fin-db
+    ports:
+      - "3310:3306"
+    environment:
+      MARIADB_ROOT_PASSWORD: root_secret
+      MARIADB_DATABASE: fin
+      MARIADB_USER: fin
+      MARIADB_PASSWORD: fin_secret
+    volumes:
+      - db_data:/var/lib/mysql
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: fin-pma
+    ports:
+      - "8091:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: fin
+      PMA_PASSWORD: fin_secret
+    depends_on:
+      - db
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: fin-mailpit
+    ports:
+      - "1026:1025"
+      - "8026:8025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+
+
+  cypress:
+    image: cypress/included:latest
+    container_name: fin-cypress
+    network_mode: host
+    working_dir: /e2e
+    volumes:
+      - .:/e2e
+    entrypoint: []
+    profiles:
+      - testing
+
+volumes:
+  db_data:
