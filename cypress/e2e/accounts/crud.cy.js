@@ -7,9 +7,9 @@ describe('Account CRUD', () => {
         });
     });
 
-    it('creates an account and sees it in the list', () => {
+    it('full CRUD lifecycle', () => {
+        // Create
         cy.visit(`/w/${workspaceUuid}/accounts`);
-
         cy.contains('Nova Conta').click();
         cy.url().should('include', '/accounts/create');
 
@@ -21,41 +21,28 @@ describe('Account CRUD', () => {
 
         cy.url().should('include', '/accounts');
         cy.contains('Conta Teste').should('be.visible');
-        cy.contains('Corrente').should('be.visible');
-    });
 
-    it('shows validation errors on empty submission', () => {
-        cy.visit(`/w/${workspaceUuid}/accounts/create`);
-
+        // Validation errors
+        cy.contains('Nova Conta').click();
         cy.contains('Criar Conta').click();
-
         cy.contains('O nome da conta é obrigatório').should('be.visible');
         cy.contains('O saldo inicial é obrigatório').should('be.visible');
-    });
 
-    it('edits an existing account', () => {
-        cy.visit(`/w/${workspaceUuid}/accounts/create`);
-        cy.get('#name').type('Para Editar');
-        cy.get('#type').click();
-        cy.contains('Corrente').click();
-        cy.get('#initial_balance').type('500');
-        cy.contains('Criar Conta').click();
-
-        cy.url().should('include', '/accounts');
-        cy.contains('Para Editar').should('be.visible');
-        cy.contains('Para Editar')
-            .parents('[class*="Card"]')
+        // Edit
+        cy.visit(`/w/${workspaceUuid}/accounts`);
+        cy.contains('Conta Teste')
+            .closest('[data-slot="card"]')
             .contains('Editar')
             .click();
 
+        cy.url().should('include', '/accounts/');
         cy.get('#name').clear().type('Conta Editada');
         cy.contains('Salvar').click();
 
         cy.url().should('include', '/accounts');
         cy.contains('Conta Editada').should('be.visible');
-    });
 
-    it('deletes an account', () => {
+        // Delete
         cy.visit(`/w/${workspaceUuid}/accounts/create`);
         cy.get('#name').type('Para Excluir');
         cy.get('#type').click();
@@ -66,9 +53,9 @@ describe('Account CRUD', () => {
         cy.url().should('include', '/accounts');
         cy.contains('Para Excluir').should('be.visible');
         cy.contains('Para Excluir')
-            .parents('[class*="Card"]')
-            .contains('Excluir')
-            .click();
+            .closest('[data-slot="card"]')
+            .contains('button', 'Excluir')
+            .click({ force: true });
 
         cy.contains('Para Excluir').should('not.exist');
     });

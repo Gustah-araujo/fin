@@ -42,7 +42,7 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
         {
             title: 'Principal',
             items: [
-                { label: 'Dashboard', href: route('dashboard', { workspace: workspaceUuid ?? '' }), icon: LayoutDashboard },
+                { label: 'Dashboard', href: '/', icon: LayoutDashboard },
                 ...(workspaceUuid
                     ? [
                           {

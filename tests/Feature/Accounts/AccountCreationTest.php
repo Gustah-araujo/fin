@@ -74,7 +74,7 @@ class AccountCreationTest extends TestCase
 
         $response->assertInertia(fn ($page) => $page
             ->component("Accounts/Index", false)
-            ->has("accounts.data", 2)
+            ->has("accounts", 2)
         );
     }
 

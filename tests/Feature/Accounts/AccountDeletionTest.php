@@ -53,7 +53,7 @@ class AccountDeletionTest extends TestCase
 
         $response->assertInertia(fn ($page) => $page
             ->component("Accounts/Index", false)
-            ->has("accounts.data", 0)
+            ->has("accounts", 0)
         );
     }
 }

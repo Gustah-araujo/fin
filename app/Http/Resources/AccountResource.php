@@ -17,7 +17,7 @@ class AccountResource extends JsonResource
             "type" => $this->type,
             "initial_balance" => (float) $this->initial_balance,
             "current_balance" => (float) $this->current_balance,
-            "workspace" => new WorkspaceResource($this->whenLoaded("workspace")),
+            "workspace" => $this->whenLoaded("workspace", fn () => new WorkspaceResource($this->workspace)),
             "created_at" => $this->created_at?->toISOString(),
         ];
     }
