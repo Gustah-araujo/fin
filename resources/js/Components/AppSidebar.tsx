@@ -28,37 +28,6 @@ interface NavSection {
     items: NavItem[];
 }
 
-const navigation: NavSection[] = [
-    {
-        title: 'Principal',
-        items: [
-            { label: 'Dashboard', href: '/', icon: LayoutDashboard },
-            { label: 'Contas', href: '/accounts', icon: Building2 },
-            { label: 'Despesas', href: '/expenses', icon: ArrowLeftRight },
-            { label: 'Receitas', href: '/incomes', icon: TrendingUp },
-        ],
-    },
-    {
-        title: 'Cartões',
-        items: [
-            { label: 'Cartões de Crédito', href: '/credit-cards', icon: CreditCard },
-        ],
-    },
-    {
-        title: 'Planejamento',
-        items: [
-            { label: 'Despesas Futuras', href: '/future-expenses', icon: CalendarClock },
-        ],
-    },
-    {
-        title: 'IA',
-        items: [
-            { label: 'Chat', href: '/chat', icon: MessageSquare },
-            { label: 'Importar', href: '/import', icon: Upload },
-        ],
-    },
-];
-
 interface Props {
     collapsed: boolean;
     onToggle: () => void;
@@ -66,7 +35,47 @@ interface Props {
 
 export default function AppSidebar({ collapsed, onToggle }: Props) {
     const { url } = usePage();
-    const { props } = usePage<{ workspace?: { name: string } }>();
+    const { props } = usePage<{ workspace?: { uuid: string; name: string } }>();
+    const workspaceUuid = props.workspace?.uuid;
+
+    const navigation: NavSection[] = [
+        {
+            title: 'Principal',
+            items: [
+                { label: 'Dashboard', href: route('dashboard', { workspace: workspaceUuid ?? '' }), icon: LayoutDashboard },
+                ...(workspaceUuid
+                    ? [
+                          {
+                              label: 'Contas',
+                              href: route('accounts.index', { workspace: workspaceUuid }),
+                              icon: Building2,
+                          },
+                      ]
+                    : [{ label: 'Contas', href: '/accounts', icon: Building2 }]),
+                { label: 'Despesas', href: '/expenses', icon: ArrowLeftRight },
+                { label: 'Receitas', href: '/incomes', icon: TrendingUp },
+            ],
+        },
+        {
+            title: 'Cartões',
+            items: [
+                { label: 'Cartões de Crédito', href: '/credit-cards', icon: CreditCard },
+            ],
+        },
+        {
+            title: 'Planejamento',
+            items: [
+                { label: 'Despesas Futuras', href: '/future-expenses', icon: CalendarClock },
+            ],
+        },
+        {
+            title: 'IA',
+            items: [
+                { label: 'Chat', href: '/chat', icon: MessageSquare },
+                { label: 'Importar', href: '/import', icon: Upload },
+            ],
+        },
+    ];
 
     function isActive(href: string) {
         if (href === '/') return url === '/';
