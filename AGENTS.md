@@ -6,6 +6,10 @@
 
 For visual work (layouts, components, styling), **also load `fin-design-system`** — it covers color tokens, typography, layout architecture, and component patterns.
 
+## Environment
+
+- All commands must be run inside the containers on `docker-compose.yml`
+
 ## Project Context
 
 All specification and planning docs live in `.specs/`. Load these as needed:
