@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Models\Workspace;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -30,13 +31,33 @@ class HandleInertiaRequests extends Middleware
                 "name" => $w->name,
                 "description" => $w->description,
             ])->values()->toArray();
+
+            $shared["workspace"] = $this->resolveCurrentWorkspace($request, $user);
         } else {
             $shared["auth"] = ["user" => null];
             $shared["workspaces"] = [];
+            $shared["workspace"] = null;
         }
 
         $shared["status"] = session("status");
 
         return $shared;
+    }
+
+    private function resolveCurrentWorkspace(Request $request, $user): ?array
+    {
+        $workspace = $request->route()?->parameter("workspace");
+
+        if (! $workspace instanceof Workspace) {
+            return null;
+        }
+
+        $member = $workspace->members()->where("user_id", $user->id)->first();
+
+        return [
+            "uuid" => $workspace->uuid,
+            "name" => $workspace->name,
+            "role" => $member?->pivot?->role,
+        ];
     }
 }
