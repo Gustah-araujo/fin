@@ -21,13 +21,13 @@ class AccountPolicy
         return $this->hasWriteAccess($user, $workspace);
     }
 
-    public function update(User $user, Workspace $workspace, Account $account): bool
+    public function update(User $user, Account $account, Workspace $workspace): bool
     {
         return $this->hasWriteAccess($user, $workspace)
             && $account->workspace_id === $workspace->id;
     }
 
-    public function delete(User $user, Workspace $workspace, Account $account): bool
+    public function delete(User $user, Account $account, Workspace $workspace): bool
     {
         return $this->isAdmin($user, $workspace)
             && $account->workspace_id === $workspace->id;
