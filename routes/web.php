@@ -13,6 +13,7 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\InviteController;
 use App\Http\Controllers\TagController;
+use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\WorkspaceMemberController;
 use Illuminate\Support\Facades\Route;
@@ -76,5 +77,10 @@ Route::middleware(["auth", "verified", "ensure.has.workspace"])->group(function 
         Route::resource("accounts", AccountController::class);
         Route::resource("categories", CategoryController::class);
         Route::resource("tags", TagController::class);
+        Route::resource("transactions", TransactionController::class);
+        Route::post("transactions/{transaction}/pay", [TransactionController::class, "pay"])
+            ->name("transactions.pay");
+        Route::post("transactions/{transaction}/unpay", [TransactionController::class, "unpay"])
+            ->name("transactions.unpay");
     });
 });

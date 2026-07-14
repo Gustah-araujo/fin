@@ -169,12 +169,12 @@ Workspace members need to record debit expenses linked to a bank account so that
 
 | ID       | Story                            | Phase  | Status  |
 | -------- | -------------------------------- | ------ | ------- |
-| DEBT-01  | P1: CRUD de Despesas em Débito   | Specify | Pending |
-| DEBT-02  | P1: Pagamento de Despesa         | Specify | Pending |
-| DEBT-03  | P2: Filtros e Busca              | -      | Pending |
-| DEBT-04  | P2: Paginação                    | -      | Pending |
+| DEBT-01  | P1: CRUD de Despesas em Débito   | Specify | Done |
+| DEBT-02  | P1: Pagamento de Despesa         | Specify | Done |
+| DEBT-03  | P2: Filtros e Busca              | -      | Done |
+| DEBT-04  | P2: Paginação                    | -      | Done |
 
-**Coverage:** 4 requirements, 0 mapped, 4 unmapped
+**Coverage:** 4 requirements, 4 mapped, 0 unmapped
 
 ---
 

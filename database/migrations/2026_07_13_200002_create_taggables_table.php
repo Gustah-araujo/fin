@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('tag_id')->constrained('tags')->cascadeOnDelete();
             $table->string('taggable_type');
-            $table->uuid('taggable_id');
+            $table->unsignedBigInteger('taggable_id');
             $table->timestamps();
 
             $table->index(['taggable_type', 'taggable_id']);

@@ -44,7 +44,17 @@ class AccountService
 
     public function recalculateBalance(Account $account): void
     {
-        $account->current_balance = $account->initial_balance;
+        $paidIncome = $account->transactions()
+            ->where('type', 'income')
+            ->whereNotNull('paid_at')
+            ->sum('value');
+
+        $paidExpenses = $account->transactions()
+            ->where('type', 'expense')
+            ->whereNotNull('paid_at')
+            ->sum('value');
+
+        $account->current_balance = (float) $account->initial_balance + (float) $paidIncome - (float) $paidExpenses;
         $account->save();
     }
 

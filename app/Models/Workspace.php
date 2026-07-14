@@ -50,4 +50,9 @@ class Workspace extends Model
     {
         return $this->hasMany(Tag::class);
     }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class);
+    }
 }
