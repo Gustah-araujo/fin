@@ -2,18 +2,30 @@ describe('Tag CRUD', () => {
     let workspaceUuid;
 
     before(() => {
-        cy.registerAndCreateWorkspace('Workspace Tags').then((uuid) => {
-            workspaceUuid = uuid;
+        cy.loginViaSession('tags-session');
+
+        cy.visit('/workspace/create');
+        cy.get('#name').type('E2E Tags');
+        cy.get('button[type="submit"]').click();
+
+        cy.url().should('match', /\/w\/([a-f0-9-]+)/);
+        cy.url().then((url) => {
+            workspaceUuid = url.match(/\/w\/([a-f0-9-]+)/)[1];
         });
     });
 
-    it('full CRUD lifecycle', () => {
-        // Empty state
+    beforeEach(() => {
+        cy.loginViaSession('tags-session');
+    });
+
+    it('shows empty tags list', () => {
         cy.visit(`/w/${workspaceUuid}/tags`);
         cy.contains('Tags').should('be.visible');
         cy.contains('Nenhuma tag cadastrada').should('be.visible');
+    });
 
-        // Create
+    it('creates a tag', () => {
+        cy.visit(`/w/${workspaceUuid}/tags`);
         cy.contains('Nova Tag').click();
         cy.url().should('include', '/tags/create');
 
@@ -22,14 +34,17 @@ describe('Tag CRUD', () => {
 
         cy.url().should('include', '/tags');
         cy.contains('Urgente').should('be.visible');
+    });
 
-        // Duplicate name error
-        cy.contains('Nova Tag').click();
+    it('shows duplicate name error', () => {
+        cy.visit(`/w/${workspaceUuid}/tags/create`);
         cy.get('#name').type('Urgente');
         cy.contains('Criar Tag').click();
-        cy.contains('Já existe uma tag com esse nome').should('be.visible');
 
-        // Edit
+        cy.contains('Já existe uma tag com esse nome').should('be.visible');
+    });
+
+    it('edits a tag', () => {
         cy.visit(`/w/${workspaceUuid}/tags`);
         cy.contains('Urgente')
             .closest('[data-slot="card"]')
@@ -42,14 +57,16 @@ describe('Tag CRUD', () => {
 
         cy.url().should('include', '/tags');
         cy.contains('Urgente Editada').should('be.visible');
+    });
 
-        // Delete
+    it('deletes a tag', () => {
         cy.visit(`/w/${workspaceUuid}/tags/create`);
         cy.get('#name').type('Para Excluir');
         cy.contains('Criar Tag').click();
 
         cy.url().should('include', '/tags');
         cy.contains('Para Excluir').should('be.visible');
+
         cy.contains('Para Excluir')
             .closest('[data-slot="card"]')
             .contains('button', 'Excluir')

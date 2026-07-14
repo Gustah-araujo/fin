@@ -25,6 +25,31 @@ Cypress.Commands.add('getVerificationLink', (email) => {
         });
 });
 
+Cypress.Commands.add('loginViaSession', (sessionId) => {
+    cy.session(sessionId, () => {
+        const email = `e2e-${Date.now()}@fin.test`;
+
+        cy.visit('/register');
+        cy.get('#name').type('E2E Test User');
+        cy.get('#email').type(email);
+        cy.get('#password').type('password123');
+        cy.get('#password_confirmation').type('password123');
+        cy.get('button[type="submit"]').click();
+
+        cy.wait(1000);
+
+        cy.getVerificationLink(email).then((verifyUrl) => {
+            cy.visit(verifyUrl);
+        });
+        cy.url().should('match', /\/workspace/);
+    }, {
+        validate() {
+            cy.visit('/workspace/create');
+            cy.url().should('not.include', '/login');
+        }
+    });
+});
+
 Cypress.Commands.add('registerAndCreateWorkspace', (workspaceName = 'E2E Workspace') => {
     const email = `e2e-${Date.now()}@example.com`;
 
