@@ -11,6 +11,7 @@ use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CreditCardController;
 use App\Http\Controllers\InviteController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TransactionController;
@@ -82,5 +83,6 @@ Route::middleware(["auth", "verified", "ensure.has.workspace"])->group(function 
             ->name("transactions.pay");
         Route::post("transactions/{transaction}/unpay", [TransactionController::class, "unpay"])
             ->name("transactions.unpay");
+        Route::resource("cards", CreditCardController::class);
     });
 });

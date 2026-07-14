@@ -75,7 +75,15 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
         {
             title: 'Cartões',
             items: [
-                { label: 'Cartões de Crédito', href: '/credit-cards', icon: CreditCard },
+                ...(workspaceUuid
+                    ? [
+                          {
+                              label: 'Cartões de Crédito',
+                              href: route('cards.index', { workspace: workspaceUuid }),
+                              icon: CreditCard,
+                          },
+                      ]
+                    : [{ label: 'Cartões de Crédito', href: '/credit-cards', icon: CreditCard }]),
             ],
         },
         {
