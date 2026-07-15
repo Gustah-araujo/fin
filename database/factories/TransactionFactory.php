@@ -21,6 +21,11 @@ class TransactionFactory extends Factory
             'value' => fake()->randomFloat(2, 10, 5000),
             'date' => fake()->date(),
             'paid_at' => null,
+            'credit_card_id' => null,
+            'credit_card_bill_id' => null,
+            'installment_number' => null,
+            'installments_total' => null,
+            'installment_group_id' => null,
         ];
     }
 

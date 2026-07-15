@@ -20,11 +20,16 @@ class Transaction extends Model
         'uuid',
         'workspace_id',
         'account_id',
+        'credit_card_id',
+        'credit_card_bill_id',
         'category_id',
         'type',
         'description',
         'value',
         'date',
+        'installment_number',
+        'installments_total',
+        'installment_group_id',
         'paid_at',
         'created_by',
     ];
@@ -36,6 +41,8 @@ class Transaction extends Model
             'value' => 'decimal:2',
             'date' => 'date',
             'paid_at' => 'datetime',
+            'installment_number' => 'integer',
+            'installments_total' => 'integer',
         ];
     }
 
@@ -52,6 +59,16 @@ class Transaction extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    public function creditCard(): BelongsTo
+    {
+        return $this->belongsTo(CreditCard::class);
+    }
+
+    public function bill(): BelongsTo
+    {
+        return $this->belongsTo(CreditCardBill::class, 'credit_card_bill_id');
     }
 
     public function category(): BelongsTo

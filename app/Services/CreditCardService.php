@@ -4,13 +4,18 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\TransactionType;
+use App\Models\Category;
 use App\Models\CreditCard;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Support\Str;
 
 class CreditCardService
 {
+    private const PAYMENT_CATEGORY_NAME = 'Pagamento de Cartão';
+
     public function create(Workspace $workspace, User $creator, array $data): CreditCard
     {
         return CreditCard::create([
@@ -48,8 +53,36 @@ class CreditCardService
 
     public function recalculateAvailableLimit(CreditCard $card): void
     {
-        $card->available_limit = (float) $card->credit_limit;
+        $usedLimit = Transaction::where('transactions.credit_card_id', $card->id)
+            ->leftJoin('credit_card_bills', 'transactions.credit_card_bill_id', '=', 'credit_card_bills.id')
+            ->where(function ($q) {
+                $q->where('credit_card_bills.status', '!=', 'paid')
+                  ->orWhereNull('transactions.credit_card_bill_id');
+            })
+            ->sum('transactions.value');
+
+        $card->available_limit = (float) $card->credit_limit - (float) $usedLimit;
         $card->save();
+    }
+
+    public function ensurePaymentCategory(Workspace $workspace): Category
+    {
+        $category = Category::where('workspace_id', $workspace->id)
+            ->where('name', self::PAYMENT_CATEGORY_NAME)
+            ->first();
+
+        if ($category) {
+            return $category;
+        }
+
+        return Category::create([
+            'uuid' => Str::orderedUuid()->toString(),
+            'workspace_id' => $workspace->id,
+            'name' => self::PAYMENT_CATEGORY_NAME,
+            'type' => TransactionType::Expense,
+            'color' => '#6B7280',
+            'is_system' => true,
+        ]);
     }
 
     public function archive(CreditCard $card): void

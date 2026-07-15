@@ -98,6 +98,16 @@ export default function Index({ cards }: Props) {
                                     <div className="mt-4 flex items-center gap-2">
                                         <Button variant="outline" size="sm" asChild>
                                             <Link
+                                                href={route('cards.show', {
+                                                    workspace: workspace.uuid,
+                                                    card: card.uuid,
+                                                })}
+                                            >
+                                                Ver fatura
+                                            </Link>
+                                        </Button>
+                                        <Button variant="outline" size="sm" asChild>
+                                            <Link
                                                 href={route('cards.edit', {
                                                     workspace: workspace.uuid,
                                                     card: card.uuid,

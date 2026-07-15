@@ -19,6 +19,13 @@ class TransactionResource extends JsonResource
             'date' => $this->date->format('Y-m-d'),
             'paid_at' => $this->paid_at?->toISOString(),
             'account' => new AccountResource($this->whenLoaded('account')),
+            'credit_card' => new CreditCardResource($this->whenLoaded('creditCard')),
+            'installment_number' => $this->installment_number,
+            'installments_total' => $this->installments_total,
+            'is_installment' => $this->installments_total !== null && $this->installments_total > 1,
+            'installment_label' => $this->installments_total !== null && $this->installments_total > 1
+                ? "{$this->installment_number}/{$this->installments_total}"
+                : null,
             'category' => new CategoryResource($this->whenLoaded('category')),
             'tags' => TagResource::collection($this->whenLoaded('tags')),
             'created_by' => new UserResource($this->whenLoaded('creator')),

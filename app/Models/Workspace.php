@@ -60,4 +60,9 @@ class Workspace extends Model
     {
         return $this->hasMany(CreditCard::class);
     }
+
+    public function creditCardBills(): HasMany
+    {
+        return $this->hasMany(CreditCardBill::class);
+    }
 }

@@ -18,6 +18,7 @@ class CreditCardResource extends JsonResource
             'available_limit' => (float) $this->available_limit,
             'closing_day' => $this->closing_day,
             'due_day' => $this->due_day,
+            'bills' => CreditCardBillResource::collection($this->whenLoaded('bills')),
             'created_at' => $this->created_at?->toISOString(),
         ];
     }

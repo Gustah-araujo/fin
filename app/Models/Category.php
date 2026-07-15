@@ -21,12 +21,14 @@ class Category extends Model
         'color',
         'icon',
         'position',
+        'is_system',
     ];
 
     protected function casts(): array
     {
         return [
             'type' => TransactionType::class,
+            'is_system' => 'boolean',
         ];
     }
 

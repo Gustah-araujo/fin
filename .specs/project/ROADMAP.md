@@ -11,7 +11,7 @@
 | Categorias e Tags    | CAT-01  | 🟢     |
 | Despesas em Débito   | DEBT-01  | 🟢     |
 | Cartões de Crédito   | CARD-01  | 🟢     |
-| Despesas de Cartão   | CCXP-01  | 🔴     |
+| Despesas de Cartão   | CCXP-01  | 🟢     |
 | Receitas             | INCM-01  | 🔴     |
 
 ## Milestone 2: Inteligência (P2)

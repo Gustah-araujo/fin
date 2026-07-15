@@ -53,6 +53,12 @@ class CategoryService
 
     public function archive(Category $category): void
     {
+        if ($category->is_system) {
+            throw ValidationException::withMessages([
+                'category' => ['Esta categoria é gerenciada pelo sistema e não pode ser excluída.'],
+            ]);
+        }
+
         if ($category->name === self::DEFAULT_CATEGORY) {
             throw ValidationException::withMessages([
                 'category' => ['A categoria padrão não pode ser excluída.'],
