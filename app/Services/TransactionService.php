@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\TransactionType;
 use App\Models\Account;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class TransactionService
 {
@@ -19,6 +21,16 @@ class TransactionService
 
     public function create(Workspace $workspace, User $creator, array $data): Transaction
     {
+        $type = isset($data['type'])
+            ? TransactionType::tryFrom($data['type'])
+            : TransactionType::Expense;
+
+        if ($type === null) {
+            throw ValidationException::withMessages([
+                'type' => 'Tipo de transação inválido.',
+            ]);
+        }
+
         $accountId = Account::where('uuid', $data['account_id'])
             ->where('workspace_id', $workspace->id)
             ->firstOrFail()
@@ -29,18 +41,28 @@ class TransactionService
             ->firstOrFail()
             ->id;
 
-        $transaction = Transaction::create([
+        $transactionData = [
             'uuid' => Str::orderedUuid()->toString(),
             'workspace_id' => $workspace->id,
             'created_by' => $creator->id,
             'account_id' => $accountId,
             'category_id' => $categoryId,
-            'type' => 'expense',
+            'type' => $type->value,
             'description' => $data['description'],
             'value' => $data['value'],
             'date' => $data['date'],
             'paid_at' => null,
-        ]);
+        ];
+
+        if ($type === TransactionType::Income) {
+            $transactionData['credit_card_id'] = null;
+            $transactionData['credit_card_bill_id'] = null;
+            $transactionData['installment_number'] = null;
+            $transactionData['installments_total'] = null;
+            $transactionData['installment_group_id'] = null;
+        }
+
+        $transaction = Transaction::create($transactionData);
 
         if (! empty($data['tags'])) {
             $this->syncTags($transaction, $data['tags']);
@@ -94,11 +116,21 @@ class TransactionService
     public function pay(Transaction $transaction): void
     {
         DB::transaction(function () use ($transaction) {
+            $account = $transaction->account_id
+                ? Account::withTrashed()->find($transaction->account_id)
+                : null;
+
+            if ($account && $account->trashed()) {
+                throw ValidationException::withMessages([
+                    'account' => 'A conta vinculada foi arquivada. Restaure a conta antes de confirmar o recebimento.',
+                ]);
+            }
+
             $transaction->paid_at = now();
             $transaction->save();
 
-            if ($transaction->account) {
-                $this->accountService->recalculateBalance($transaction->account);
+            if ($account) {
+                $this->accountService->recalculateBalance($account);
             }
         });
     }

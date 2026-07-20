@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Models\Recurrence;
 use App\Models\Workspace;
+use App\Policies\RecurrencePolicy;
 use App\Policies\WorkspacePolicy;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Gate;
@@ -20,5 +22,6 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::policy(Workspace::class, WorkspacePolicy::class);
+        Gate::policy(Recurrence::class, RecurrencePolicy::class);
     }
 }

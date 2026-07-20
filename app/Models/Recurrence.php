@@ -4,48 +4,56 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\RecurrenceFrequency;
+use App\Enums\RecurrenceStatus;
 use App\Enums\TransactionType;
-use App\Models\Recurrence;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Transaction extends Model
+class Recurrence extends Model
 {
     use HasFactory;
+    use HasUuids;
     use SoftDeletes;
 
     protected $fillable = [
         'uuid',
         'workspace_id',
         'account_id',
-        'credit_card_id',
-        'credit_card_bill_id',
         'category_id',
         'type',
         'description',
         'value',
-        'date',
-        'installment_number',
-        'installments_total',
-        'installment_group_id',
-        'paid_at',
+        'frequency',
+        'frequency_day',
+        'start_date',
+        'until_date',
+        'next_date',
+        'status',
         'created_by',
-        'recurrence_id',
     ];
 
     protected function casts(): array
     {
         return [
             'type' => TransactionType::class,
+            'frequency' => RecurrenceFrequency::class,
+            'status' => RecurrenceStatus::class,
             'value' => 'decimal:2',
-            'date' => 'date',
-            'paid_at' => 'datetime',
-            'installment_number' => 'integer',
-            'installments_total' => 'integer',
+            'start_date' => 'date',
+            'until_date' => 'date',
+            'next_date' => 'date',
         ];
+    }
+
+    public function uniqueIds(): array
+    {
+        return ['uuid'];
     }
 
     public function getRouteKeyName(): string
@@ -63,16 +71,6 @@ class Transaction extends Model
         return $this->belongsTo(Account::class);
     }
 
-    public function creditCard(): BelongsTo
-    {
-        return $this->belongsTo(CreditCard::class);
-    }
-
-    public function bill(): BelongsTo
-    {
-        return $this->belongsTo(CreditCardBill::class, 'credit_card_bill_id');
-    }
-
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
@@ -83,13 +81,13 @@ class Transaction extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
     public function tags(): MorphToMany
     {
         return $this->morphToMany(Tag::class, 'taggable');
-    }
-
-    public function recurrence(): BelongsTo
-    {
-        return $this->belongsTo(Recurrence::class);
     }
 }
