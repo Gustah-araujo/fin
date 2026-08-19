@@ -20,6 +20,7 @@
         "laravel/pint": "^1.27",
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.6",
+        "phpmd/phpmd": "^2.15",
         "phpunit/phpunit": "^12.5.12"
     },
     "autoload": {
@@ -50,6 +51,16 @@
         "test": [
             "@php artisan config:clear --ansi @no_additional_args",
             "@php artisan test"
+        ],
+        "format": [
+            "@php vendor/bin/pint"
+        ],
+        "lint": [
+            "@php vendor/bin/phpmd app text phpmd.xml"
+        ],
+        "quality": [
+            "@php vendor/bin/pint --test",
+            "@php vendor/bin/phpmd app text phpmd.xml"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
