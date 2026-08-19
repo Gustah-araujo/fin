@@ -14,7 +14,9 @@ use App\Http\Controllers\CardExpenseController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CreditCardBillController;
 use App\Http\Controllers\CreditCardController;
+use App\Http\Controllers\IncomeController;
 use App\Http\Controllers\InviteController;
+use App\Http\Controllers\RecurrenceController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\WorkspaceController;
@@ -85,6 +87,22 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
             ->name('transactions.pay');
         Route::post('transactions/{transaction}/unpay', [TransactionController::class, 'unpay'])
             ->name('transactions.unpay');
+
+        Route::resource('incomes', IncomeController::class)
+            ->except(['show'])
+            ->parameters(['incomes' => 'transaction']);
+        Route::post('incomes/{transaction}/pay', [IncomeController::class, 'pay'])
+            ->name('incomes.pay');
+        Route::post('incomes/{transaction}/unpay', [IncomeController::class, 'unpay'])
+            ->name('incomes.unpay');
+
+        Route::resource('recurrences', RecurrenceController::class)->only(['index', 'edit', 'update', 'destroy']);
+        Route::post('recurrences/{recurrence}/pause', [RecurrenceController::class, 'pause'])
+            ->name('recurrences.pause');
+        Route::post('recurrences/{recurrence}/restore', [RecurrenceController::class, 'restore'])
+            ->name('recurrences.restore');
+        Route::post('recurrences/{recurrence}/generate', [RecurrenceController::class, 'generateNow'])
+            ->name('recurrences.generate');
 
         Route::resource('cards', CreditCardController::class);
 

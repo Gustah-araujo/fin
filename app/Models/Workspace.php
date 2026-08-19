@@ -65,4 +65,9 @@ class Workspace extends Model
     {
         return $this->hasMany(CreditCardBill::class);
     }
+
+    public function recurrences(): HasMany
+    {
+        return $this->hasMany(Recurrence::class);
+    }
 }

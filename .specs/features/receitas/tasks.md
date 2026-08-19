@@ -5,6 +5,8 @@
 **Spec:** `.specs/features/receitas/spec.md`  
 **Design:** `.specs/features/receitas/design.md`  
 
+**Status:** ✅ Complete (T1–T21) — 2026-08-19
+
 ---
 
 ## Overview

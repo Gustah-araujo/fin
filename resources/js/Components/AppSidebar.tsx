@@ -7,6 +7,7 @@ import {
     CreditCard,
     TrendingUp,
     CalendarClock,
+    Repeat,
     MessageSquare,
     Upload,
     ChevronLeft,
@@ -86,7 +87,22 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
                           { label: 'Tags', href: '/tags', icon: Tags },
                       ]),
                 { label: 'Despesas', href: '/expenses', icon: ArrowLeftRight },
-                { label: 'Receitas', href: '/incomes', icon: TrendingUp },
+                {
+                    label: 'Receitas',
+                    href: workspaceUuid
+                        ? route('incomes.index', { workspace: workspaceUuid })
+                        : '/incomes',
+                    icon: TrendingUp,
+                },
+                {
+                    label: 'Recorrências',
+                    href: workspaceUuid
+                        ? route('recurrences.index', {
+                              workspace: workspaceUuid,
+                          })
+                        : '/recurrences',
+                    icon: Repeat,
+                },
             ],
         },
         {
