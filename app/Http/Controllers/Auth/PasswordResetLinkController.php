@@ -15,19 +15,19 @@ class PasswordResetLinkController extends Controller
 {
     public function create(): Response
     {
-        return inertia("Auth/ForgotPassword", [
-            "status" => session("status"),
+        return inertia('Auth/ForgotPassword', [
+            'status' => session('status'),
         ]);
     }
 
     public function store(StoreForgotPasswordRequest $request, AuthService $authService): RedirectResponse
     {
-        $status = $authService->sendPasswordResetLink($request->validated()["email"]);
+        $status = $authService->sendPasswordResetLink($request->validated()['email']);
 
         if ($status === Password::RESET_LINK_SENT) {
-            return back()->with("status", "Se o email existir, um link de recuperação foi enviado.");
+            return back()->with('status', 'Se o email existir, um link de recuperação foi enviado.');
         }
 
-        return back()->with("status", "Se o email existir, um link de recuperação foi enviado.");
+        return back()->with('status', 'Se o email existir, um link de recuperação foi enviado.');
     }
 }

@@ -7,6 +7,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\PayBillRequest;
 use App\Http\Resources\AccountResource;
 use App\Http\Resources\CreditCardBillResource;
+use App\Http\Resources\CreditCardResource;
+use App\Models\Account;
 use App\Models\CreditCardBill;
 use App\Models\Workspace;
 use App\Services\BillService;
@@ -33,7 +35,7 @@ class CreditCardBillController extends Controller
 
         return inertia('Bills/Show', [
             'bill' => new CreditCardBillResource($bill),
-            'card' => new \App\Http\Resources\CreditCardResource($bill->creditCard),
+            'card' => new CreditCardResource($bill->creditCard),
             'accounts' => AccountResource::collection(
                 $workspace->accounts()->orderBy('name')->get()
             ),
@@ -45,7 +47,7 @@ class CreditCardBillController extends Controller
         abort_if($bill->workspace_id !== $workspace->id, 404);
         $this->authorize('pay', [$bill, $workspace]);
 
-        $account = \App\Models\Account::where('uuid', $request->validated()['account_id'])
+        $account = Account::where('uuid', $request->validated()['account_id'])
             ->where('workspace_id', $workspace->id)
             ->firstOrFail();
 

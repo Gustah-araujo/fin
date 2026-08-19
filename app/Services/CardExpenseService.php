@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Enums\BillStatus;
 use App\Models\Category;
 use App\Models\CreditCard;
+use App\Models\CreditCardBill;
 use App\Models\Tag;
 use App\Models\Transaction;
 use App\Models\User;
@@ -133,7 +134,7 @@ class CardExpenseService
             }
 
             if ($oldBillId !== $transaction->credit_card_bill_id) {
-                $oldBill = \App\Models\CreditCardBill::find($oldBillId);
+                $oldBill = CreditCardBill::find($oldBillId);
                 if ($oldBill) {
                     $this->billService->recalculateBillTotal($oldBill);
                 }
@@ -177,7 +178,7 @@ class CardExpenseService
             }
 
             foreach ($affectedBills->unique() as $billId) {
-                $bill = \App\Models\CreditCardBill::find($billId);
+                $bill = CreditCardBill::find($billId);
                 if ($bill) {
                     $this->billService->recalculateBillTotal($bill);
                 }
@@ -223,7 +224,7 @@ class CardExpenseService
             }
 
             foreach ($affectedBills->unique() as $billId) {
-                $bill = \App\Models\CreditCardBill::find($billId);
+                $bill = CreditCardBill::find($billId);
                 if ($bill) {
                     $this->billService->recalculateBillTotal($bill);
                 }

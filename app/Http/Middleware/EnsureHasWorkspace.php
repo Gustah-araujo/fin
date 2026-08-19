@@ -20,18 +20,18 @@ class EnsureHasWorkspace
 
         if ($user->workspaces()->count() === 0) {
             $exemptRoutes = [
-                "workspace.create",
-                "workspace.store",
-                "logout",
-                "verification.notice",
-                "verification.verify",
-                "verification.send",
-                "password.edit",
-                "password.update",
+                'workspace.create',
+                'workspace.store',
+                'logout',
+                'verification.notice',
+                'verification.verify',
+                'verification.send',
+                'password.edit',
+                'password.update',
             ];
 
             if (! in_array($request->route()?->getName(), $exemptRoutes, true)) {
-                return redirect()->route("workspace.create");
+                return redirect()->route('workspace.create');
             }
         }
 

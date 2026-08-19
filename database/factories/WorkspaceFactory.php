@@ -13,9 +13,9 @@ class WorkspaceFactory extends Factory
     public function definition(): array
     {
         return [
-            "uuid" => Str::orderedUuid()->toString(),
-            "name" => fake()->company() . " Finanças",
-            "description" => fake()->optional()->sentence(),
+            'uuid' => Str::orderedUuid()->toString(),
+            'name' => fake()->company().' Finanças',
+            'description' => fake()->optional()->sentence(),
         ];
     }
 }

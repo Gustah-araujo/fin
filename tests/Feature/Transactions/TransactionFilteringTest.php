@@ -18,46 +18,46 @@ class TransactionFilteringTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
         ]);
         $category = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "type" => "expense",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
         ]);
 
         Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
-            "description" => "Mercado Extra",
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
+            'description' => 'Mercado Extra',
         ]);
         Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
-            "description" => "Mercado São João",
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
+            'description' => 'Mercado São João',
         ]);
         Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
-            "description" => "Padaria Pão Doce",
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
+            'description' => 'Padaria Pão Doce',
         ]);
 
         $response = $this->actingAs($user)
-            ->get(route("transactions.index", ["workspace" => $workspace, "search" => "mercado"]));
+            ->get(route('transactions.index', ['workspace' => $workspace, 'search' => 'mercado']));
 
         $response->assertInertia(fn ($page) => $page
-            ->component("Transactions/Index", false)
-            ->has("transactions.data", 2)
+            ->component('Transactions/Index', false)
+            ->has('transactions.data', 2)
         );
     }
 
@@ -65,39 +65,39 @@ class TransactionFilteringTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
         ]);
         $category = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "type" => "expense",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
         ]);
 
         Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
-            "description" => "Mercado",
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
+            'description' => 'Mercado',
         ]);
         Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
-            "description" => "Padaria",
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
+            'description' => 'Padaria',
         ]);
 
         $response = $this->actingAs($user)
-            ->get(route("transactions.index", ["workspace" => $workspace, "search" => "MERCADO"]));
+            ->get(route('transactions.index', ['workspace' => $workspace, 'search' => 'MERCADO']));
 
         $response->assertInertia(fn ($page) => $page
-            ->component("Transactions/Index", false)
-            ->has("transactions.data", 1)
+            ->component('Transactions/Index', false)
+            ->has('transactions.data', 1)
         );
     }
 
@@ -105,56 +105,56 @@ class TransactionFilteringTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
         ]);
         $categoryA = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "type" => "expense",
-            "name" => "Alimentação",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
+            'name' => 'Alimentação',
         ]);
         $categoryB = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "type" => "expense",
-            "name" => "Transporte",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
+            'name' => 'Transporte',
         ]);
 
         Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $categoryA->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $categoryA->id,
+            'created_by' => $user->id,
         ]);
         Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $categoryA->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $categoryA->id,
+            'created_by' => $user->id,
         ]);
         Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $categoryB->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $categoryB->id,
+            'created_by' => $user->id,
         ]);
         Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $categoryB->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $categoryB->id,
+            'created_by' => $user->id,
         ]);
 
         $response = $this->actingAs($user)
-            ->get(route("transactions.index", ["workspace" => $workspace, "category" => $categoryA->id]));
+            ->get(route('transactions.index', ['workspace' => $workspace, 'category' => $categoryA->id]));
 
         $response->assertInertia(fn ($page) => $page
-            ->component("Transactions/Index", false)
-            ->has("transactions.data", 2)
+            ->component('Transactions/Index', false)
+            ->has('transactions.data', 2)
         );
     }
 
@@ -162,55 +162,55 @@ class TransactionFilteringTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $accountA = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "name" => "Nubank",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'name' => 'Nubank',
         ]);
         $accountB = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "name" => "Itaú",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'name' => 'Itaú',
         ]);
         $category = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "type" => "expense",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
         ]);
 
         Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $accountA->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'account_id' => $accountA->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
         ]);
         Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $accountA->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'account_id' => $accountA->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
         ]);
         Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $accountB->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'account_id' => $accountB->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
         ]);
         Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $accountB->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'account_id' => $accountB->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
         ]);
 
         $response = $this->actingAs($user)
-            ->get(route("transactions.index", ["workspace" => $workspace, "account" => $accountA->id]));
+            ->get(route('transactions.index', ['workspace' => $workspace, 'account' => $accountA->id]));
 
         $response->assertInertia(fn ($page) => $page
-            ->component("Transactions/Index", false)
-            ->has("transactions.data", 2)
+            ->component('Transactions/Index', false)
+            ->has('transactions.data', 2)
         );
     }
 
@@ -218,50 +218,50 @@ class TransactionFilteringTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
         ]);
         $category = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "type" => "expense",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
         ]);
 
         Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
-            "date" => "2026-01-01",
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
+            'date' => '2026-01-01',
         ]);
         Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
-            "date" => "2026-06-15",
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
+            'date' => '2026-06-15',
         ]);
         Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
-            "date" => "2026-12-31",
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
+            'date' => '2026-12-31',
         ]);
 
         $response = $this->actingAs($user)
-            ->get(route("transactions.index", [
-                "workspace" => $workspace,
-                "from_date" => "2026-03-01",
-                "to_date" => "2026-09-30",
+            ->get(route('transactions.index', [
+                'workspace' => $workspace,
+                'from_date' => '2026-03-01',
+                'to_date' => '2026-09-30',
             ]));
 
         $response->assertInertia(fn ($page) => $page
-            ->component("Transactions/Index", false)
-            ->has("transactions.data", 1)
+            ->component('Transactions/Index', false)
+            ->has('transactions.data', 1)
         );
     }
 
@@ -269,51 +269,51 @@ class TransactionFilteringTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
         ]);
         $category = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "type" => "expense",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
         ]);
 
         Transaction::factory()->paid()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
         ]);
         Transaction::factory()->paid()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
         ]);
         Transaction::factory()->unpaid()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
         ]);
 
         $paidResponse = $this->actingAs($user)
-            ->get(route("transactions.index", ["workspace" => $workspace, "status" => "paid"]));
+            ->get(route('transactions.index', ['workspace' => $workspace, 'status' => 'paid']));
 
         $paidResponse->assertInertia(fn ($page) => $page
-            ->component("Transactions/Index", false)
-            ->has("transactions.data", 2)
+            ->component('Transactions/Index', false)
+            ->has('transactions.data', 2)
         );
 
         $unpaidResponse = $this->actingAs($user)
-            ->get(route("transactions.index", ["workspace" => $workspace, "status" => "unpaid"]));
+            ->get(route('transactions.index', ['workspace' => $workspace, 'status' => 'unpaid']));
 
         $unpaidResponse->assertInertia(fn ($page) => $page
-            ->component("Transactions/Index", false)
-            ->has("transactions.data", 1)
+            ->component('Transactions/Index', false)
+            ->has('transactions.data', 1)
         );
     }
 
@@ -321,61 +321,61 @@ class TransactionFilteringTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
         ]);
         $categoryA = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "type" => "expense",
-            "name" => "Categoria A",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
+            'name' => 'Categoria A',
         ]);
         $categoryB = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "type" => "expense",
-            "name" => "Categoria B",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
+            'name' => 'Categoria B',
         ]);
 
         Transaction::factory()->paid()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $categoryA->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $categoryA->id,
+            'created_by' => $user->id,
         ]);
 
         Transaction::factory()->paid()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $categoryB->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $categoryB->id,
+            'created_by' => $user->id,
         ]);
         Transaction::factory()->paid()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $categoryB->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $categoryB->id,
+            'created_by' => $user->id,
         ]);
         Transaction::factory()->unpaid()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $categoryB->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $categoryB->id,
+            'created_by' => $user->id,
         ]);
 
         $response = $this->actingAs($user)
-            ->get(route("transactions.index", [
-                "workspace" => $workspace,
-                "status" => "paid",
-                "category" => $categoryB->id,
+            ->get(route('transactions.index', [
+                'workspace' => $workspace,
+                'status' => 'paid',
+                'category' => $categoryB->id,
             ]));
 
         $response->assertInertia(fn ($page) => $page
-            ->component("Transactions/Index", false)
-            ->has("transactions.data", 2)
+            ->component('Transactions/Index', false)
+            ->has('transactions.data', 2)
         );
     }
 
@@ -383,31 +383,31 @@ class TransactionFilteringTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
         ]);
         $category = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "type" => "expense",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
         ]);
 
         Transaction::factory()->count(30)->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
         ]);
 
         $response = $this->actingAs($user)
-            ->get(route("transactions.index", $workspace));
+            ->get(route('transactions.index', $workspace));
 
         $response->assertInertia(fn ($page) => $page
-            ->component("Transactions/Index", false)
-            ->has("transactions.data", 25)
+            ->component('Transactions/Index', false)
+            ->has('transactions.data', 25)
         );
     }
 }

@@ -16,7 +16,7 @@ class CategoryFactory extends Factory
             'uuid' => Str::orderedUuid()->toString(),
             'name' => fake()->unique()->word(),
             'type' => fake()->randomElement(['income', 'expense', 'both']),
-            'color' => '#' . str_pad(dechex(mt_rand(0, 0xFFFFFF)), 6, '0', STR_PAD_LEFT),
+            'color' => '#'.str_pad(dechex(mt_rand(0, 0xFFFFFF)), 6, '0', STR_PAD_LEFT),
             'icon' => fake()->optional()->randomElement(['shopping-cart', 'home', 'car', 'utensils', 'heart', 'briefcase', 'music', 'gamepad']),
         ];
     }

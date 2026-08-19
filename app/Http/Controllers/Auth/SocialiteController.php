@@ -14,16 +14,16 @@ class SocialiteController extends Controller
 {
     public function redirect(): RedirectResponse
     {
-        return Socialite::driver("google")->redirect();
+        return Socialite::driver('google')->redirect();
     }
 
     public function callback(AuthService $authService): RedirectResponse
     {
         try {
-            $googleUser = Socialite::driver("google")->user();
+            $googleUser = Socialite::driver('google')->user();
         } catch (\Exception $e) {
-            return redirect()->route("login")->withErrors([
-                "email" => "Falha na autenticação com Google.",
+            return redirect()->route('login')->withErrors([
+                'email' => 'Falha na autenticação com Google.',
             ]);
         }
 
@@ -32,6 +32,6 @@ class SocialiteController extends Controller
         Auth::login($user, true);
         request()->session()->regenerate();
 
-        return redirect()->route("workspace.select");
+        return redirect()->route('workspace.select');
     }
 }

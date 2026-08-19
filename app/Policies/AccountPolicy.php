@@ -13,7 +13,7 @@ class AccountPolicy
 {
     public function viewAny(User $user, Workspace $workspace): bool
     {
-        return $workspace->members()->where("user_id", $user->id)->exists();
+        return $workspace->members()->where('user_id', $user->id)->exists();
     }
 
     public function create(User $user, Workspace $workspace): bool
@@ -45,7 +45,7 @@ class AccountPolicy
 
     private function getUserRole(User $user, Workspace $workspace): ?WorkspaceRole
     {
-        $pivot = $workspace->members()->where("user_id", $user->id)->first();
+        $pivot = $workspace->members()->where('user_id', $user->id)->first();
 
         if (! $pivot || ! $pivot->pivot->role) {
             return null;

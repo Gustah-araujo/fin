@@ -16,15 +16,15 @@ class UpdateMemberRoleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            "role" => ["required", "string", "in:admin,editor,viewer"],
+            'role' => ['required', 'string', 'in:admin,editor,viewer'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            "role.required" => "O papel é obrigatório.",
-            "role.in" => "Papel inválido.",
+            'role.required' => 'O papel é obrigatório.',
+            'role.in' => 'Papel inválido.',
         ];
     }
 }

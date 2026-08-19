@@ -6,7 +6,6 @@ namespace App\Http\Requests;
 
 use App\Enums\BillStatus;
 use App\Models\Account;
-use App\Models\CreditCardBill;
 use Illuminate\Foundation\Http\FormRequest;
 
 class PayBillRequest extends FormRequest
@@ -36,6 +35,7 @@ class PayBillRequest extends FormRequest
 
                 if (! $account) {
                     $validator->errors()->add('account_id', 'A conta selecionada não pertence a este workspace.');
+
                     return;
                 }
 

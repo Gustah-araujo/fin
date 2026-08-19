@@ -16,18 +16,18 @@ class Account extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        "uuid",
-        "workspace_id",
-        "created_by",
-        "name",
-        "type",
-        "initial_balance",
-        "current_balance",
+        'uuid',
+        'workspace_id',
+        'created_by',
+        'name',
+        'type',
+        'initial_balance',
+        'current_balance',
     ];
 
     public function getRouteKeyName(): string
     {
-        return "uuid";
+        return 'uuid';
     }
 
     public function workspace(): BelongsTo
@@ -37,7 +37,7 @@ class Account extends Model
 
     public function creator(): BelongsTo
     {
-        return $this->belongsTo(User::class, "created_by");
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function transactions(): HasMany

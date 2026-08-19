@@ -67,7 +67,7 @@ class AccountBalanceRecalculationTest extends TestCase
 
     public function test_recalculate_balance_still_works_for_accounts_without_transactions(): void
     {
-        [, , $account, ] = $this->createTestSetup(500);
+        [, , $account] = $this->createTestSetup(500);
 
         $this->accountService->recalculateBalance($account);
 

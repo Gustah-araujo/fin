@@ -18,9 +18,9 @@ class VerifyEmailController extends Controller
         $user = $request->user();
 
         if ($user && $user->workspaces()->count() === 0) {
-            return redirect()->route("workspace.create");
+            return redirect()->route('workspace.create');
         }
 
-        return redirect()->route("workspace.select")->with("verified", true);
+        return redirect()->route('workspace.select')->with('verified', true);
     }
 }

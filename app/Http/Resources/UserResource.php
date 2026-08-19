@@ -12,11 +12,11 @@ class UserResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            "uuid" => $this->uuid,
-            "name" => $this->name,
-            "email" => $this->email,
-            "avatar" => $this->when($this->avatar, $this->avatar),
-            "workspace_role" => $this->whenPivotLoaded("workspace_user", function () {
+            'uuid' => $this->uuid,
+            'name' => $this->name,
+            'email' => $this->email,
+            'avatar' => $this->when($this->avatar, $this->avatar),
+            'workspace_role' => $this->whenPivotLoaded('workspace_user', function () {
                 return $this->pivot->role;
             }),
         ];

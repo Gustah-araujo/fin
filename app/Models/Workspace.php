@@ -14,20 +14,20 @@ class Workspace extends Model
     use HasFactory;
 
     protected $fillable = [
-        "uuid",
-        "name",
-        "description",
+        'uuid',
+        'name',
+        'description',
     ];
 
     public function getRouteKeyName(): string
     {
-        return "uuid";
+        return 'uuid';
     }
 
     public function members(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, "workspace_user")
-            ->withPivot("role", "last_visited_at")
+        return $this->belongsToMany(User::class, 'workspace_user')
+            ->withPivot('role', 'last_visited_at')
             ->withTimestamps();
     }
 

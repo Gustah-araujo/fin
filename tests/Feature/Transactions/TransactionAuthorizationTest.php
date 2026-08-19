@@ -18,25 +18,25 @@ class TransactionAuthorizationTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Viewer->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Viewer->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
         ]);
         $category = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "type" => "expense",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
         ]);
 
         $response = $this->actingAs($user)
-            ->post(route("transactions.store", $workspace), [
-                "description" => "Compra no mercado",
-                "value" => 150.00,
-                "date" => "2026-07-01",
-                "account_id" => $account->uuid,
-                "category_id" => $category->uuid,
+            ->post(route('transactions.store', $workspace), [
+                'description' => 'Compra no mercado',
+                'value' => 150.00,
+                'date' => '2026-07-01',
+                'account_id' => $account->uuid,
+                'category_id' => $category->uuid,
             ]);
 
         $response->assertForbidden();
@@ -46,31 +46,31 @@ class TransactionAuthorizationTest extends TestCase
     {
         $admin = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($admin, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($admin, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $admin->id,
+            'workspace_id' => $workspace->id,
+            'created_by' => $admin->id,
         ]);
         $category = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $admin->id,
-            "type" => "expense",
+            'workspace_id' => $workspace->id,
+            'created_by' => $admin->id,
+            'type' => 'expense',
         ]);
 
         $transaction = Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $admin->id,
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $admin->id,
         ]);
 
         $user = User::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Viewer->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Viewer->value]);
 
         $response = $this->actingAs($user)
-            ->put(route("transactions.update", [$workspace, $transaction]), [
-                "description" => "Hacked",
+            ->put(route('transactions.update', [$workspace, $transaction]), [
+                'description' => 'Hacked',
             ]);
 
         $response->assertForbidden();
@@ -80,30 +80,30 @@ class TransactionAuthorizationTest extends TestCase
     {
         $admin = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($admin, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($admin, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $admin->id,
+            'workspace_id' => $workspace->id,
+            'created_by' => $admin->id,
         ]);
         $category = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $admin->id,
-            "type" => "expense",
+            'workspace_id' => $workspace->id,
+            'created_by' => $admin->id,
+            'type' => 'expense',
         ]);
 
         $transaction = Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $admin->id,
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $admin->id,
         ]);
 
         $user = User::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Viewer->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Viewer->value]);
 
         $response = $this->actingAs($user)
-            ->delete(route("transactions.destroy", [$workspace, $transaction]));
+            ->delete(route('transactions.destroy', [$workspace, $transaction]));
 
         $response->assertForbidden();
     }
@@ -112,25 +112,25 @@ class TransactionAuthorizationTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Editor->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Editor->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
         ]);
         $category = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "type" => "expense",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
         ]);
 
         $response = $this->actingAs($user)
-            ->post(route("transactions.store", $workspace), [
-                "description" => "Compra no mercado",
-                "value" => 150.00,
-                "date" => "2026-07-01",
-                "account_id" => $account->uuid,
-                "category_id" => $category->uuid,
+            ->post(route('transactions.store', $workspace), [
+                'description' => 'Compra no mercado',
+                'value' => 150.00,
+                'date' => '2026-07-01',
+                'account_id' => $account->uuid,
+                'category_id' => $category->uuid,
             ]);
 
         $response->assertRedirect();
@@ -142,31 +142,31 @@ class TransactionAuthorizationTest extends TestCase
     {
         $admin = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($admin, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($admin, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $admin->id,
+            'workspace_id' => $workspace->id,
+            'created_by' => $admin->id,
         ]);
         $category = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $admin->id,
-            "type" => "expense",
+            'workspace_id' => $workspace->id,
+            'created_by' => $admin->id,
+            'type' => 'expense',
         ]);
 
         $transaction = Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $admin->id,
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $admin->id,
         ]);
 
         $user = User::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Editor->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Editor->value]);
 
         $response = $this->actingAs($user)
-            ->put(route("transactions.update", [$workspace, $transaction]), [
-                "description" => "Descrição atualizada",
+            ->put(route('transactions.update', [$workspace, $transaction]), [
+                'description' => 'Descrição atualizada',
             ]);
 
         $response->assertRedirect();
@@ -176,30 +176,30 @@ class TransactionAuthorizationTest extends TestCase
     {
         $admin = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($admin, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($admin, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $admin->id,
+            'workspace_id' => $workspace->id,
+            'created_by' => $admin->id,
         ]);
         $category = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $admin->id,
-            "type" => "expense",
+            'workspace_id' => $workspace->id,
+            'created_by' => $admin->id,
+            'type' => 'expense',
         ]);
 
         $transaction = Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $admin->id,
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $admin->id,
         ]);
 
         $user = User::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Editor->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Editor->value]);
 
         $response = $this->actingAs($user)
-            ->delete(route("transactions.destroy", [$workspace, $transaction]));
+            ->delete(route('transactions.destroy', [$workspace, $transaction]));
 
         $response->assertForbidden();
     }
@@ -209,30 +209,30 @@ class TransactionAuthorizationTest extends TestCase
         $user = User::factory()->create();
 
         $workspaceA = Workspace::factory()->create();
-        $workspaceA->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspaceA->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $workspaceB = Workspace::factory()->create();
-        $workspaceB->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspaceB->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspaceA->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspaceA->id,
+            'created_by' => $user->id,
         ]);
         $category = Category::factory()->create([
-            "workspace_id" => $workspaceA->id,
-            "created_by" => $user->id,
-            "type" => "expense",
+            'workspace_id' => $workspaceA->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
         ]);
 
         $transaction = Transaction::factory()->create([
-            "workspace_id" => $workspaceA->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspaceA->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
         ]);
 
         $response = $this->actingAs($user)
-            ->get(route("transactions.edit", ["workspace" => $workspaceB->id, "transaction" => $transaction->id]));
+            ->get(route('transactions.edit', ['workspace' => $workspaceB->id, 'transaction' => $transaction->id]));
 
         $response->assertNotFound();
     }

@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\CardExpenses;
 
-use App\Enums\BillStatus;
 use App\Models\CreditCardBill;
 use App\Models\Transaction;
-use Tests\Feature\CardExpenses\CardExpenseTestCase;
 
 class CardExpenseAuthorizationTest extends CardExpenseTestCase
 {

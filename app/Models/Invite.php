@@ -15,25 +15,25 @@ class Invite extends Model
     use HasFactory;
 
     protected $fillable = [
-        "uuid",
-        "workspace_id",
-        "email",
-        "role",
-        "inviter_id",
-        "status",
+        'uuid',
+        'workspace_id',
+        'email',
+        'role',
+        'inviter_id',
+        'status',
     ];
 
     protected function casts(): array
     {
         return [
-            "role" => WorkspaceRole::class,
-            "status" => InviteStatus::class,
+            'role' => WorkspaceRole::class,
+            'status' => InviteStatus::class,
         ];
     }
 
     public function getRouteKeyName(): string
     {
-        return "uuid";
+        return 'uuid';
     }
 
     public function workspace(): BelongsTo
@@ -43,6 +43,6 @@ class Invite extends Model
 
     public function inviter(): BelongsTo
     {
-        return $this->belongsTo(User::class, "inviter_id");
+        return $this->belongsTo(User::class, 'inviter_id');
     }
 }

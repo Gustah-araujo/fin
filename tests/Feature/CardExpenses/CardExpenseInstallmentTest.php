@@ -5,9 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\CardExpenses;
 
 use App\Models\Transaction;
-use App\Models\Workspace;
-use Illuminate\Support\Facades\DB;
-use Tests\Feature\CardExpenses\CardExpenseTestCase;
 
 class CardExpenseInstallmentTest extends CardExpenseTestCase
 {

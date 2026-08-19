@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\CardExpenses;
 
-use App\Enums\BillStatus;
-use App\Models\Category;
-use App\Models\CreditCard;
 use App\Models\CreditCardBill;
 use App\Models\Transaction;
 use App\Services\CreditCardService;
-use Tests\Feature\CardExpenses\CardExpenseTestCase;
+use Illuminate\Support\Str;
 
 class AvailableLimitTest extends CardExpenseTestCase
 {
@@ -21,7 +18,7 @@ class AvailableLimitTest extends CardExpenseTestCase
         $category = $this->createExpenseCategory($workspace, $user);
 
         Transaction::create([
-            'uuid' => \Illuminate\Support\Str::orderedUuid()->toString(),
+            'uuid' => Str::orderedUuid()->toString(),
             'workspace_id' => $workspace->id,
             'account_id' => null,
             'credit_card_id' => $card->id,
@@ -46,7 +43,7 @@ class AvailableLimitTest extends CardExpenseTestCase
         $category = $this->createExpenseCategory($workspace, $user);
 
         $transaction = Transaction::create([
-            'uuid' => \Illuminate\Support\Str::orderedUuid()->toString(),
+            'uuid' => Str::orderedUuid()->toString(),
             'workspace_id' => $workspace->id,
             'account_id' => null,
             'credit_card_id' => $card->id,
@@ -81,7 +78,7 @@ class AvailableLimitTest extends CardExpenseTestCase
         ]);
 
         Transaction::create([
-            'uuid' => \Illuminate\Support\Str::orderedUuid()->toString(),
+            'uuid' => Str::orderedUuid()->toString(),
             'workspace_id' => $workspace->id,
             'account_id' => null,
             'credit_card_id' => $card->id,
@@ -108,7 +105,7 @@ class AvailableLimitTest extends CardExpenseTestCase
 
         foreach ([100, 200, 50] as $value) {
             Transaction::create([
-                'uuid' => \Illuminate\Support\Str::orderedUuid()->toString(),
+                'uuid' => Str::orderedUuid()->toString(),
                 'workspace_id' => $workspace->id,
                 'account_id' => null,
                 'credit_card_id' => $card->id,
@@ -133,11 +130,11 @@ class AvailableLimitTest extends CardExpenseTestCase
         $card = $this->createCard($workspace, $user);
         $category = $this->createExpenseCategory($workspace, $user);
 
-        $groupId = \Illuminate\Support\Str::orderedUuid()->toString();
+        $groupId = Str::orderedUuid()->toString();
 
         foreach ([1, 2, 3] as $num) {
             Transaction::create([
-                'uuid' => \Illuminate\Support\Str::orderedUuid()->toString(),
+                'uuid' => Str::orderedUuid()->toString(),
                 'workspace_id' => $workspace->id,
                 'account_id' => null,
                 'credit_card_id' => $card->id,
@@ -166,7 +163,7 @@ class AvailableLimitTest extends CardExpenseTestCase
         $category = $this->createExpenseCategory($workspace, $user);
 
         Transaction::create([
-            'uuid' => \Illuminate\Support\Str::orderedUuid()->toString(),
+            'uuid' => Str::orderedUuid()->toString(),
             'workspace_id' => $workspace->id,
             'account_id' => null,
             'credit_card_id' => $card->id,

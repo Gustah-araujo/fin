@@ -19,34 +19,34 @@ class TransactionDeletionTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
         ]);
 
         $category = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "type" => "expense",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
         ]);
 
         $transaction = Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
-            "type" => "expense",
-            "description" => "Para deletar",
-            "value" => 100,
-            "date" => "2026-07-10",
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
+            'description' => 'Para deletar',
+            'value' => 100,
+            'date' => '2026-07-10',
         ]);
 
         $response = $this->actingAs($user)
-            ->delete(route("transactions.destroy", ["workspace" => $workspace, "transaction" => $transaction]));
+            ->delete(route('transactions.destroy', ['workspace' => $workspace, 'transaction' => $transaction]));
 
-        $response->assertRedirect(route("transactions.index", $workspace));
+        $response->assertRedirect(route('transactions.index', $workspace));
 
         $this->assertSoftDeleted($transaction);
     }
@@ -55,29 +55,29 @@ class TransactionDeletionTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "initial_balance" => 1000,
-            "current_balance" => 1000,
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'initial_balance' => 1000,
+            'current_balance' => 1000,
         ]);
 
         $category = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "type" => "expense",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
         ]);
 
         $transaction = Transaction::factory()->paid()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
-            "type" => "expense",
-            "value" => 200,
-            "date" => "2026-07-10",
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
+            'value' => 200,
+            'date' => '2026-07-10',
         ]);
 
         app(AccountService::class)->recalculateBalance($account);
@@ -85,7 +85,7 @@ class TransactionDeletionTest extends TestCase
         $this->assertEquals(800, (float) $account->fresh()->current_balance);
 
         $this->actingAs($user)
-            ->delete(route("transactions.destroy", ["workspace" => $workspace, "transaction" => $transaction]));
+            ->delete(route('transactions.destroy', ['workspace' => $workspace, 'transaction' => $transaction]));
 
         $this->assertEquals(1000, (float) $account->fresh()->current_balance);
     }
@@ -94,39 +94,39 @@ class TransactionDeletionTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
         ]);
 
         $category = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "type" => "expense",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
         ]);
 
         $transaction = Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
-            "type" => "expense",
-            "description" => "Visível",
-            "value" => 100,
-            "date" => "2026-07-10",
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
+            'description' => 'Visível',
+            'value' => 100,
+            'date' => '2026-07-10',
         ]);
 
         $this->actingAs($user)
-            ->delete(route("transactions.destroy", ["workspace" => $workspace, "transaction" => $transaction]));
+            ->delete(route('transactions.destroy', ['workspace' => $workspace, 'transaction' => $transaction]));
 
         $response = $this->actingAs($user)
-            ->get(route("transactions.index", $workspace));
+            ->get(route('transactions.index', $workspace));
 
         $response->assertInertia(fn ($page) => $page
-            ->component("Transactions/Index", false)
-            ->has("transactions.data", 0)
+            ->component('Transactions/Index', false)
+            ->has('transactions.data', 0)
         );
     }
 }

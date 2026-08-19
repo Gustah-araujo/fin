@@ -13,8 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(["name", "email", "password", "uuid", "google_id", "avatar"])]
-#[Hidden(["password", "remember_token"])]
+#[Fillable(['name', 'email', 'password', 'uuid', 'google_id', 'avatar'])]
+#[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
@@ -23,20 +23,20 @@ class User extends Authenticatable implements MustVerifyEmail
     protected function casts(): array
     {
         return [
-            "email_verified_at" => "datetime",
-            "password" => "hashed",
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
         ];
     }
 
     public function getRouteKeyName(): string
     {
-        return "uuid";
+        return 'uuid';
     }
 
     public function workspaces(): BelongsToMany
     {
-        return $this->belongsToMany(Workspace::class, "workspace_user")
-            ->withPivot("role", "last_visited_at")
+        return $this->belongsToMany(Workspace::class, 'workspace_user')
+            ->withPivot('role', 'last_visited_at')
             ->withTimestamps();
     }
 }

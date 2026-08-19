@@ -14,29 +14,29 @@ class AccountUpdateTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "name" => "Original",
-            "type" => "checking",
-            "initial_balance" => 1000,
-            "current_balance" => 1000,
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'name' => 'Original',
+            'type' => 'checking',
+            'initial_balance' => 1000,
+            'current_balance' => 1000,
         ]);
 
         $response = $this->actingAs($user)
-            ->put(route("accounts.update", [$workspace, $account]), [
-                "name" => "Updated Name",
-                "type" => "savings",
+            ->put(route('accounts.update', [$workspace, $account]), [
+                'name' => 'Updated Name',
+                'type' => 'savings',
             ]);
 
-        $response->assertRedirect(route("accounts.index", $workspace));
+        $response->assertRedirect(route('accounts.index', $workspace));
 
-        $this->assertDatabaseHas("accounts", [
-            "id" => $account->id,
-            "name" => "Updated Name",
-            "type" => "savings",
+        $this->assertDatabaseHas('accounts', [
+            'id' => $account->id,
+            'name' => 'Updated Name',
+            'type' => 'savings',
         ]);
     }
 
@@ -44,20 +44,20 @@ class AccountUpdateTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "name" => "Original",
-            "type" => "checking",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'name' => 'Original',
+            'type' => 'checking',
         ]);
 
         $response = $this->actingAs($user)
-            ->put(route("accounts.update", [$workspace, $account]), [
-                "type" => "invalid_type",
+            ->put(route('accounts.update', [$workspace, $account]), [
+                'type' => 'invalid_type',
             ]);
 
-        $response->assertSessionHasErrors(["type"]);
+        $response->assertSessionHasErrors(['type']);
     }
 }

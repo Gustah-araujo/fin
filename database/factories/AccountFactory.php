@@ -15,11 +15,11 @@ class AccountFactory extends Factory
         $initialBalance = fake()->randomFloat(2, 0, 100000);
 
         return [
-            "uuid" => Str::orderedUuid()->toString(),
-            "name" => fake()->company(),
-            "type" => fake()->randomElement(["checking", "savings", "investment"]),
-            "initial_balance" => $initialBalance,
-            "current_balance" => $initialBalance,
+            'uuid' => Str::orderedUuid()->toString(),
+            'name' => fake()->company(),
+            'type' => fake()->randomElement(['checking', 'savings', 'investment']),
+            'initial_balance' => $initialBalance,
+            'current_balance' => $initialBalance,
         ];
     }
 }

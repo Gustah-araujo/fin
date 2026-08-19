@@ -65,7 +65,7 @@ class TagService
         $color = trim($color);
 
         if (! str_starts_with($color, '#')) {
-            $color = '#' . $color;
+            $color = '#'.$color;
         }
 
         return strtoupper($color);

@@ -16,15 +16,15 @@ class EmailVerificationNotificationController extends Controller
         $user = $request->user();
 
         if (! $user) {
-            return redirect()->route("login");
+            return redirect()->route('login');
         }
 
         if ($user->hasVerifiedEmail()) {
-            return redirect()->intended(route("workspace.select", absolute: false));
+            return redirect()->intended(route('workspace.select', absolute: false));
         }
 
         $authService->resendVerificationEmail($user);
 
-        return back()->with("status", "Email de verificação reenviado.");
+        return back()->with('status', 'Email de verificação reenviado.');
     }
 }

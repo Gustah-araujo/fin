@@ -16,9 +16,9 @@ class NewPasswordController extends Controller
 {
     public function create(Request $request): Response
     {
-        return inertia("Auth/ResetPassword", [
-            "email" => $request->get("email"),
-            "token" => $request->route("token"),
+        return inertia('Auth/ResetPassword', [
+            'email' => $request->get('email'),
+            'token' => $request->route('token'),
         ]);
     }
 
@@ -27,9 +27,9 @@ class NewPasswordController extends Controller
         $status = $authService->resetPassword($request->validated());
 
         if ($status === Password::PASSWORD_RESET) {
-            return redirect()->route("login")->with("status", "Senha redefinida com sucesso.");
+            return redirect()->route('login')->with('status', 'Senha redefinida com sucesso.');
         }
 
-        return back()->withErrors(["email" => "Link inválido ou expirado."]);
+        return back()->withErrors(['email' => 'Link inválido ou expirado.']);
     }
 }

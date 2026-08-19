@@ -10,9 +10,9 @@ use App\Models\CreditCard;
 use App\Models\CreditCardBill;
 use App\Models\Transaction;
 use App\Models\User;
-use App\Models\Workspace;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class BillService
@@ -21,6 +21,7 @@ class BillService
         private readonly CreditCardService $creditCardService,
         private readonly AccountService $accountService,
     ) {}
+
     public function computeBillPeriod(CreditCard $card, Carbon $date): array
     {
         $closingDay = min($card->closing_day, $date->daysInMonth);
@@ -31,18 +32,21 @@ class BillService
         }
 
         $next = $date->copy()->addMonthNoOverflow();
+
         return ['year' => $next->year, 'month' => $next->month];
     }
 
     public function computeClosingDate(CreditCard $card, int $year, int $month): Carbon
     {
         $day = min($card->closing_day, Carbon::createFromDate($year, $month, 1)->daysInMonth);
+
         return Carbon::createFromDate($year, $month, $day);
     }
 
     public function computeDueDate(CreditCard $card, int $year, int $month): Carbon
     {
         $day = min($card->due_day, Carbon::createFromDate($year, $month, 1)->daysInMonth);
+
         return Carbon::createFromDate($year, $month, $day);
     }
 
@@ -102,7 +106,7 @@ class BillService
                 $this->closeBill($bill);
                 $count++;
             } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error("Failed to close bill {$bill->id}: " . $e->getMessage());
+                Log::error("Failed to close bill {$bill->id}: ".$e->getMessage());
             }
         }
 

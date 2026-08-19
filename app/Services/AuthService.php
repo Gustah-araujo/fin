@@ -18,10 +18,10 @@ class AuthService
     public function register(array $data): User
     {
         $user = User::create([
-            "uuid" => Str::orderedUuid()->toString(),
-            "name" => $data["name"],
-            "email" => $data["email"],
-            "password" => Hash::make($data["password"]),
+            'uuid' => Str::orderedUuid()->toString(),
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => Hash::make($data['password']),
         ]);
 
         event(new Registered($user));
@@ -33,7 +33,7 @@ class AuthService
     {
         if (! Auth::attempt($credentials, $remember)) {
             throw ValidationException::withMessages([
-                "email" => ["Credenciais inválidas."],
+                'email' => ['Credenciais inválidas.'],
             ]);
         }
     }
@@ -57,7 +57,7 @@ class AuthService
 
     public function sendPasswordResetLink(string $email): string
     {
-        return Password::sendResetLink(["email" => $email]);
+        return Password::sendResetLink(['email' => $email]);
     }
 
     public function resetPassword(array $data): string
@@ -66,7 +66,7 @@ class AuthService
             $data,
             function (User $user, string $password) {
                 $user->forceFill([
-                    "password" => Hash::make($password),
+                    'password' => Hash::make($password),
                 ])->save();
             }
         );
@@ -75,33 +75,34 @@ class AuthService
     public function changePassword(User $user, string $newPassword): void
     {
         $user->forceFill([
-            "password" => Hash::make($newPassword),
+            'password' => Hash::make($newPassword),
         ])->save();
     }
 
     public function handleGoogleCallback(SocialiteUser $googleUser): User
     {
-        $existingUser = User::where("email", $googleUser->getEmail())->first();
+        $existingUser = User::where('email', $googleUser->getEmail())->first();
 
         if ($existingUser) {
             if (! $existingUser->google_id) {
                 $existingUser->forceFill([
-                    "google_id" => $googleUser->getId(),
-                    "avatar" => $googleUser->getAvatar(),
-                    "email_verified_at" => $existingUser->email_verified_at ?? now(),
+                    'google_id' => $googleUser->getId(),
+                    'avatar' => $googleUser->getAvatar(),
+                    'email_verified_at' => $existingUser->email_verified_at ?? now(),
                 ])->save();
             }
+
             return $existingUser;
         }
 
         return User::create([
-            "uuid" => Str::orderedUuid()->toString(),
-            "name" => $googleUser->getName() ?? $googleUser->getEmail(),
-            "email" => $googleUser->getEmail(),
-            "google_id" => $googleUser->getId(),
-            "avatar" => $googleUser->getAvatar(),
-            "email_verified_at" => now(),
-            "password" => null,
+            'uuid' => Str::orderedUuid()->toString(),
+            'name' => $googleUser->getName() ?? $googleUser->getEmail(),
+            'email' => $googleUser->getEmail(),
+            'google_id' => $googleUser->getId(),
+            'avatar' => $googleUser->getAvatar(),
+            'email_verified_at' => now(),
+            'password' => null,
         ]);
     }
 }

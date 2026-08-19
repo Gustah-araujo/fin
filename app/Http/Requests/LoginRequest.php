@@ -16,18 +16,18 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            "email" => ["required", "string", "email"],
-            "password" => ["required", "string"],
-            "remember" => ["boolean"],
+            'email' => ['required', 'string', 'email'],
+            'password' => ['required', 'string'],
+            'remember' => ['boolean'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            "email.required" => "O email é obrigatório.",
-            "email.email" => "Informe um email válido.",
-            "password.required" => "A senha é obrigatória.",
+            'email.required' => 'O email é obrigatório.',
+            'email.email' => 'Informe um email válido.',
+            'password.required' => 'A senha é obrigatória.',
         ];
     }
 }

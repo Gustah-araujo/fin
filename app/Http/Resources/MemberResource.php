@@ -12,11 +12,11 @@ class MemberResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            "user" => new UserResource($this->whenLoaded("user", $this)),
-            "role" => $this->whenPivotLoaded("workspace_user", function () {
+            'user' => new UserResource($this->whenLoaded('user', $this)),
+            'role' => $this->whenPivotLoaded('workspace_user', function () {
                 return $this->pivot->role;
             }, $this->role ?? null),
-            "joined_at" => $this->whenPivotLoaded("workspace_user", function () {
+            'joined_at' => $this->whenPivotLoaded('workspace_user', function () {
                 return $this->pivot->created_at?->toISOString();
             }),
         ];

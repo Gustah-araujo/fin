@@ -4,14 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\CardExpenses;
 
-use App\Enums\TransactionType;
-use App\Models\Account;
 use App\Models\Category;
 use App\Models\Tag;
 use App\Models\Transaction;
-use App\Models\Workspace;
-use App\Models\Workspace as WorkspaceModel;
-use Tests\Feature\CardExpenses\CardExpenseTestCase;
 
 class CardExpenseCreationTest extends CardExpenseTestCase
 {

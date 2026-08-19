@@ -12,6 +12,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\AccountService;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class TransactionUpdateTest extends TestCase
@@ -20,40 +21,40 @@ class TransactionUpdateTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
         ]);
 
         $category = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "type" => "expense",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
         ]);
 
         $transaction = Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
-            "type" => "expense",
-            "description" => "Original",
-            "value" => 100,
-            "date" => "2026-07-10",
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
+            'description' => 'Original',
+            'value' => 100,
+            'date' => '2026-07-10',
         ]);
 
         $response = $this->actingAs($user)
-            ->put(route("transactions.update", ["workspace" => $workspace, "transaction" => $transaction]), [
-                "description" => "Atualizada",
+            ->put(route('transactions.update', ['workspace' => $workspace, 'transaction' => $transaction]), [
+                'description' => 'Atualizada',
             ]);
 
-        $response->assertRedirect(route("transactions.index", $workspace));
+        $response->assertRedirect(route('transactions.index', $workspace));
 
-        $this->assertDatabaseHas("transactions", [
-            "id" => $transaction->id,
-            "description" => "Atualizada",
+        $this->assertDatabaseHas('transactions', [
+            'id' => $transaction->id,
+            'description' => 'Atualizada',
         ]);
     }
 
@@ -61,69 +62,69 @@ class TransactionUpdateTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
         ]);
 
         $category = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "type" => "expense",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
         ]);
 
         $tag1 = Tag::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "name" => "Urgente",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'name' => 'Urgente',
         ]);
 
         $tag2 = Tag::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "name" => "Viagem",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'name' => 'Viagem',
         ]);
 
         $tag3 = Tag::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "name" => "Lazer",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'name' => 'Lazer',
         ]);
 
         $this->actingAs($user)
-            ->post(route("transactions.store", $workspace), [
-                "description" => "Com tags",
-                "value" => 200,
-                "date" => "2026-07-10",
-                "account_id" => $account->uuid,
-                "category_id" => $category->uuid,
-                "tags" => [$tag1->uuid, $tag2->uuid],
+            ->post(route('transactions.store', $workspace), [
+                'description' => 'Com tags',
+                'value' => 200,
+                'date' => '2026-07-10',
+                'account_id' => $account->uuid,
+                'category_id' => $category->uuid,
+                'tags' => [$tag1->uuid, $tag2->uuid],
             ]);
 
-        $transaction = Transaction::where("description", "Com tags")->first();
+        $transaction = Transaction::where('description', 'Com tags')->first();
 
-        $this->assertEquals(2, \Illuminate\Support\Facades\DB::table("taggables")
-            ->where("taggable_id", $transaction->id)
-            ->where("taggable_type", Transaction::class)
+        $this->assertEquals(2, DB::table('taggables')
+            ->where('taggable_id', $transaction->id)
+            ->where('taggable_type', Transaction::class)
             ->count());
 
         $this->actingAs($user)
-            ->put(route("transactions.update", ["workspace" => $workspace, "transaction" => $transaction]), [
-                "tags" => [$tag3->uuid],
+            ->put(route('transactions.update', ['workspace' => $workspace, 'transaction' => $transaction]), [
+                'tags' => [$tag3->uuid],
             ]);
 
         $transaction->refresh();
 
-        $this->assertEquals(1, \Illuminate\Support\Facades\DB::table("taggables")
-            ->where("taggable_id", $transaction->id)
-            ->where("taggable_type", Transaction::class)
+        $this->assertEquals(1, DB::table('taggables')
+            ->where('taggable_id', $transaction->id)
+            ->where('taggable_type', Transaction::class)
             ->count());
-        $this->assertDatabaseHas("taggables", [
-            "tag_id" => $tag3->id,
-            "taggable_id" => $transaction->id,
-            "taggable_type" => Transaction::class,
+        $this->assertDatabaseHas('taggables', [
+            'tag_id' => $tag3->id,
+            'taggable_id' => $transaction->id,
+            'taggable_type' => Transaction::class,
         ]);
     }
 
@@ -131,29 +132,29 @@ class TransactionUpdateTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "initial_balance" => 1000,
-            "current_balance" => 1000,
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'initial_balance' => 1000,
+            'current_balance' => 1000,
         ]);
 
         $category = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "type" => "expense",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
         ]);
 
         $transaction = Transaction::factory()->paid()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
-            "type" => "expense",
-            "value" => 200,
-            "date" => "2026-07-10",
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
+            'value' => 200,
+            'date' => '2026-07-10',
         ]);
 
         app(AccountService::class)->recalculateBalance($account);
@@ -161,8 +162,8 @@ class TransactionUpdateTest extends TestCase
         $this->assertEquals(800, (float) $account->fresh()->current_balance);
 
         $this->actingAs($user)
-            ->put(route("transactions.update", ["workspace" => $workspace, "transaction" => $transaction]), [
-                "value" => 300,
+            ->put(route('transactions.update', ['workspace' => $workspace, 'transaction' => $transaction]), [
+                'value' => 300,
             ]);
 
         $this->assertEquals(700, (float) $account->fresh()->current_balance);
@@ -172,36 +173,36 @@ class TransactionUpdateTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $accountA = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "initial_balance" => 1000,
-            "current_balance" => 1000,
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'initial_balance' => 1000,
+            'current_balance' => 1000,
         ]);
 
         $accountB = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "initial_balance" => 2000,
-            "current_balance" => 2000,
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'initial_balance' => 2000,
+            'current_balance' => 2000,
         ]);
 
         $category = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "type" => "expense",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
         ]);
 
         $transaction = Transaction::factory()->paid()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $accountA->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
-            "type" => "expense",
-            "value" => 200,
-            "date" => "2026-07-10",
+            'workspace_id' => $workspace->id,
+            'account_id' => $accountA->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
+            'value' => 200,
+            'date' => '2026-07-10',
         ]);
 
         app(AccountService::class)->recalculateBalance($accountA);
@@ -209,8 +210,8 @@ class TransactionUpdateTest extends TestCase
         $this->assertEquals(800, (float) $accountA->fresh()->current_balance);
 
         $this->actingAs($user)
-            ->put(route("transactions.update", ["workspace" => $workspace, "transaction" => $transaction]), [
-                "account_id" => $accountB->uuid,
+            ->put(route('transactions.update', ['workspace' => $workspace, 'transaction' => $transaction]), [
+                'account_id' => $accountB->uuid,
             ]);
 
         $this->assertEquals(1000, (float) $accountA->fresh()->current_balance);
@@ -221,35 +222,35 @@ class TransactionUpdateTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
         ]);
 
         $category = Category::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "type" => "expense",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
         ]);
 
         $transaction = Transaction::factory()->create([
-            "workspace_id" => $workspace->id,
-            "account_id" => $account->id,
-            "category_id" => $category->id,
-            "created_by" => $user->id,
-            "type" => "expense",
-            "description" => "Original",
-            "value" => 100,
-            "date" => "2026-07-10",
+            'workspace_id' => $workspace->id,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'created_by' => $user->id,
+            'type' => 'expense',
+            'description' => 'Original',
+            'value' => 100,
+            'date' => '2026-07-10',
         ]);
 
         $response = $this->actingAs($user)
-            ->put(route("transactions.update", ["workspace" => $workspace, "transaction" => $transaction]), [
-                "description" => "",
+            ->put(route('transactions.update', ['workspace' => $workspace, 'transaction' => $transaction]), [
+                'description' => '',
             ]);
 
-        $response->assertSessionHasErrors(["description"]);
+        $response->assertSessionHasErrors(['description']);
     }
 }

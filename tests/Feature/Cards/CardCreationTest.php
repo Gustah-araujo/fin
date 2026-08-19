@@ -3,7 +3,6 @@
 namespace Tests\Feature\Cards;
 
 use App\Enums\WorkspaceRole;
-use App\Models\CreditCard;
 use App\Models\User;
 use App\Models\Workspace;
 use Tests\TestCase;

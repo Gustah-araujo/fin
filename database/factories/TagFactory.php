@@ -15,7 +15,7 @@ class TagFactory extends Factory
         return [
             'uuid' => Str::orderedUuid()->toString(),
             'name' => fake()->unique()->word(),
-            'color' => '#' . str_pad(dechex(mt_rand(0, 0xFFFFFF)), 6, '0', STR_PAD_LEFT),
+            'color' => '#'.str_pad(dechex(mt_rand(0, 0xFFFFFF)), 6, '0', STR_PAD_LEFT),
         ];
     }
 }

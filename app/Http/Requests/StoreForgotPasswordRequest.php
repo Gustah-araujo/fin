@@ -16,15 +16,15 @@ class StoreForgotPasswordRequest extends FormRequest
     public function rules(): array
     {
         return [
-            "email" => ["required", "string", "email"],
+            'email' => ['required', 'string', 'email'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            "email.required" => "O email é obrigatório.",
-            "email.email" => "Informe um email válido.",
+            'email.required' => 'O email é obrigatório.',
+            'email.email' => 'Informe um email válido.',
         ];
     }
 }

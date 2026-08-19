@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Bills;
 
-use App\Enums\BillStatus;
-use App\Models\Account;
 use App\Models\CreditCardBill;
 use App\Models\Transaction;
+use Illuminate\Support\Str;
 use Tests\Feature\CardExpenses\CardExpenseTestCase;
 
 class BillViewTest extends CardExpenseTestCase
@@ -25,7 +24,7 @@ class BillViewTest extends CardExpenseTestCase
         ]);
 
         Transaction::create([
-            'uuid' => \Illuminate\Support\Str::orderedUuid()->toString(),
+            'uuid' => Str::orderedUuid()->toString(),
             'workspace_id' => $workspace->id,
             'credit_card_id' => $card->id,
             'credit_card_bill_id' => $bill->id,

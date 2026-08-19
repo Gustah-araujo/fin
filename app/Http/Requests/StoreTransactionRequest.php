@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Enums\TransactionType;
+use App\Models\Account;
 use App\Models\Category;
+use App\Models\Tag;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreTransactionRequest extends FormRequest
@@ -34,7 +36,7 @@ class StoreTransactionRequest extends FormRequest
             $workspace = $this->route('workspace');
 
             if ($this->filled('account_id')) {
-                $belongsToWorkspace = \App\Models\Account::where('uuid', $this->input('account_id'))
+                $belongsToWorkspace = Account::where('uuid', $this->input('account_id'))
                     ->where('workspace_id', $workspace->id)
                     ->exists();
 
@@ -48,6 +50,7 @@ class StoreTransactionRequest extends FormRequest
 
                 if (! $category) {
                     $validator->errors()->add('category_id', 'A categoria selecionada é inválida.');
+
                     return;
                 }
 
@@ -61,7 +64,7 @@ class StoreTransactionRequest extends FormRequest
             }
 
             if ($this->filled('tags')) {
-                $tagCount = \App\Models\Tag::whereIn('uuid', $this->input('tags'))
+                $tagCount = Tag::whereIn('uuid', $this->input('tags'))
                     ->where('workspace_id', $workspace->id)
                     ->count();
 

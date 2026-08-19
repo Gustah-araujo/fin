@@ -14,16 +14,16 @@ class PasswordController extends Controller
 {
     public function edit(): Response
     {
-        return inertia("Auth/ChangePassword");
+        return inertia('Auth/ChangePassword');
     }
 
     public function update(UpdatePasswordRequest $request, AuthService $authService): RedirectResponse
     {
         $authService->changePassword(
             $request->user(),
-            $request->validated()["password"],
+            $request->validated()['password'],
         );
 
-        return back()->with("status", "Senha alterada com sucesso.");
+        return back()->with('status', 'Senha alterada com sucesso.');
     }
 }

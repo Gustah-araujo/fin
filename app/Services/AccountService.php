@@ -14,27 +14,27 @@ class AccountService
     public function create(Workspace $workspace, User $creator, array $data): Account
     {
         return Account::create([
-            "uuid" => Str::orderedUuid()->toString(),
-            "workspace_id" => $workspace->id,
-            "created_by" => $creator->id,
-            "name" => $data["name"],
-            "type" => $data["type"],
-            "initial_balance" => $data["initial_balance"],
-            "current_balance" => $data["initial_balance"],
+            'uuid' => Str::orderedUuid()->toString(),
+            'workspace_id' => $workspace->id,
+            'created_by' => $creator->id,
+            'name' => $data['name'],
+            'type' => $data['type'],
+            'initial_balance' => $data['initial_balance'],
+            'current_balance' => $data['initial_balance'],
         ]);
     }
 
     public function update(Account $account, array $data): Account
     {
-        if (isset($data["name"])) {
-            $account->name = $data["name"];
+        if (isset($data['name'])) {
+            $account->name = $data['name'];
         }
-        if (isset($data["type"])) {
-            $account->type = $data["type"];
+        if (isset($data['type'])) {
+            $account->type = $data['type'];
         }
-        if (isset($data["initial_balance"])) {
-            $account->initial_balance = $data["initial_balance"];
-            $account->current_balance = $data["initial_balance"];
+        if (isset($data['initial_balance'])) {
+            $account->initial_balance = $data['initial_balance'];
+            $account->current_balance = $data['initial_balance'];
         }
 
         $account->save();

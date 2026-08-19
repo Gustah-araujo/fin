@@ -15,7 +15,7 @@ class CreditCardBillResource extends JsonResource
             'uuid' => $this->uuid,
             'period_year' => $this->period_year,
             'period_month' => $this->period_month,
-            'period_label' => $this->period_year . '/' . str_pad((string) $this->period_month, 2, '0', STR_PAD_LEFT),
+            'period_label' => $this->period_year.'/'.str_pad((string) $this->period_month, 2, '0', STR_PAD_LEFT),
             'closing_date' => $this->closing_date->format('Y-m-d'),
             'due_date' => $this->due_date->format('Y-m-d'),
             'status' => $this->status->value,

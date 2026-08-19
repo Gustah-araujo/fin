@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Tests\Feature\Bills;
 
 use App\Enums\BillStatus;
-use App\Models\Account;
+use App\Models\CreditCardBill;
 use App\Models\Transaction;
-use App\Services\BillService;
 use App\Services\CreditCardService;
+use Illuminate\Support\Str;
 use Tests\Feature\CardExpenses\CardExpenseTestCase;
 
 class BillPaymentTest extends CardExpenseTestCase
@@ -20,7 +20,7 @@ class BillPaymentTest extends CardExpenseTestCase
         $category = $this->createExpenseCategory($workspace, $user);
         $account = $this->createAccount($workspace, $user);
 
-        $bill = \App\Models\CreditCardBill::factory()->closed()->create([
+        $bill = CreditCardBill::factory()->closed()->create([
             'credit_card_id' => $card->id,
             'workspace_id' => $workspace->id,
             'created_by' => $user->id,
@@ -46,7 +46,7 @@ class BillPaymentTest extends CardExpenseTestCase
         $category = $this->createExpenseCategory($workspace, $user);
         $account = $this->createAccount($workspace, $user);
 
-        $bill = \App\Models\CreditCardBill::factory()->closed()->create([
+        $bill = CreditCardBill::factory()->closed()->create([
             'credit_card_id' => $card->id,
             'workspace_id' => $workspace->id,
             'created_by' => $user->id,
@@ -74,7 +74,7 @@ class BillPaymentTest extends CardExpenseTestCase
         $card = $this->createCard($workspace, $user);
         $account = $this->createAccount($workspace, $user, 5000);
 
-        $bill = \App\Models\CreditCardBill::factory()->closed()->create([
+        $bill = CreditCardBill::factory()->closed()->create([
             'credit_card_id' => $card->id,
             'workspace_id' => $workspace->id,
             'created_by' => $user->id,
@@ -97,7 +97,7 @@ class BillPaymentTest extends CardExpenseTestCase
         $category = $this->createExpenseCategory($workspace, $user);
         $account = $this->createAccount($workspace, $user);
 
-        $bill = \App\Models\CreditCardBill::factory()->closed()->create([
+        $bill = CreditCardBill::factory()->closed()->create([
             'credit_card_id' => $card->id,
             'workspace_id' => $workspace->id,
             'created_by' => $user->id,
@@ -105,7 +105,7 @@ class BillPaymentTest extends CardExpenseTestCase
         ]);
 
         Transaction::create([
-            'uuid' => \Illuminate\Support\Str::orderedUuid()->toString(),
+            'uuid' => Str::orderedUuid()->toString(),
             'workspace_id' => $workspace->id,
             'credit_card_id' => $card->id,
             'credit_card_bill_id' => $bill->id,
@@ -135,7 +135,7 @@ class BillPaymentTest extends CardExpenseTestCase
         $card = $this->createCard($workspace, $user);
         $account = $this->createAccount($workspace, $user);
 
-        $bill = \App\Models\CreditCardBill::factory()->open()->create([
+        $bill = CreditCardBill::factory()->open()->create([
             'credit_card_id' => $card->id,
             'workspace_id' => $workspace->id,
             'created_by' => $user->id,
@@ -155,7 +155,7 @@ class BillPaymentTest extends CardExpenseTestCase
         $card = $this->createCard($workspace, $user);
         $account = $this->createAccount($workspace, $user);
 
-        $bill = \App\Models\CreditCardBill::factory()->paid()->create([
+        $bill = CreditCardBill::factory()->paid()->create([
             'credit_card_id' => $card->id,
             'workspace_id' => $workspace->id,
             'created_by' => $user->id,
@@ -176,7 +176,7 @@ class BillPaymentTest extends CardExpenseTestCase
         $card = $this->createCard($workspace, $user);
         $account = $this->createAccount($workspace, $user);
 
-        $bill = \App\Models\CreditCardBill::factory()->closed()->create([
+        $bill = CreditCardBill::factory()->closed()->create([
             'credit_card_id' => $card->id,
             'workspace_id' => $workspace->id,
             'created_by' => $user->id,
@@ -197,7 +197,7 @@ class BillPaymentTest extends CardExpenseTestCase
         $card = $this->createCard($workspace, $user);
         $account = $this->createAccount($workspace, $user);
 
-        $bill = \App\Models\CreditCardBill::factory()->closed()->create([
+        $bill = CreditCardBill::factory()->closed()->create([
             'credit_card_id' => $card->id,
             'workspace_id' => $workspace->id,
             'created_by' => $user->id,
@@ -227,7 +227,7 @@ class BillPaymentTest extends CardExpenseTestCase
         $card = $this->createCard($workspace, $user);
         $account = $this->createAccount($workspace, $user, 100);
 
-        $bill = \App\Models\CreditCardBill::factory()->closed()->create([
+        $bill = CreditCardBill::factory()->closed()->create([
             'credit_card_id' => $card->id,
             'workspace_id' => $workspace->id,
             'created_by' => $user->id,
@@ -250,7 +250,7 @@ class BillPaymentTest extends CardExpenseTestCase
         $card = $this->createCard($workspace, $user);
         $account = $this->createAccount($workspace, $user, 5000);
 
-        $bill = \App\Models\CreditCardBill::factory()->closed()->create([
+        $bill = CreditCardBill::factory()->closed()->create([
             'credit_card_id' => $card->id,
             'workspace_id' => $workspace->id,
             'created_by' => $user->id,

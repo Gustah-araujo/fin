@@ -16,18 +16,18 @@ class StoreInviteRequest extends FormRequest
     public function rules(): array
     {
         return [
-            "email" => ["required", "string", "email"],
-            "role" => ["required", "string", "in:admin,editor,viewer"],
+            'email' => ['required', 'string', 'email'],
+            'role' => ['required', 'string', 'in:admin,editor,viewer'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            "email.required" => "O email é obrigatório.",
-            "email.email" => "Informe um email válido.",
-            "role.required" => "O papel é obrigatório.",
-            "role.in" => "Papel inválido.",
+            'email.required' => 'O email é obrigatório.',
+            'email.email' => 'Informe um email válido.',
+            'role.required' => 'O papel é obrigatório.',
+            'role.in' => 'Papel inválido.',
         ];
     }
 }

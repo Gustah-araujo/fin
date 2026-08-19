@@ -16,25 +16,25 @@ class AuthenticatedSessionController extends Controller
 {
     public function create(): Response
     {
-        return inertia("Auth/Login", [
-            "status" => session("status"),
+        return inertia('Auth/Login', [
+            'status' => session('status'),
         ]);
     }
 
     public function store(LoginRequest $request, AuthService $authService): RedirectResponse
     {
         $authService->authenticate(
-            $request->only("email", "password"),
-            $request->boolean("remember"),
+            $request->only('email', 'password'),
+            $request->boolean('remember'),
         );
 
         $request->session()->regenerate();
 
         if (! $request->user()?->hasVerifiedEmail()) {
-            return redirect()->route("verification.notice");
+            return redirect()->route('verification.notice');
         }
 
-        return redirect()->intended(route("workspace.select", absolute: false));
+        return redirect()->intended(route('workspace.select', absolute: false));
     }
 
     public function destroy(Request $request): RedirectResponse
@@ -44,6 +44,6 @@ class AuthenticatedSessionController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect("/");
+        return redirect('/');
     }
 }

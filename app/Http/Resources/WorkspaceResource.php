@@ -12,11 +12,11 @@ class WorkspaceResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            "uuid" => $this->uuid,
-            "name" => $this->name,
-            "description" => $this->when($this->description, $this->description),
-            "members_count" => $this->whenCounted("members"),
-            "role" => $this->whenPivotLoaded("workspace_user", function () {
+            'uuid' => $this->uuid,
+            'name' => $this->name,
+            'description' => $this->when($this->description, $this->description),
+            'members_count' => $this->whenCounted('members'),
+            'role' => $this->whenPivotLoaded('workspace_user', function () {
                 return $this->pivot->role;
             }),
         ];

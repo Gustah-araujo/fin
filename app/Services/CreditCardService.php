@@ -57,7 +57,7 @@ class CreditCardService
             ->leftJoin('credit_card_bills', 'transactions.credit_card_bill_id', '=', 'credit_card_bills.id')
             ->where(function ($q) {
                 $q->where('credit_card_bills.status', '!=', 'paid')
-                  ->orWhereNull('transactions.credit_card_bill_id');
+                    ->orWhereNull('transactions.credit_card_bill_id');
             })
             ->sum('transactions.value');
 

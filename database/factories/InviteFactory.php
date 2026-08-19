@@ -17,33 +17,33 @@ class InviteFactory extends Factory
     public function definition(): array
     {
         return [
-            "uuid" => Str::orderedUuid()->toString(),
-            "workspace_id" => Workspace::factory(),
-            "email" => fake()->email(),
-            "role" => fake()->randomElement([WorkspaceRole::Admin, WorkspaceRole::Editor, WorkspaceRole::Viewer]),
-            "inviter_id" => User::factory(),
-            "status" => InviteStatus::Pending,
+            'uuid' => Str::orderedUuid()->toString(),
+            'workspace_id' => Workspace::factory(),
+            'email' => fake()->email(),
+            'role' => fake()->randomElement([WorkspaceRole::Admin, WorkspaceRole::Editor, WorkspaceRole::Viewer]),
+            'inviter_id' => User::factory(),
+            'status' => InviteStatus::Pending,
         ];
     }
 
     public function pending(): static
     {
         return $this->state(fn (array $attributes) => [
-            "status" => InviteStatus::Pending,
+            'status' => InviteStatus::Pending,
         ]);
     }
 
     public function accepted(): static
     {
         return $this->state(fn (array $attributes) => [
-            "status" => InviteStatus::Accepted,
+            'status' => InviteStatus::Accepted,
         ]);
     }
 
     public function declined(): static
     {
         return $this->state(fn (array $attributes) => [
-            "status" => InviteStatus::Declined,
+            'status' => InviteStatus::Declined,
         ]);
     }
 }

@@ -14,22 +14,22 @@ class AccountDeletionTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "name" => "To Delete",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'name' => 'To Delete',
         ]);
 
         $response = $this->actingAs($user)
-            ->delete(route("accounts.destroy", [$workspace, $account]));
+            ->delete(route('accounts.destroy', [$workspace, $account]));
 
-        $response->assertRedirect(route("accounts.index", $workspace));
+        $response->assertRedirect(route('accounts.index', $workspace));
 
         $this->assertSoftDeleted($account);
-        $this->assertDatabaseHas("accounts", [
-            "id" => $account->id,
+        $this->assertDatabaseHas('accounts', [
+            'id' => $account->id,
         ]);
     }
 
@@ -37,23 +37,23 @@ class AccountDeletionTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
-            "name" => "Archived",
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
+            'name' => 'Archived',
         ]);
 
         $this->actingAs($user)
-            ->delete(route("accounts.destroy", [$workspace, $account]));
+            ->delete(route('accounts.destroy', [$workspace, $account]));
 
         $response = $this->actingAs($user)
-            ->get(route("accounts.index", $workspace));
+            ->get(route('accounts.index', $workspace));
 
         $response->assertInertia(fn ($page) => $page
-            ->component("Accounts/Index", false)
-            ->has("accounts", 0)
+            ->component('Accounts/Index', false)
+            ->has('accounts', 0)
         );
     }
 }

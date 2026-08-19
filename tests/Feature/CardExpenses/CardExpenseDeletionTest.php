@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\CardExpenses;
 
+use App\Models\CreditCardBill;
 use App\Models\Transaction;
-use Tests\Feature\CardExpenses\CardExpenseTestCase;
+use Illuminate\Support\Str;
 
 class CardExpenseDeletionTest extends CardExpenseTestCase
 {
@@ -108,14 +109,14 @@ class CardExpenseDeletionTest extends CardExpenseTestCase
         $card = $this->createCard($workspace, $user);
         $category = $this->createExpenseCategory($workspace, $user);
 
-        $bill = \App\Models\CreditCardBill::factory()->paid()->create([
+        $bill = CreditCardBill::factory()->paid()->create([
             'credit_card_id' => $card->id,
             'workspace_id' => $workspace->id,
             'created_by' => $user->id,
         ]);
 
         $transaction = Transaction::create([
-            'uuid' => \Illuminate\Support\Str::orderedUuid()->toString(),
+            'uuid' => Str::orderedUuid()->toString(),
             'workspace_id' => $workspace->id,
             'credit_card_id' => $card->id,
             'credit_card_bill_id' => $bill->id,

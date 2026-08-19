@@ -28,7 +28,7 @@ class TransactionController extends Controller
             ->latest('date');
 
         if (request()->filled('search')) {
-            $query->where('description', 'like', '%' . request()->input('search') . '%');
+            $query->where('description', 'like', '%'.request()->input('search').'%');
         }
         if (request()->filled('category')) {
             $query->where('category_id', request()->input('category'));

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\CardExpenses;
 
 use App\Enums\TransactionType;
-use App\Enums\WorkspaceRole;
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\CreditCard;

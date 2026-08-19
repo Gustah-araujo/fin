@@ -14,13 +14,13 @@ class AccountAuthorizationTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Viewer->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Viewer->value]);
 
         $response = $this->actingAs($user)
-            ->post(route("accounts.store", $workspace), [
-                "name" => "Test",
-                "type" => "checking",
-                "initial_balance" => 100,
+            ->post(route('accounts.store', $workspace), [
+                'name' => 'Test',
+                'type' => 'checking',
+                'initial_balance' => 100,
             ]);
 
         $response->assertForbidden();
@@ -30,16 +30,16 @@ class AccountAuthorizationTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Viewer->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Viewer->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
         ]);
 
         $response = $this->actingAs($user)
-            ->put(route("accounts.update", [$workspace, $account]), [
-                "name" => "Hacked",
+            ->put(route('accounts.update', [$workspace, $account]), [
+                'name' => 'Hacked',
             ]);
 
         $response->assertForbidden();
@@ -49,15 +49,15 @@ class AccountAuthorizationTest extends TestCase
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ["role" => WorkspaceRole::Viewer->value]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Viewer->value]);
 
         $account = Account::factory()->create([
-            "workspace_id" => $workspace->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspace->id,
+            'created_by' => $user->id,
         ]);
 
         $response = $this->actingAs($user)
-            ->delete(route("accounts.destroy", [$workspace, $account]));
+            ->delete(route('accounts.destroy', [$workspace, $account]));
 
         $response->assertForbidden();
     }
@@ -66,20 +66,20 @@ class AccountAuthorizationTest extends TestCase
     {
         $user = User::factory()->create();
         $workspaceA = Workspace::factory()->create();
-        $workspaceA->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspaceA->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $workspaceB = Workspace::factory()->create();
-        $workspaceB->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
+        $workspaceB->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $accountInB = Account::factory()->create([
-            "workspace_id" => $workspaceB->id,
-            "created_by" => $user->id,
+            'workspace_id' => $workspaceB->id,
+            'created_by' => $user->id,
         ]);
 
         // Try to access workspace B's account via workspace A's URL
         $response = $this->actingAs($user)
-            ->put(route("accounts.update", [$workspaceA, $accountInB]), [
-                "name" => "Hacked",
+            ->put(route('accounts.update', [$workspaceA, $accountInB]), [
+                'name' => 'Hacked',
             ]);
 
         $response->assertNotFound();
