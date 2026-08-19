@@ -18,6 +18,9 @@ class TransactionResource extends JsonResource
             'type' => $this->type,
             'date' => $this->date->format('Y-m-d'),
             'paid_at' => $this->paid_at?->toISOString(),
+            'is_paid' => $this->paid_at !== null,
+            'recurrence_id' => $this->whenLoaded('recurrence', fn () => $this->recurrence->uuid),
+            'recurrence' => new RecurrenceResource($this->whenLoaded('recurrence')),
             'account' => new AccountResource($this->whenLoaded('account')),
             'credit_card' => new CreditCardResource($this->whenLoaded('creditCard')),
             'installment_number' => $this->installment_number,
@@ -26,12 +29,6 @@ class TransactionResource extends JsonResource
             'installment_label' => $this->installments_total !== null && $this->installments_total > 1
                 ? "{$this->installment_number}/{$this->installments_total}"
                 : null,
-            'is_recurring' => $this->is_recurring,
-            'is_recurring_template' => $this->isRecurringTemplate(),
-            'recurring_parent_uuid' => $this->recurring_parent_uuid,
-            'recurring_ends_at' => $this->recurring_ends_at?->format('Y-m-d'),
-            'is_transfer' => $this->isTransfer(),
-            'transfer_group_id' => $this->transfer_group_id,
             'category' => new CategoryResource($this->whenLoaded('category')),
             'tags' => TagResource::collection($this->whenLoaded('tags')),
             'created_by' => new UserResource($this->whenLoaded('creator')),

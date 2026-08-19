@@ -14,12 +14,9 @@ use App\Http\Controllers\CardExpenseController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CreditCardBillController;
 use App\Http\Controllers\CreditCardController;
-use App\Http\Controllers\IncomeController;
 use App\Http\Controllers\InviteController;
-use App\Http\Controllers\RecurringIncomeController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TransactionController;
-use App\Http\Controllers\TransferController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\WorkspaceMemberController;
 use Illuminate\Support\Facades\Route;
@@ -89,30 +86,6 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
         Route::post('transactions/{transaction}/unpay', [TransactionController::class, 'unpay'])
             ->name('transactions.unpay');
 
-        Route::resource('incomes', IncomeController::class)->except(['show']);
-        Route::post('incomes/{income}/receive', [IncomeController::class, 'receive'])
-            ->name('incomes.receive');
-        Route::post('incomes/{income}/unreceive', [IncomeController::class, 'unreceive'])
-            ->name('incomes.unreceive');
-        Route::delete('incomes/{income}/group', [IncomeController::class, 'destroyGroup'])
-            ->name('incomes.destroy-group');
-
-        Route::get('recurring-incomes', [RecurringIncomeController::class, 'index'])
-            ->name('recurring-incomes.index');
-        Route::get('recurring-incomes/{template}/edit', [RecurringIncomeController::class, 'edit'])
-            ->name('recurring-incomes.edit');
-        Route::put('recurring-incomes/{template}', [RecurringIncomeController::class, 'update'])
-            ->name('recurring-incomes.update');
-        Route::post('recurring-incomes/{template}/cancel', [RecurringIncomeController::class, 'cancel'])
-            ->name('recurring-incomes.cancel');
-        Route::delete('recurring-incomes/{template}', [RecurringIncomeController::class, 'destroy'])
-            ->name('recurring-incomes.destroy');
-
-        Route::get('transfers/create', [TransferController::class, 'create'])->name('transfers.create');
-        Route::post('transfers', [TransferController::class, 'store'])->name('transfers.store');
-        Route::get('transfers/{transferGroup}/edit', [TransferController::class, 'edit'])->name('transfers.edit');
-        Route::put('transfers/{transferGroup}', [TransferController::class, 'update'])->name('transfers.update');
-        Route::delete('transfers/{transferGroup}', [TransferController::class, 'destroy'])->name('transfers.destroy');
         Route::resource('cards', CreditCardController::class);
 
         Route::get('cards/{card}/expenses/create', [CardExpenseController::class, 'create'])
