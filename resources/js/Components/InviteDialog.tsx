@@ -43,7 +43,8 @@ export default function InviteDialog({ workspaceUuid }: InviteDialogProps) {
                 <DialogHeader>
                     <DialogTitle>Convidar membro</DialogTitle>
                     <DialogDescription>
-                        Envie um convite por email. O usuário precisa ter uma conta no Fin.
+                        Envie um convite por email. O usuário precisa ter uma
+                        conta no Fin.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={submit} className="space-y-4">
@@ -57,7 +58,9 @@ export default function InviteDialog({ workspaceUuid }: InviteDialogProps) {
                             placeholder="convidado@email.com"
                         />
                         {errors.email && (
-                            <p className="text-sm text-destructive">{errors.email}</p>
+                            <p className="text-sm text-destructive">
+                                {errors.email}
+                            </p>
                         )}
                     </div>
 
@@ -67,7 +70,11 @@ export default function InviteDialog({ workspaceUuid }: InviteDialogProps) {
                     />
 
                     <div className="flex justify-end gap-2">
-                        <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setOpen(false)}
+                        >
                             Cancelar
                         </Button>
                         <Button type="submit" disabled={processing}>

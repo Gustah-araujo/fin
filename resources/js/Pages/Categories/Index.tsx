@@ -1,4 +1,5 @@
-import { Link, useForm, usePage } from '@inertiajs/react';
+import { Link, useForm } from '@inertiajs/react';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,13 +28,19 @@ const typeLabels: Record<string, string> = {
 };
 
 export default function Index({ categories }: Props) {
-    const { workspace } = usePage<{ workspace: { uuid: string; name: string } }>().props;
+    const workspace = useWorkspace();
     const { delete: destroy } = useForm();
 
     function handleDelete(categoryUuid: string) {
-        destroy(route('categories.destroy', { workspace: workspace.uuid, category: categoryUuid }), {
-            onSuccess: () => window.location.reload(),
-        });
+        destroy(
+            route('categories.destroy', {
+                workspace: workspace.uuid,
+                category: categoryUuid,
+            }),
+            {
+                onSuccess: () => window.location.reload(),
+            },
+        );
     }
 
     const categoriesByType = {
@@ -42,7 +49,11 @@ export default function Index({ categories }: Props) {
         both: categories.filter((c) => c.type === 'both'),
     };
 
-    const typeOrder: Array<keyof typeof categoriesByType> = ['income', 'expense', 'both'];
+    const typeOrder: Array<keyof typeof categoriesByType> = [
+        'income',
+        'expense',
+        'both',
+    ];
 
     const userCategories = categories.filter((c) => c.name !== 'Sem Categoria');
 
@@ -51,13 +62,20 @@ export default function Index({ categories }: Props) {
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">Categorias</h1>
+                        <h1 className="text-2xl font-semibold tracking-tight">
+                            Categorias
+                        </h1>
                         <p className="text-sm text-muted-foreground mt-1">
-                            {userCategories.length} categoria{userCategories.length !== 1 ? 's' : ''}
+                            {userCategories.length} categoria
+                            {userCategories.length !== 1 ? 's' : ''}
                         </p>
                     </div>
                     <Button asChild>
-                        <Link href={route('categories.create', { workspace: workspace.uuid })}>
+                        <Link
+                            href={route('categories.create', {
+                                workspace: workspace.uuid,
+                            })}
+                        >
                             Nova Categoria
                         </Link>
                     </Button>
@@ -70,7 +88,11 @@ export default function Index({ categories }: Props) {
                                 Nenhuma categoria criada
                             </p>
                             <Button asChild>
-                                <Link href={route('categories.create', { workspace: workspace.uuid })}>
+                                <Link
+                                    href={route('categories.create', {
+                                        workspace: workspace.uuid,
+                                    })}
+                                >
                                     Criar primeira categoria
                                 </Link>
                             </Button>
@@ -91,28 +113,42 @@ export default function Index({ categories }: Props) {
                             )}
                             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                                 {items.map((category) => {
-                                    const isDefault = category.name === 'Sem Categoria';
+                                    const isDefault =
+                                        category.name === 'Sem Categoria';
                                     return (
                                         <Card
                                             key={category.uuid}
-                                            className={cn(isDefault && 'opacity-75')}
+                                            className={cn(
+                                                isDefault && 'opacity-75',
+                                            )}
                                         >
                                             <CardHeader className="pb-2">
                                                 <div className="flex items-center gap-3">
                                                     <div
                                                         className="flex size-8 shrink-0 items-center justify-center rounded-full"
-                                                        style={{ backgroundColor: category.color + '20' }}
+                                                        style={{
+                                                            backgroundColor:
+                                                                category.color +
+                                                                '20',
+                                                        }}
                                                     >
                                                         {category.icon ? (
                                                             <DynamicIcon
-                                                                name={category.icon}
+                                                                name={
+                                                                    category.icon
+                                                                }
                                                                 className="size-4"
-                                                                style={{ color: category.color }}
+                                                                style={{
+                                                                    color: category.color,
+                                                                }}
                                                             />
                                                         ) : (
                                                             <div
                                                                 className="size-3 rounded-full"
-                                                                style={{ backgroundColor: category.color }}
+                                                                style={{
+                                                                    backgroundColor:
+                                                                        category.color,
+                                                                }}
                                                             />
                                                         )}
                                                     </div>
@@ -122,7 +158,10 @@ export default function Index({ categories }: Props) {
                                                         </CardTitle>
                                                     </div>
                                                     {isDefault && (
-                                                        <Badge variant="secondary" className="text-xs">
+                                                        <Badge
+                                                            variant="secondary"
+                                                            className="text-xs"
+                                                        >
                                                             Padrão
                                                         </Badge>
                                                     )}
@@ -136,10 +175,15 @@ export default function Index({ categories }: Props) {
                                                         asChild
                                                     >
                                                         <Link
-                                                            href={route('categories.edit', {
-                                                                workspace: workspace.uuid,
-                                                                category: category.uuid,
-                                                            })}
+                                                            href={route(
+                                                                'categories.edit',
+                                                                {
+                                                                    workspace:
+                                                                        workspace.uuid,
+                                                                    category:
+                                                                        category.uuid,
+                                                                },
+                                                            )}
                                                         >
                                                             Editar
                                                         </Link>
@@ -148,7 +192,11 @@ export default function Index({ categories }: Props) {
                                                         <Button
                                                             variant="destructive"
                                                             size="sm"
-                                                            onClick={() => handleDelete(category.uuid)}
+                                                            onClick={() =>
+                                                                handleDelete(
+                                                                    category.uuid,
+                                                                )
+                                                            }
                                                         >
                                                             Excluir
                                                         </Button>

@@ -1,4 +1,5 @@
-import { Link, useForm, usePage } from '@inertiajs/react';
+import { Link, useForm } from '@inertiajs/react';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -31,13 +32,19 @@ const typeLabels: Record<string, string> = {
 };
 
 export default function Index({ accounts }: Props) {
-    const { workspace } = usePage<{ workspace: { uuid: string; name: string } }>().props;
+    const workspace = useWorkspace();
     const { delete: destroy } = useForm();
 
     function handleDelete(accountUuid: string) {
-        destroy(route('accounts.destroy', { workspace: workspace.uuid, account: accountUuid }), {
-            onSuccess: () => window.location.reload(),
-        });
+        destroy(
+            route('accounts.destroy', {
+                workspace: workspace.uuid,
+                account: accountUuid,
+            }),
+            {
+                onSuccess: () => window.location.reload(),
+            },
+        );
     }
 
     return (
@@ -45,13 +52,20 @@ export default function Index({ accounts }: Props) {
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">Contas</h1>
+                        <h1 className="text-2xl font-semibold tracking-tight">
+                            Contas
+                        </h1>
                         <p className="text-sm text-muted-foreground mt-1">
-                            {accounts.length} conta{accounts.length !== 1 ? 's' : ''}
+                            {accounts.length} conta
+                            {accounts.length !== 1 ? 's' : ''}
                         </p>
                     </div>
                     <Button asChild>
-                        <Link href={route('accounts.create', { workspace: workspace.uuid })}>
+                        <Link
+                            href={route('accounts.create', {
+                                workspace: workspace.uuid,
+                            })}
+                        >
                             Nova Conta
                         </Link>
                     </Button>
@@ -64,7 +78,11 @@ export default function Index({ accounts }: Props) {
                                 Nenhuma conta cadastrada
                             </p>
                             <Button asChild>
-                                <Link href={route('accounts.create', { workspace: workspace.uuid })}>
+                                <Link
+                                    href={route('accounts.create', {
+                                        workspace: workspace.uuid,
+                                    })}
+                                >
                                     Criar primeira conta
                                 </Link>
                             </Button>
@@ -83,18 +101,28 @@ export default function Index({ accounts }: Props) {
                                         </div>
                                         <Badge
                                             variant="outline"
-                                            className={typeBadgeStyles[account.type] ?? ''}
+                                            className={
+                                                typeBadgeStyles[account.type] ??
+                                                ''
+                                            }
                                         >
-                                            {typeLabels[account.type] ?? account.type}
+                                            {typeLabels[account.type] ??
+                                                account.type}
                                         </Badge>
                                     </div>
                                 </CardHeader>
                                 <CardContent>
                                     <p className="text-2xl font-semibold">
-                                        {formatCurrency(account.current_balance)}
+                                        {formatCurrency(
+                                            account.current_balance,
+                                        )}
                                     </p>
                                     <div className="mt-4 flex items-center gap-2">
-                                        <Button variant="outline" size="sm" asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            asChild
+                                        >
                                             <Link
                                                 href={route('accounts.edit', {
                                                     workspace: workspace.uuid,
@@ -107,7 +135,9 @@ export default function Index({ accounts }: Props) {
                                         <Button
                                             variant="destructive"
                                             size="sm"
-                                            onClick={() => handleDelete(account.uuid)}
+                                            onClick={() =>
+                                                handleDelete(account.uuid)
+                                            }
                                         >
                                             Excluir
                                         </Button>

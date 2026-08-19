@@ -4,7 +4,10 @@ interface GuestLayoutProps {
     status?: string;
 }
 
-export default function GuestLayout({ status, children }: PropsWithChildren<GuestLayoutProps>) {
+export default function GuestLayout({
+    status,
+    children,
+}: PropsWithChildren<GuestLayoutProps>) {
     return (
         <div className="min-h-screen flex items-center justify-center bg-background p-4">
             <div className="w-full max-w-md space-y-6">

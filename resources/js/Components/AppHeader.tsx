@@ -1,4 +1,11 @@
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import {
+    Breadcrumb,
+    BreadcrumbItem,
+    BreadcrumbLink,
+    BreadcrumbList,
+    BreadcrumbPage,
+    BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -12,7 +19,7 @@ interface Props {
     sidebar?: React.ReactNode;
 }
 
-export default function AppHeader({ collapsed, onToggle, sidebar }: Props) {
+export default function AppHeader({ onToggle, sidebar }: Props) {
     const { component } = usePage();
 
     const title = String(component).split('/').pop() || 'Home';

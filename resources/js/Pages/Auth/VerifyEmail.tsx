@@ -12,15 +12,19 @@ export default function VerifyEmail({ status }: VerifyEmailProps) {
     return (
         <GuestLayout status={status}>
             <div className="mb-6">
-                <h1 className="text-xl font-semibold tracking-tight">Verifique seu email</h1>
+                <h1 className="text-xl font-semibold tracking-tight">
+                    Verifique seu email
+                </h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                    Um link de verificação foi enviado para seu email. Verifique sua caixa de entrada e clique no link para confirmar.
+                    Um link de verificação foi enviado para seu email. Verifique
+                    sua caixa de entrada e clique no link para confirmar.
                 </p>
             </div>
 
             <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                    Não recebeu o email? Verifique a pasta de spam ou solicite um novo link.
+                    Não recebeu o email? Verifique a pasta de spam ou solicite
+                    um novo link.
                 </p>
 
                 <Button

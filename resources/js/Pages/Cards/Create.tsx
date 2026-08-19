@@ -1,4 +1,5 @@
-import { Link, useForm, usePage } from '@inertiajs/react';
+import { Link, useForm } from '@inertiajs/react';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export default function Create() {
-    const { workspace } = usePage<{ workspace: { uuid: string; name: string } }>().props;
+    const workspace = useWorkspace();
     const { data, setData, post, processing, errors } = useForm({
         name: '',
         credit_limit: '',
@@ -23,7 +24,9 @@ export default function Create() {
         <AuthenticatedLayout>
             <div className="space-y-6">
                 <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">Novo Cartão</h1>
+                    <h1 className="text-2xl font-semibold tracking-tight">
+                        Novo Cartão
+                    </h1>
                     <p className="text-sm text-muted-foreground mt-1">
                         Adicione um cartão de crédito ao workspace
                     </p>
@@ -40,11 +43,15 @@ export default function Create() {
                                 <Input
                                     id="name"
                                     value={data.name}
-                                    onChange={(e) => setData('name', e.target.value)}
+                                    onChange={(e) =>
+                                        setData('name', e.target.value)
+                                    }
                                     placeholder="Ex: Nubank Mastercard, Inter Visa"
                                 />
                                 {errors.name && (
-                                    <p className="text-sm text-destructive">{errors.name}</p>
+                                    <p className="text-sm text-destructive">
+                                        {errors.name}
+                                    </p>
                                 )}
                             </div>
 
@@ -56,7 +63,9 @@ export default function Create() {
                                     step="0.01"
                                     min="0"
                                     value={data.credit_limit}
-                                    onChange={(e) => setData('credit_limit', e.target.value)}
+                                    onChange={(e) =>
+                                        setData('credit_limit', e.target.value)
+                                    }
                                     placeholder="0,00"
                                 />
                                 {errors.credit_limit && (
@@ -68,14 +77,21 @@ export default function Create() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="closing_day">Dia de Fechamento</Label>
+                                    <Label htmlFor="closing_day">
+                                        Dia de Fechamento
+                                    </Label>
                                     <Input
                                         id="closing_day"
                                         type="number"
                                         min="1"
                                         max="31"
                                         value={data.closing_day}
-                                        onChange={(e) => setData('closing_day', e.target.value)}
+                                        onChange={(e) =>
+                                            setData(
+                                                'closing_day',
+                                                e.target.value,
+                                            )
+                                        }
                                         placeholder="1 a 31"
                                     />
                                     {errors.closing_day && (
@@ -86,14 +102,18 @@ export default function Create() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="due_day">Dia de Vencimento</Label>
+                                    <Label htmlFor="due_day">
+                                        Dia de Vencimento
+                                    </Label>
                                     <Input
                                         id="due_day"
                                         type="number"
                                         min="1"
                                         max="31"
                                         value={data.due_day}
-                                        onChange={(e) => setData('due_day', e.target.value)}
+                                        onChange={(e) =>
+                                            setData('due_day', e.target.value)
+                                        }
                                         placeholder="1 a 31"
                                     />
                                     {errors.due_day && (

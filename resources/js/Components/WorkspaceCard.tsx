@@ -15,7 +15,13 @@ const roleLabels: Record<string, string> = {
     viewer: 'Visualizador',
 };
 
-export default function WorkspaceCard({ name, description, membersCount, role, onClick }: WorkspaceCardProps) {
+export default function WorkspaceCard({
+    name,
+    description,
+    membersCount,
+    role,
+    onClick,
+}: WorkspaceCardProps) {
     return (
         <Card
             className="cursor-pointer hover:border-primary transition-colors"
@@ -26,11 +32,13 @@ export default function WorkspaceCard({ name, description, membersCount, role, o
             </CardHeader>
             <CardContent>
                 {description && (
-                    <p className="text-sm text-muted-foreground mb-2">{description}</p>
+                    <p className="text-sm text-muted-foreground mb-2">
+                        {description}
+                    </p>
                 )}
                 <p className="text-xs text-muted-foreground">
-                    {membersCount} membro{membersCount !== 1 ? 's' : ''} &middot;{' '}
-                    {roleLabels[role] ?? role}
+                    {membersCount} membro{membersCount !== 1 ? 's' : ''}{' '}
+                    &middot; {roleLabels[role] ?? role}
                 </p>
             </CardContent>
         </Card>

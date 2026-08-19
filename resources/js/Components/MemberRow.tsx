@@ -28,7 +28,12 @@ interface MemberRowProps {
     isSelf: boolean;
 }
 
-export default function MemberRow({ member, workspaceUuid, canManage, isSelf }: MemberRowProps) {
+export default function MemberRow({
+    member,
+    workspaceUuid,
+    canManage,
+    isSelf,
+}: MemberRowProps) {
     const { delete: destroy, put, processing } = useForm({});
 
     const initials = member.user.name
@@ -42,31 +47,48 @@ export default function MemberRow({ member, workspaceUuid, canManage, isSelf }: 
         <div className="flex items-center justify-between rounded-lg border p-3">
             <div className="flex items-center gap-3">
                 <Avatar className="h-9 w-9">
-                    <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                    <AvatarFallback className="text-xs">
+                        {initials}
+                    </AvatarFallback>
                 </Avatar>
                 <div>
                     <p className="text-sm font-medium">
                         {member.user.name}
-                        {isSelf && <span className="text-muted-foreground ml-1">(você)</span>}
+                        {isSelf && (
+                            <span className="text-muted-foreground ml-1">
+                                (você)
+                            </span>
+                        )}
                     </p>
-                    <p className="text-xs text-muted-foreground">{member.user.email}</p>
+                    <p className="text-xs text-muted-foreground">
+                        {member.user.email}
+                    </p>
                 </div>
             </div>
             <div className="flex items-center gap-3">
-                <RoleBadge role={member.role as 'admin' | 'editor' | 'viewer'} />
+                <RoleBadge
+                    role={member.role as 'admin' | 'editor' | 'viewer'}
+                />
                 {canManage && !isSelf && (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                            >
                                 <MoreHorizontal className="h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem
                                 onClick={() =>
-                                    put(`/w/${workspaceUuid}/members/${member.user.uuid}/role`, {
-                                        data: { role: 'admin' },
-                                    })
+                                    put(
+                                        `/w/${workspaceUuid}/members/${member.user.uuid}/role`,
+                                        {
+                                            data: { role: 'admin' },
+                                        },
+                                    )
                                 }
                                 disabled={processing}
                             >
@@ -74,9 +96,12 @@ export default function MemberRow({ member, workspaceUuid, canManage, isSelf }: 
                             </DropdownMenuItem>
                             <DropdownMenuItem
                                 onClick={() =>
-                                    put(`/w/${workspaceUuid}/members/${member.user.uuid}/role`, {
-                                        data: { role: 'editor' },
-                                    })
+                                    put(
+                                        `/w/${workspaceUuid}/members/${member.user.uuid}/role`,
+                                        {
+                                            data: { role: 'editor' },
+                                        },
+                                    )
                                 }
                                 disabled={processing}
                             >
@@ -84,9 +109,12 @@ export default function MemberRow({ member, workspaceUuid, canManage, isSelf }: 
                             </DropdownMenuItem>
                             <DropdownMenuItem
                                 onClick={() =>
-                                    put(`/w/${workspaceUuid}/members/${member.user.uuid}/role`, {
-                                        data: { role: 'viewer' },
-                                    })
+                                    put(
+                                        `/w/${workspaceUuid}/members/${member.user.uuid}/role`,
+                                        {
+                                            data: { role: 'viewer' },
+                                        },
+                                    )
                                 }
                                 disabled={processing}
                             >
@@ -95,7 +123,9 @@ export default function MemberRow({ member, workspaceUuid, canManage, isSelf }: 
                             <DropdownMenuItem
                                 className="text-destructive"
                                 onClick={() =>
-                                    destroy(`/w/${workspaceUuid}/members/${member.user.uuid}`)
+                                    destroy(
+                                        `/w/${workspaceUuid}/members/${member.user.uuid}`,
+                                    )
                                 }
                                 disabled={processing}
                             >

@@ -1,4 +1,5 @@
-import { Link, useForm, usePage } from '@inertiajs/react';
+import { Link, useForm } from '@inertiajs/react';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,13 +21,19 @@ interface Props {
 }
 
 export default function Index({ cards }: Props) {
-    const { workspace } = usePage<{ workspace: { uuid: string; name: string } }>().props;
+    const workspace = useWorkspace();
     const { delete: destroy } = useForm();
 
     function handleDelete(cardUuid: string) {
-        destroy(route('cards.destroy', { workspace: workspace.uuid, card: cardUuid }), {
-            onSuccess: () => window.location.reload(),
-        });
+        destroy(
+            route('cards.destroy', {
+                workspace: workspace.uuid,
+                card: cardUuid,
+            }),
+            {
+                onSuccess: () => window.location.reload(),
+            },
+        );
     }
 
     return (
@@ -34,13 +41,20 @@ export default function Index({ cards }: Props) {
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">Cartões</h1>
+                        <h1 className="text-2xl font-semibold tracking-tight">
+                            Cartões
+                        </h1>
                         <p className="text-sm text-muted-foreground mt-1">
-                            {cards.length} cartão{cards.length !== 1 ? 'ões' : ''}
+                            {cards.length} cartão
+                            {cards.length !== 1 ? 'ões' : ''}
                         </p>
                     </div>
                     <Button asChild>
-                        <Link href={route('cards.create', { workspace: workspace.uuid })}>
+                        <Link
+                            href={route('cards.create', {
+                                workspace: workspace.uuid,
+                            })}
+                        >
                             Novo Cartão
                         </Link>
                     </Button>
@@ -53,7 +67,11 @@ export default function Index({ cards }: Props) {
                                 Nenhum cartão cadastrado
                             </p>
                             <Button asChild>
-                                <Link href={route('cards.create', { workspace: workspace.uuid })}>
+                                <Link
+                                    href={route('cards.create', {
+                                        workspace: workspace.uuid,
+                                    })}
+                                >
                                     Criar primeiro cartão
                                 </Link>
                             </Button>
@@ -75,15 +93,23 @@ export default function Index({ cards }: Props) {
                                 <CardContent>
                                     <div className="flex items-baseline justify-between">
                                         <div>
-                                            <p className="text-xs text-muted-foreground">Limite</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                Limite
+                                            </p>
                                             <p className="text-lg font-semibold">
-                                                {formatCurrency(card.credit_limit)}
+                                                {formatCurrency(
+                                                    card.credit_limit,
+                                                )}
                                             </p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-xs text-muted-foreground">Disponível</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                Disponível
+                                            </p>
                                             <p className="text-lg font-semibold text-emerald-600">
-                                                {formatCurrency(card.available_limit)}
+                                                {formatCurrency(
+                                                    card.available_limit,
+                                                )}
                                             </p>
                                         </div>
                                     </div>
@@ -96,7 +122,11 @@ export default function Index({ cards }: Props) {
                                         </Badge>
                                     </div>
                                     <div className="mt-4 flex items-center gap-2">
-                                        <Button variant="outline" size="sm" asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            asChild
+                                        >
                                             <Link
                                                 href={route('cards.show', {
                                                     workspace: workspace.uuid,
@@ -106,7 +136,11 @@ export default function Index({ cards }: Props) {
                                                 Ver fatura
                                             </Link>
                                         </Button>
-                                        <Button variant="outline" size="sm" asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            asChild
+                                        >
                                             <Link
                                                 href={route('cards.edit', {
                                                     workspace: workspace.uuid,
@@ -119,7 +153,9 @@ export default function Index({ cards }: Props) {
                                         <Button
                                             variant="destructive"
                                             size="sm"
-                                            onClick={() => handleDelete(card.uuid)}
+                                            onClick={() =>
+                                                handleDelete(card.uuid)
+                                            }
                                         >
                                             Excluir
                                         </Button>

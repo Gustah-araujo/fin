@@ -22,7 +22,9 @@ export default function ForgotPassword({ status }: ForgotPasswordProps) {
     return (
         <GuestLayout status={status}>
             <div className="mb-6">
-                <h1 className="text-xl font-semibold tracking-tight">Esqueci minha senha</h1>
+                <h1 className="text-xl font-semibold tracking-tight">
+                    Esqueci minha senha
+                </h1>
                 <p className="text-sm text-muted-foreground mt-1">
                     Informe seu email para receber o link de recuperação
                 </p>
@@ -40,7 +42,9 @@ export default function ForgotPassword({ status }: ForgotPasswordProps) {
                         placeholder="seu@email.com"
                     />
                     {errors.email && (
-                        <p className="text-sm text-destructive">{errors.email}</p>
+                        <p className="text-sm text-destructive">
+                            {errors.email}
+                        </p>
                     )}
                 </div>
 
@@ -49,7 +53,10 @@ export default function ForgotPassword({ status }: ForgotPasswordProps) {
                 </Button>
 
                 <p className="text-center text-sm text-muted-foreground">
-                    <a href={route('login')} className="text-primary hover:underline">
+                    <a
+                        href={route('login')}
+                        className="text-primary hover:underline"
+                    >
                         Voltar para o login
                     </a>
                 </p>

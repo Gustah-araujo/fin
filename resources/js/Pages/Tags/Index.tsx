@@ -1,7 +1,7 @@
-import { Link, useForm, usePage } from '@inertiajs/react';
+import { Link, useForm } from '@inertiajs/react';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 interface TagItem {
@@ -16,13 +16,16 @@ interface Props {
 }
 
 export default function Index({ tags }: Props) {
-    const { workspace } = usePage<{ workspace: { uuid: string; name: string } }>().props;
+    const workspace = useWorkspace();
     const { delete: destroy } = useForm();
 
     function handleDelete(tagUuid: string) {
-        destroy(route('tags.destroy', { workspace: workspace.uuid, tag: tagUuid }), {
-            onSuccess: () => window.location.reload(),
-        });
+        destroy(
+            route('tags.destroy', { workspace: workspace.uuid, tag: tagUuid }),
+            {
+                onSuccess: () => window.location.reload(),
+            },
+        );
     }
 
     return (
@@ -30,13 +33,19 @@ export default function Index({ tags }: Props) {
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">Tags</h1>
+                        <h1 className="text-2xl font-semibold tracking-tight">
+                            Tags
+                        </h1>
                         <p className="text-sm text-muted-foreground mt-1">
                             {tags.length} tag{tags.length !== 1 ? 's' : ''}
                         </p>
                     </div>
                     <Button asChild>
-                        <Link href={route('tags.create', { workspace: workspace.uuid })}>
+                        <Link
+                            href={route('tags.create', {
+                                workspace: workspace.uuid,
+                            })}
+                        >
                             Nova Tag
                         </Link>
                     </Button>
@@ -49,7 +58,11 @@ export default function Index({ tags }: Props) {
                                 Nenhuma tag cadastrada
                             </p>
                             <Button asChild>
-                                <Link href={route('tags.create', { workspace: workspace.uuid })}>
+                                <Link
+                                    href={route('tags.create', {
+                                        workspace: workspace.uuid,
+                                    })}
+                                >
                                     Criar primeira tag
                                 </Link>
                             </Button>
@@ -63,7 +76,9 @@ export default function Index({ tags }: Props) {
                                     <div className="flex items-center gap-3">
                                         <div
                                             className="size-4 shrink-0 rounded-full"
-                                            style={{ backgroundColor: tag.color }}
+                                            style={{
+                                                backgroundColor: tag.color,
+                                            }}
                                         />
                                         <CardTitle className="text-base font-medium truncate">
                                             {tag.name}
@@ -72,7 +87,11 @@ export default function Index({ tags }: Props) {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="flex items-center gap-2">
-                                        <Button variant="outline" size="sm" asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            asChild
+                                        >
                                             <Link
                                                 href={route('tags.edit', {
                                                     workspace: workspace.uuid,
@@ -85,7 +104,9 @@ export default function Index({ tags }: Props) {
                                         <Button
                                             variant="destructive"
                                             size="sm"
-                                            onClick={() => handleDelete(tag.uuid)}
+                                            onClick={() =>
+                                                handleDelete(tag.uuid)
+                                            }
                                         >
                                             Excluir
                                         </Button>

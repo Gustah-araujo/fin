@@ -31,10 +31,10 @@ interface MembersProps {
 }
 
 export default function Members({ members, invites, workspace }: MembersProps) {
-    const { auth } = usePage<{ auth: { user: { uuid: string } } }>().props;
+    const { auth } = usePage().props;
     const currentUserUuid = auth.user?.uuid;
     const isAdmin = members.some(
-        (m) => m.user.uuid === currentUserUuid && m.role === 'admin'
+        (m) => m.user.uuid === currentUserUuid && m.role === 'admin',
     );
 
     return (
@@ -42,9 +42,12 @@ export default function Members({ members, invites, workspace }: MembersProps) {
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">Membros</h1>
+                        <h1 className="text-2xl font-semibold tracking-tight">
+                            Membros
+                        </h1>
                         <p className="text-sm text-muted-foreground mt-1">
-                            {members.length} membro{members.length !== 1 ? 's' : ''} no workspace
+                            {members.length} membro
+                            {members.length !== 1 ? 's' : ''} no workspace
                         </p>
                     </div>
                     {isAdmin && <InviteDialog workspaceUuid={workspace.uuid} />}
@@ -52,7 +55,9 @@ export default function Members({ members, invites, workspace }: MembersProps) {
 
                 {invites.length > 0 && (
                     <div className="space-y-3">
-                        <h2 className="text-lg font-medium">Convites pendentes</h2>
+                        <h2 className="text-lg font-medium">
+                            Convites pendentes
+                        </h2>
                         <PendingInvitesList invites={invites} />
                     </div>
                 )}

@@ -5,7 +5,9 @@ export default function Home() {
     return (
         <AuthenticatedLayout>
             <div className="space-y-6">
-                <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+                <h1 className="text-2xl font-semibold tracking-tight">
+                    Dashboard
+                </h1>
 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <Card>
@@ -26,7 +28,9 @@ export default function Home() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-2xl font-semibold text-emerald-600">R$ 0,00</p>
+                            <p className="text-2xl font-semibold text-emerald-600">
+                                R$ 0,00
+                            </p>
                         </CardContent>
                     </Card>
 
@@ -37,7 +41,9 @@ export default function Home() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-2xl font-semibold text-rose-600">R$ 0,00</p>
+                            <p className="text-2xl font-semibold text-rose-600">
+                                R$ 0,00
+                            </p>
                         </CardContent>
                     </Card>
 
@@ -48,7 +54,9 @@ export default function Home() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-2xl font-semibold text-amber-600">0</p>
+                            <p className="text-2xl font-semibold text-amber-600">
+                                0
+                            </p>
                         </CardContent>
                     </Card>
                 </div>

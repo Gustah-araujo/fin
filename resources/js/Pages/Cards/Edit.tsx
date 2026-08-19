@@ -1,4 +1,5 @@
-import { Link, useForm, usePage } from '@inertiajs/react';
+import { Link, useForm } from '@inertiajs/react';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,7 @@ interface Props {
 }
 
 export default function Edit({ card }: Props) {
-    const { workspace } = usePage<{ workspace: { uuid: string; name: string } }>().props;
+    const workspace = useWorkspace();
     const { data, setData, put, processing, errors } = useForm({
         name: card.name,
         credit_limit: String(card.credit_limit),
@@ -29,14 +30,21 @@ export default function Edit({ card }: Props) {
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        put(route('cards.update', { workspace: workspace.uuid, card: card.uuid }));
+        put(
+            route('cards.update', {
+                workspace: workspace.uuid,
+                card: card.uuid,
+            }),
+        );
     }
 
     return (
         <AuthenticatedLayout>
             <div className="space-y-6">
                 <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">Editar Cartão</h1>
+                    <h1 className="text-2xl font-semibold tracking-tight">
+                        Editar Cartão
+                    </h1>
                     <p className="text-sm text-muted-foreground mt-1">
                         Altere os dados do cartão {card.name}
                     </p>
@@ -53,10 +61,14 @@ export default function Edit({ card }: Props) {
                                 <Input
                                     id="name"
                                     value={data.name}
-                                    onChange={(e) => setData('name', e.target.value)}
+                                    onChange={(e) =>
+                                        setData('name', e.target.value)
+                                    }
                                 />
                                 {errors.name && (
-                                    <p className="text-sm text-destructive">{errors.name}</p>
+                                    <p className="text-sm text-destructive">
+                                        {errors.name}
+                                    </p>
                                 )}
                             </div>
 
@@ -68,7 +80,9 @@ export default function Edit({ card }: Props) {
                                     step="0.01"
                                     min="0"
                                     value={data.credit_limit}
-                                    onChange={(e) => setData('credit_limit', e.target.value)}
+                                    onChange={(e) =>
+                                        setData('credit_limit', e.target.value)
+                                    }
                                 />
                                 {errors.credit_limit && (
                                     <p className="text-sm text-destructive">
@@ -79,14 +93,21 @@ export default function Edit({ card }: Props) {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="closing_day">Dia de Fechamento</Label>
+                                    <Label htmlFor="closing_day">
+                                        Dia de Fechamento
+                                    </Label>
                                     <Input
                                         id="closing_day"
                                         type="number"
                                         min="1"
                                         max="31"
                                         value={data.closing_day}
-                                        onChange={(e) => setData('closing_day', e.target.value)}
+                                        onChange={(e) =>
+                                            setData(
+                                                'closing_day',
+                                                e.target.value,
+                                            )
+                                        }
                                     />
                                     {errors.closing_day && (
                                         <p className="text-sm text-destructive">
@@ -96,14 +117,18 @@ export default function Edit({ card }: Props) {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="due_day">Dia de Vencimento</Label>
+                                    <Label htmlFor="due_day">
+                                        Dia de Vencimento
+                                    </Label>
                                     <Input
                                         id="due_day"
                                         type="number"
                                         min="1"
                                         max="31"
                                         value={data.due_day}
-                                        onChange={(e) => setData('due_day', e.target.value)}
+                                        onChange={(e) =>
+                                            setData('due_day', e.target.value)
+                                        }
                                     />
                                     {errors.due_day && (
                                         <p className="text-sm text-destructive">

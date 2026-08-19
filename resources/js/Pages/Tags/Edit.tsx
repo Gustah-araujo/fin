@@ -1,4 +1,5 @@
-import { Link, useForm, usePage } from '@inertiajs/react';
+import { Link, useForm } from '@inertiajs/react';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,7 +19,7 @@ interface Props {
 }
 
 export default function Edit({ tag }: Props) {
-    const { workspace } = usePage<{ workspace: { uuid: string; name: string } }>().props;
+    const workspace = useWorkspace();
     const { data, setData, put, processing, errors } = useForm({
         name: tag.name,
         color: tag.color,
@@ -33,7 +34,9 @@ export default function Edit({ tag }: Props) {
         <AuthenticatedLayout>
             <div className="space-y-6">
                 <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">Editar Tag</h1>
+                    <h1 className="text-2xl font-semibold tracking-tight">
+                        Editar Tag
+                    </h1>
                     <p className="text-sm text-muted-foreground mt-1">
                         Atualize os dados da tag
                     </p>
@@ -50,10 +53,14 @@ export default function Edit({ tag }: Props) {
                                 <Input
                                     id="name"
                                     value={data.name}
-                                    onChange={(e) => setData('name', e.target.value)}
+                                    onChange={(e) =>
+                                        setData('name', e.target.value)
+                                    }
                                 />
                                 {errors.name && (
-                                    <p className="text-sm text-destructive">{errors.name}</p>
+                                    <p className="text-sm text-destructive">
+                                        {errors.name}
+                                    </p>
                                 )}
                             </div>
 
@@ -61,10 +68,14 @@ export default function Edit({ tag }: Props) {
                                 <Label>Cor</Label>
                                 <ColorPicker
                                     value={data.color}
-                                    onChange={(color) => setData('color', color)}
+                                    onChange={(color) =>
+                                        setData('color', color)
+                                    }
                                 />
                                 {errors.color && (
-                                    <p className="text-sm text-destructive">{errors.color}</p>
+                                    <p className="text-sm text-destructive">
+                                        {errors.color}
+                                    </p>
                                 )}
                             </div>
 

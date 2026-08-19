@@ -11,7 +11,7 @@ import {
 import { LogOut, Settings, User } from 'lucide-react';
 
 export default function UserMenu() {
-    const { props } = usePage() as any;
+    const { props } = usePage();
     const { post } = useForm({});
     const user = props.auth?.user;
 
@@ -39,7 +39,9 @@ export default function UserMenu() {
                 <DropdownMenuLabel>
                     <div className="flex flex-col">
                         <span className="text-sm font-medium">{user.name}</span>
-                        <span className="text-xs text-muted-foreground">{user.email}</span>
+                        <span className="text-xs text-muted-foreground">
+                            {user.email}
+                        </span>
                     </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />

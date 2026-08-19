@@ -19,9 +19,12 @@ export default function Create() {
         <div className="min-h-screen flex items-center justify-center bg-background p-4">
             <div className="w-full max-w-md space-y-6">
                 <div className="text-center">
-                    <h1 className="text-2xl font-semibold tracking-tight">Criar seu workspace</h1>
+                    <h1 className="text-2xl font-semibold tracking-tight">
+                        Criar seu workspace
+                    </h1>
                     <p className="text-sm text-muted-foreground mt-2">
-                        Um workspace é onde você gerencia suas finanças. Pode ser pessoal ou compartilhado.
+                        Um workspace é onde você gerencia suas finanças. Pode
+                        ser pessoal ou compartilhado.
                     </p>
                 </div>
 
@@ -33,26 +36,38 @@ export default function Create() {
                                 id="name"
                                 type="text"
                                 value={data.name}
-                                onChange={(e) => setData('name', e.target.value)}
+                                onChange={(e) =>
+                                    setData('name', e.target.value)
+                                }
                                 placeholder="Ex: Finanças da Casa"
                             />
                             {errors.name && (
-                                <p className="text-sm text-destructive">{errors.name}</p>
+                                <p className="text-sm text-destructive">
+                                    {errors.name}
+                                </p>
                             )}
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="description">Descrição (opcional)</Label>
+                            <Label htmlFor="description">
+                                Descrição (opcional)
+                            </Label>
                             <Input
                                 id="description"
                                 type="text"
                                 value={data.description}
-                                onChange={(e) => setData('description', e.target.value)}
+                                onChange={(e) =>
+                                    setData('description', e.target.value)
+                                }
                                 placeholder="Ex: Controle financeiro da família"
                             />
                         </div>
 
-                        <Button type="submit" className="w-full" disabled={processing}>
+                        <Button
+                            type="submit"
+                            className="w-full"
+                            disabled={processing}
+                        >
                             Criar workspace
                         </Button>
                     </form>

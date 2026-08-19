@@ -21,7 +21,9 @@ export default function Register() {
     return (
         <GuestLayout>
             <div className="mb-6">
-                <h1 className="text-xl font-semibold tracking-tight">Criar conta</h1>
+                <h1 className="text-xl font-semibold tracking-tight">
+                    Criar conta
+                </h1>
                 <p className="text-sm text-muted-foreground mt-1">
                     Preencha os dados para começar
                 </p>
@@ -39,7 +41,9 @@ export default function Register() {
                         placeholder="Seu nome"
                     />
                     {errors.name && (
-                        <p className="text-sm text-destructive">{errors.name}</p>
+                        <p className="text-sm text-destructive">
+                            {errors.name}
+                        </p>
                     )}
                 </div>
 
@@ -54,7 +58,9 @@ export default function Register() {
                         placeholder="seu@email.com"
                     />
                     {errors.email && (
-                        <p className="text-sm text-destructive">{errors.email}</p>
+                        <p className="text-sm text-destructive">
+                            {errors.email}
+                        </p>
                     )}
                 </div>
 
@@ -69,18 +75,24 @@ export default function Register() {
                         placeholder="Mínimo 8 caracteres"
                     />
                     {errors.password && (
-                        <p className="text-sm text-destructive">{errors.password}</p>
+                        <p className="text-sm text-destructive">
+                            {errors.password}
+                        </p>
                     )}
                 </div>
 
                 <div className="space-y-2">
-                    <Label htmlFor="password_confirmation">Confirmar senha</Label>
+                    <Label htmlFor="password_confirmation">
+                        Confirmar senha
+                    </Label>
                     <Input
                         id="password_confirmation"
                         type="password"
                         autoComplete="new-password"
                         value={data.password_confirmation}
-                        onChange={(e) => setData('password_confirmation', e.target.value)}
+                        onChange={(e) =>
+                            setData('password_confirmation', e.target.value)
+                        }
                     />
                 </div>
 
@@ -90,7 +102,10 @@ export default function Register() {
 
                 <p className="text-center text-sm text-muted-foreground">
                     Já possui uma conta?{' '}
-                    <a href={route('login')} className="text-primary hover:underline">
+                    <a
+                        href={route('login')}
+                        className="text-primary hover:underline"
+                    >
                         Entrar
                     </a>
                 </p>

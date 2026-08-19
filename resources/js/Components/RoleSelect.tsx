@@ -12,7 +12,11 @@ const roles = [
     { value: 'viewer', label: 'Visualizador' },
 ];
 
-export default function RoleSelect({ value, onChange, disabled }: RoleSelectProps) {
+export default function RoleSelect({
+    value,
+    onChange,
+    disabled,
+}: RoleSelectProps) {
     return (
         <div className="space-y-2">
             <Label>Papel</Label>

@@ -17,7 +17,11 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface NavItem {
     label: string;
@@ -36,8 +40,7 @@ interface Props {
 }
 
 export default function AppSidebar({ collapsed, onToggle }: Props) {
-    const { url } = usePage();
-    const { props } = usePage<{ workspace?: { uuid: string; name: string } }>();
+    const { url, props } = usePage();
     const workspaceUuid = props.workspace?.uuid;
 
     const navigation: NavSection[] = [
@@ -49,23 +52,37 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
                     ? [
                           {
                               label: 'Contas',
-                              href: route('accounts.index', { workspace: workspaceUuid }),
+                              href: route('accounts.index', {
+                                  workspace: workspaceUuid,
+                              }),
                               icon: Building2,
                           },
                           {
                               label: 'Categorias',
-                              href: route('categories.index', { workspace: workspaceUuid }),
+                              href: route('categories.index', {
+                                  workspace: workspaceUuid,
+                              }),
                               icon: Folders,
                           },
                           {
                               label: 'Tags',
-                              href: route('tags.index', { workspace: workspaceUuid }),
+                              href: route('tags.index', {
+                                  workspace: workspaceUuid,
+                              }),
                               icon: Tags,
                           },
                       ]
                     : [
-                          { label: 'Contas', href: '/accounts', icon: Building2 },
-                          { label: 'Categorias', href: '/categories', icon: Folders },
+                          {
+                              label: 'Contas',
+                              href: '/accounts',
+                              icon: Building2,
+                          },
+                          {
+                              label: 'Categorias',
+                              href: '/categories',
+                              icon: Folders,
+                          },
                           { label: 'Tags', href: '/tags', icon: Tags },
                       ]),
                 { label: 'Despesas', href: '/expenses', icon: ArrowLeftRight },
@@ -79,17 +96,29 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
                     ? [
                           {
                               label: 'Cartões de Crédito',
-                              href: route('cards.index', { workspace: workspaceUuid }),
+                              href: route('cards.index', {
+                                  workspace: workspaceUuid,
+                              }),
                               icon: CreditCard,
                           },
                       ]
-                    : [{ label: 'Cartões de Crédito', href: '/credit-cards', icon: CreditCard }]),
+                    : [
+                          {
+                              label: 'Cartões de Crédito',
+                              href: '/credit-cards',
+                              icon: CreditCard,
+                          },
+                      ]),
             ],
         },
         {
             title: 'Planejamento',
             items: [
-                { label: 'Despesas Futuras', href: '/future-expenses', icon: CalendarClock },
+                {
+                    label: 'Despesas Futuras',
+                    href: '/future-expenses',
+                    icon: CalendarClock,
+                },
             ],
         },
         {
@@ -110,16 +139,23 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
         <aside
             className={cn(
                 'fixed inset-y-0 left-0 z-40 flex flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-300',
-                collapsed ? 'w-[68px]' : 'w-[240px]'
+                collapsed ? 'w-[68px]' : 'w-[240px]',
             )}
         >
-            <div className={cn('flex items-center h-14 px-4 border-b border-sidebar-border', collapsed ? 'justify-center' : 'gap-3')}>
+            <div
+                className={cn(
+                    'flex items-center h-14 px-4 border-b border-sidebar-border',
+                    collapsed ? 'justify-center' : 'gap-3',
+                )}
+            >
                 {!collapsed && (
                     <>
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold text-sm">
                             F
                         </div>
-                        <span className="font-semibold tracking-tight">Fin</span>
+                        <span className="font-semibold tracking-tight">
+                            Fin
+                        </span>
                     </>
                 )}
                 {collapsed && (
@@ -149,11 +185,13 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
                                             active
                                                 ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                                                 : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
-                                            collapsed && 'justify-center px-2'
+                                            collapsed && 'justify-center px-2',
                                         )}
                                     >
                                         <item.icon className="h-4 w-4 shrink-0" />
-                                        {!collapsed && <span>{item.label}</span>}
+                                        {!collapsed && (
+                                            <span>{item.label}</span>
+                                        )}
                                     </Link>
                                 );
 
@@ -163,7 +201,10 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
                                             <TooltipTrigger asChild>
                                                 {link}
                                             </TooltipTrigger>
-                                            <TooltipContent side="right" className="flex items-center gap-2">
+                                            <TooltipContent
+                                                side="right"
+                                                className="flex items-center gap-2"
+                                            >
                                                 {item.label}
                                             </TooltipContent>
                                         </Tooltip>
@@ -182,7 +223,9 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
             <div className="p-3">
                 {!collapsed && (
                     <div className="rounded-lg bg-sidebar-accent/50 px-3 py-2">
-                        <p className="text-xs font-medium text-sidebar-foreground/60">Workspace</p>
+                        <p className="text-xs font-medium text-sidebar-foreground/60">
+                            Workspace
+                        </p>
                         <p className="text-sm font-medium truncate">
                             {props.workspace?.name ?? 'Workspace Pessoal'}
                         </p>
@@ -193,11 +236,15 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
                     size="icon"
                     className={cn(
                         'mt-2 w-full text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50',
-                        collapsed && 'mt-1'
+                        collapsed && 'mt-1',
                     )}
                     onClick={onToggle}
                 >
-                    {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                    {collapsed ? (
+                        <ChevronRight className="h-4 w-4" />
+                    ) : (
+                        <ChevronLeft className="h-4 w-4" />
+                    )}
                 </Button>
             </div>
         </aside>
