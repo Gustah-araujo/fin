@@ -16,6 +16,7 @@ class CategoryResource extends JsonResource
             'color' => $this->color,
             'icon' => $this->icon,
             'position' => $this->position,
+            'is_system' => $this->is_system,
             'workspace' => new WorkspaceResource($this->whenLoaded('workspace')),
             'created_at' => $this->created_at?->toISOString(),
         ];

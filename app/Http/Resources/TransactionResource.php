@@ -26,6 +26,12 @@ class TransactionResource extends JsonResource
             'installment_label' => $this->installments_total !== null && $this->installments_total > 1
                 ? "{$this->installment_number}/{$this->installments_total}"
                 : null,
+            'is_recurring' => $this->is_recurring,
+            'is_recurring_template' => $this->isRecurringTemplate(),
+            'recurring_parent_uuid' => $this->recurring_parent_uuid,
+            'recurring_ends_at' => $this->recurring_ends_at?->format('Y-m-d'),
+            'is_transfer' => $this->isTransfer(),
+            'transfer_group_id' => $this->transfer_group_id,
             'category' => new CategoryResource($this->whenLoaded('category')),
             'tags' => TagResource::collection($this->whenLoaded('tags')),
             'created_by' => new UserResource($this->whenLoaded('creator')),

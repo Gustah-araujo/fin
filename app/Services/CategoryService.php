@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\TransactionType;
 use App\Models\Category;
 use App\Models\User;
 use App\Models\Workspace;
@@ -13,6 +14,29 @@ use Illuminate\Validation\ValidationException;
 class CategoryService
 {
     private const DEFAULT_CATEGORY = 'Sem Categoria';
+
+    public function ensureSystemCategory(Workspace $workspace, string $name, TransactionType $type): int
+    {
+        $category = Category::where('workspace_id', $workspace->id)
+            ->where('name', $name)
+            ->where('is_system', true)
+            ->first();
+
+        if ($category) {
+            return $category->id;
+        }
+
+        return Category::create([
+            'uuid' => Str::orderedUuid()->toString(),
+            'workspace_id' => $workspace->id,
+            'name' => $name,
+            'type' => $type->value,
+            'color' => '#6B7280',
+            'icon' => 'arrow-left-right',
+            'is_system' => true,
+            'position' => 999,
+        ])->id;
+    }
 
     public function create(Workspace $workspace, User $creator, array $data): Category
     {
@@ -98,7 +122,7 @@ class CategoryService
         $color = trim($color);
 
         if (! str_starts_with($color, '#')) {
-            $color = '#' . $color;
+            $color = '#'.$color;
         }
 
         return strtoupper($color);

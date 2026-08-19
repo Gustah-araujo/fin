@@ -26,6 +26,11 @@ class TransactionFactory extends Factory
             'installment_number' => null,
             'installments_total' => null,
             'installment_group_id' => null,
+            'is_recurring' => false,
+            'recurring_parent_uuid' => null,
+            'recurring_ends_at' => null,
+            'recurring_year_month' => null,
+            'transfer_group_id' => null,
         ];
     }
 

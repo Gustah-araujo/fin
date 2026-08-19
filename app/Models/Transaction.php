@@ -8,6 +8,7 @@ use App\Enums\TransactionType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -30,6 +31,11 @@ class Transaction extends Model
         'installment_number',
         'installments_total',
         'installment_group_id',
+        'is_recurring',
+        'recurring_parent_uuid',
+        'recurring_ends_at',
+        'recurring_year_month',
+        'transfer_group_id',
         'paid_at',
         'created_by',
     ];
@@ -43,6 +49,8 @@ class Transaction extends Model
             'paid_at' => 'datetime',
             'installment_number' => 'integer',
             'installments_total' => 'integer',
+            'is_recurring' => 'boolean',
+            'recurring_ends_at' => 'date',
         ];
     }
 
@@ -84,5 +92,36 @@ class Transaction extends Model
     public function tags(): MorphToMany
     {
         return $this->morphToMany(Tag::class, 'taggable');
+    }
+
+    public function recurringParent(): BelongsTo
+    {
+        return $this->belongsTo(Transaction::class, 'recurring_parent_uuid', 'uuid');
+    }
+
+    public function recurringOccurrences(): HasMany
+    {
+        return $this->hasMany(Transaction::class, 'recurring_parent_uuid', 'uuid');
+    }
+
+    public function transferSiblings(): HasMany
+    {
+        return $this->hasMany(Transaction::class, 'transfer_group_id', 'transfer_group_id')
+            ->whereKeyNot($this->id);
+    }
+
+    public function isTransfer(): bool
+    {
+        return $this->transfer_group_id !== null;
+    }
+
+    public function isRecurringTemplate(): bool
+    {
+        return $this->is_recurring && $this->recurring_parent_uuid === null;
+    }
+
+    public function isRecurringOccurrence(): bool
+    {
+        return $this->recurring_parent_uuid !== null;
     }
 }

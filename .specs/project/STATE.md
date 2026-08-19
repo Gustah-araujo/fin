@@ -14,7 +14,7 @@
 | D-08 | Inertia pure: shared data + props + useForm()            | 2026-07-13 | No React Query           |
 | D-09 | shadcn/ui for components, `resources/js/Components/ui/`  | 2026-07-13 | Follow shadcn conventions |
 | D-10 | PHPUnit for feature tests                                | 2026-07-13 | No unit tests (for now)  |
-| D-11 | No linting tools                                         | 2026-07-13 | Simplicity preference    |
+| D-11 | ~~No linting tools~~ (superseded by D-40)                | 2026-07-13 | Simplicity preference    |
 | D-12 | No CI/CD for now                                         | 2026-07-13 |                         |
 | D-13 | `/w/{workspace}/` route prefix, Route model binding (UUID) | 2026-07-13 | web.php only             |
 | D-14 | useForm().errors default (Inertia built-in)              | 2026-07-13 | No custom wrapper        |
@@ -37,6 +37,13 @@
 | D-31 | "Pagamento de Cartão" category auto-created per workspace on first card creation; system-managed (not user-deletable, name editable) | 2026-07-14 | CCXP-01 spec; bill payment category |
 | D-32 | Bill closing: scheduled daily job + on-demand fallback; next open bill created lazily | 2026-07-14 | CCXP-01 spec; no proactive empty bills |
 | D-33 | Installment value = round(total/count, 2); last installment absorbs remainder so sum = total exactly | 2026-07-14 | CCXP-01 spec              |
+| D-34 | Transferências entre contas IN scope (override PROJECT v1 + DEBT-01 out-of-scope); implementada em INCM-01 como par Income(destino)+Expense(origem) | 2026-07-15 | INCM-01 spec; user override |
+| D-35 | Receitas reusam coluna `paid_at` (sem `received_at`); `recalculateBalance()` soma receitas pagas | 2026-07-15 | INCM-01; espelho DEBT-01 |
+| D-36 | Receitas aceitam categoria `type∈{Income,Both}`; rejeitam `Expense` | 2026-07-15 | INCM-01; espelho DEBT-01 |
+| D-37 | Receitas recorrentes mensais: template `is_recurring=true` + ocorrências lazy geradas por job diário + fallback on-demand; idempotência via UNIQUE(recurring_parent_uuid, mês) | 2026-07-15 | INCM-01 spec |
+| D-38 | Receitas parceladas reusam `installment_group_id`/`installment_number`/`installments_total` (CCXP-01 schema); arredondamento D-33 | 2026-07-15 | INCM-01 spec |
+| D-39 | Transferência = 2 Transaction em mesma transação DB, `transfer_group_id` UUID; `recalculateBalance()` em ambas contas; saldo total workspace invariante | 2026-07-15 | INCM-01 spec |
+| D-40 | Quality gates: `composer quality` (Pint `--test` + PHPMD CyclomaticComplexity/NPathComplexity on `app/`) and `npm run quality` (ESLint `complexity` 20 + Prettier check). Auto-fix: `composer format`, `npm run format`, `npm run lint:fix` | 2026-08-19 | Supersedes D-11 |
 
 ## Blockers
 

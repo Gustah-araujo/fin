@@ -39,7 +39,7 @@ Workspace members need to record debit expenses linked to a bank account so that
 | Receitas (INCM-01) | Feature separada; schema suporta mas lógica virá depois |
 | Despesas de cartão de crédito (CCXP-01) | Feature separada; schema extensível com credit_card_id futuro |
 | Despesas recorrentes | INCM-01 cobre recorrência; escopo complexo para primeiro transaction type |
-| Transferências entre contas | Fora do escopo v1 (PROJECT.md) |
+| Transferências entre contas | Implementado em INCM-01 (D-34) — reaberto por decisão do user em 2026-07-15 |
 | Conciliação bancária manual | v1: saldo é calculado automaticamente; sem reconciliação |
 | Importação de extratos | IMPT-01 (P2); escopo separado |
 | Anexos/comprovantes | Complexidade de storage desnecessária para v1 |

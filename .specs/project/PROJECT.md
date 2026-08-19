@@ -40,7 +40,7 @@
 - CRUD de cartões de crédito (data fechamento/vencimento)
 - CRUD de despesas de cartão de crédito (compras individuais e parceladas)
 - Pagamento de fatura com débito automático da conta selecionada
-- CRUD de receitas (com suporte a recorrência)
+- CRUD de receitas (com suporte a recorrência, parcelamento e transferência entre contas)
 - CRUD de despesas futuras (dívidas pessoais parceladas, ex: "devo R$1000 em 4x de R$250")
 - Dashboard com widgets de resumo financeiro
 - Insights IA gerados diariamente (meia-noite) via DeepSeek

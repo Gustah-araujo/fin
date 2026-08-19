@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Account;
+use App\Models\Category;
+use App\Models\Tag;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Workspace;
@@ -24,7 +26,7 @@ class TransactionService
             ->firstOrFail()
             ->id;
 
-        $categoryId = \App\Models\Category::where('uuid', $data['category_id'])
+        $categoryId = Category::where('uuid', $data['category_id'])
             ->where('workspace_id', $workspace->id)
             ->firstOrFail()
             ->id;
@@ -64,7 +66,7 @@ class TransactionService
         }
 
         if (isset($data['category_id'])) {
-            $data['category_id'] = \App\Models\Category::where('uuid', $data['category_id'])
+            $data['category_id'] = Category::where('uuid', $data['category_id'])
                 ->where('workspace_id', $transaction->workspace_id)
                 ->firstOrFail()
                 ->id;
@@ -130,9 +132,9 @@ class TransactionService
         });
     }
 
-    public function syncTags(Transaction $transaction, array $tagUuids): void
+    protected function syncTags(Transaction $transaction, array $tagUuids): void
     {
-        $tagIds = \App\Models\Tag::whereIn('uuid', $tagUuids)
+        $tagIds = Tag::whereIn('uuid', $tagUuids)
             ->where('workspace_id', $transaction->workspace_id)
             ->pluck('id')
             ->toArray();
@@ -143,33 +145,48 @@ class TransactionService
     private function recalculateAfterUpdate(Transaction $transaction, bool $wasPaid, float $oldValue, ?int $oldAccountId, array $data): void
     {
         $isNowPaid = $transaction->paid_at !== null;
+
+        if (! $isNowPaid) {
+            if ($wasPaid) {
+                $this->recalculateCurrentAccount($transaction);
+            }
+
+            return;
+        }
+
+        if ($this->paidTransactionChanged($oldValue, $oldAccountId, $data)) {
+            $this->recalculateAffectedAccounts($transaction, $oldAccountId);
+        }
+    }
+
+    private function paidTransactionChanged(float $oldValue, ?int $oldAccountId, array $data): bool
+    {
         $valueChanged = isset($data['value']) && (float) $data['value'] !== $oldValue;
         $accountChanged = isset($data['account_id']) && (int) $data['account_id'] !== $oldAccountId;
 
-        if (! $wasPaid && ! $isNowPaid) {
-            return;
-        }
+        return $valueChanged || $accountChanged;
+    }
 
-        if ($wasPaid && ! $isNowPaid) {
+    private function recalculateCurrentAccount(Transaction $transaction): void
+    {
+        if ($transaction->account) {
+            $this->accountService->recalculateBalance($transaction->account);
+        }
+    }
+
+    private function recalculateAffectedAccounts(Transaction $transaction, ?int $oldAccountId): void
+    {
+        DB::transaction(function () use ($transaction, $oldAccountId) {
+            if ($oldAccountId && $oldAccountId !== $transaction->account_id) {
+                $oldAccount = Account::find($oldAccountId);
+                if ($oldAccount) {
+                    $this->accountService->recalculateBalance($oldAccount);
+                }
+            }
+
             if ($transaction->account) {
                 $this->accountService->recalculateBalance($transaction->account);
             }
-            return;
-        }
-
-        if ($isNowPaid && ($valueChanged || $accountChanged)) {
-            DB::transaction(function () use ($transaction, $oldAccountId) {
-                if ($oldAccountId && $oldAccountId !== $transaction->account_id) {
-                    $oldAccount = Account::find($oldAccountId);
-                    if ($oldAccount) {
-                        $this->accountService->recalculateBalance($oldAccount);
-                    }
-                }
-
-                if ($transaction->account) {
-                    $this->accountService->recalculateBalance($transaction->account);
-                }
-            });
-        }
+        });
     }
 }
