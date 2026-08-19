@@ -13,14 +13,6 @@ services:
         condition: service_started
       mailpit:
         condition: service_started
-    environment:
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_DATABASE: fin
-      DB_USERNAME: fin
-      DB_PASSWORD: fin_secret
-      MAIL_HOST: mailpit
-      MAIL_PORT: 1025
 
   db:
     image: mariadb:11
