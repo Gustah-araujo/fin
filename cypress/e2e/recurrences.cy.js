@@ -12,7 +12,8 @@ describe('Recurrence management', () => {
         cy.url().then((url) => {
             workspaceUuid = url.match(/\/w\/([a-f0-9-]+)/)[1];
 
-            cy.visit(`/w/${workspaceUuid}/accounts/create`);
+            cy.get('[data-testid="sidebar-accounts"]').click();
+            cy.contains('Nova Conta').click();
             cy.get('#name').type('Conta Principal');
             cy.get('#type').click();
             cy.contains('Corrente').click();
@@ -23,10 +24,13 @@ describe('Recurrence management', () => {
 
     beforeEach(() => {
         cy.loginViaSession('recurrences-session');
+
+        cy.visit(`/w/${workspaceUuid}`);
     });
 
     it('creates a recurring income and shows it on the recurrences page', () => {
-        cy.visit(`/w/${workspaceUuid}/incomes/create`);
+        cy.get('[data-testid="sidebar-incomes"]').click();
+        cy.contains('Nova Receita').click();
         cy.get('#description').type('Salário');
         cy.get('#value').type('3000');
 
@@ -40,13 +44,13 @@ describe('Recurrence management', () => {
 
         cy.contains('Criar Receita').click({ force: true });
 
-        cy.visit(`/w/${workspaceUuid}/recurrences`);
+        cy.get('[data-testid="sidebar-recurrences"]').click();
         cy.contains('Salário').should('be.visible');
         cy.contains('Ativa').should('be.visible');
     });
 
     it('pauses and reactivates a recurrence', () => {
-        cy.visit(`/w/${workspaceUuid}/recurrences`);
+        cy.get('[data-testid="sidebar-recurrences"]').click();
 
         cy.contains('Salário')
             .closest('[data-slot="card"]')

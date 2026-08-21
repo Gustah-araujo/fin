@@ -12,7 +12,8 @@ describe('Income CRUD', () => {
         cy.url().then((url) => {
             workspaceUuid = url.match(/\/w\/([a-f0-9-]+)/)[1];
 
-            cy.visit(`/w/${workspaceUuid}/accounts/create`);
+            cy.get('[data-testid="sidebar-accounts"]').click();
+            cy.contains('Nova Conta').click();
             cy.get('#name').type('Conta Principal');
             cy.get('#type').click();
             cy.contains('Corrente').click();
@@ -25,15 +26,18 @@ describe('Income CRUD', () => {
 
     beforeEach(() => {
         cy.loginViaSession('incomes-session');
+
+        cy.visit(`/w/${workspaceUuid}`);
     });
 
     it('shows incomes index page', () => {
-        cy.visit(`/w/${workspaceUuid}/incomes`);
+        cy.get('[data-testid="sidebar-incomes"]').click();
         cy.contains('Receitas').should('be.visible');
     });
 
     it('shows validation errors on create', () => {
-        cy.visit(`/w/${workspaceUuid}/incomes/create`);
+        cy.get('[data-testid="sidebar-incomes"]').click();
+        cy.contains('Nova Receita').click();
         cy.get('#description').should('be.visible');
         cy.contains('Criar Receita').click({ force: true });
 
@@ -44,7 +48,8 @@ describe('Income CRUD', () => {
     });
 
     it('creates an avulsa income', () => {
-        cy.visit(`/w/${workspaceUuid}/incomes/create`);
+        cy.get('[data-testid="sidebar-incomes"]').click();
+        cy.contains('Nova Receita').click();
         cy.get('#description').type('Salário');
         cy.get('#value').type('2000');
 
@@ -61,7 +66,7 @@ describe('Income CRUD', () => {
     });
 
     it('confirms and unconfirms receipt', () => {
-        cy.visit(`/w/${workspaceUuid}/incomes`);
+        cy.get('[data-testid="sidebar-incomes"]').click();
 
         cy.contains('Salário')
             .closest('[data-slot="card"]')
@@ -85,7 +90,8 @@ describe('Income CRUD', () => {
     });
 
     it('creates a recurring income and sees the first instance', () => {
-        cy.visit(`/w/${workspaceUuid}/incomes/create`);
+        cy.get('[data-testid="sidebar-incomes"]').click();
+        cy.contains('Nova Receita').click();
         cy.get('#description').type('Freelance');
         cy.get('#value').type('800');
 
@@ -105,7 +111,7 @@ describe('Income CRUD', () => {
     });
 
     it('edits an income', () => {
-        cy.visit(`/w/${workspaceUuid}/incomes`);
+        cy.get('[data-testid="sidebar-incomes"]').click();
 
         cy.contains('Salário')
             .closest('[data-slot="card"]')
@@ -120,7 +126,7 @@ describe('Income CRUD', () => {
     });
 
     it('deletes an income', () => {
-        cy.visit(`/w/${workspaceUuid}/incomes`);
+        cy.get('[data-testid="sidebar-incomes"]').click();
 
         cy.contains('Salário Mensal')
             .closest('[data-slot="card"]')

@@ -20,9 +20,13 @@ interface Props {
 }
 
 export default function AppHeader({ onToggle, sidebar }: Props) {
-    const { component } = usePage();
+    const { component, props } = usePage();
 
     const title = String(component).split('/').pop() || 'Home';
+    const workspaceUuid = props.workspace?.uuid;
+    const homeHref = workspaceUuid
+        ? route('dashboard', { workspace: workspaceUuid })
+        : '/';
 
     return (
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background px-4">
@@ -51,7 +55,7 @@ export default function AppHeader({ onToggle, sidebar }: Props) {
             <Breadcrumb>
                 <BreadcrumbList>
                     <BreadcrumbItem>
-                        <BreadcrumbLink href="/">Fin</BreadcrumbLink>
+                        <BreadcrumbLink href={homeHref}>Fin</BreadcrumbLink>
                     </BreadcrumbItem>
                     <BreadcrumbSeparator />
                     <BreadcrumbItem>

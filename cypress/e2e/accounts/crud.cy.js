@@ -16,15 +16,17 @@ describe('Account CRUD', () => {
 
     beforeEach(() => {
         cy.loginViaSession('accounts-session');
+
+        cy.visit(`/w/${workspaceUuid}`);
     });
 
     it('shows accounts index page', () => {
-        cy.visit(`/w/${workspaceUuid}/accounts`);
+        cy.get('[data-testid="sidebar-accounts"]').click();
         cy.contains('Contas').should('be.visible');
     });
 
     it('creates an account', () => {
-        cy.visit(`/w/${workspaceUuid}/accounts`);
+        cy.get('[data-testid="sidebar-accounts"]').click();
         cy.contains('Nova Conta').click();
         cy.url().should('include', '/accounts/create');
 
@@ -39,7 +41,8 @@ describe('Account CRUD', () => {
     });
 
     it('shows validation errors on create', () => {
-        cy.visit(`/w/${workspaceUuid}/accounts/create`);
+        cy.get('[data-testid="sidebar-accounts"]').click();
+        cy.contains('Nova Conta').click();
         cy.contains('Criar Conta').click();
 
         cy.contains('O nome da conta é obrigatório').should('be.visible');
@@ -47,7 +50,7 @@ describe('Account CRUD', () => {
     });
 
     it('edits an account', () => {
-        cy.visit(`/w/${workspaceUuid}/accounts`);
+        cy.get('[data-testid="sidebar-accounts"]').click();
         cy.contains('Conta Teste')
             .closest('[data-slot="card"]')
             .contains('Editar')
@@ -62,7 +65,8 @@ describe('Account CRUD', () => {
     });
 
     it('deletes an account', () => {
-        cy.visit(`/w/${workspaceUuid}/accounts/create`);
+        cy.get('[data-testid="sidebar-accounts"]').click();
+        cy.contains('Nova Conta').click();
         cy.get('#name').type('Para Excluir');
         cy.get('#type').click();
         cy.contains('Poupança').click();

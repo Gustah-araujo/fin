@@ -6,10 +6,7 @@ import {
     ArrowLeftRight,
     CreditCard,
     TrendingUp,
-    CalendarClock,
     Repeat,
-    MessageSquare,
-    Upload,
     ChevronLeft,
     ChevronRight,
     Tags,
@@ -28,6 +25,8 @@ interface NavItem {
     label: string;
     href: string;
     icon: LucideIcon;
+    testId: string;
+    exact?: boolean;
 }
 
 interface NavSection {
@@ -44,111 +43,85 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
     const { url, props } = usePage();
     const workspaceUuid = props.workspace?.uuid;
 
+    if (!workspaceUuid) {
+        return null;
+    }
+
     const navigation: NavSection[] = [
         {
             title: 'Principal',
             items: [
-                { label: 'Dashboard', href: '/', icon: LayoutDashboard },
-                ...(workspaceUuid
-                    ? [
-                          {
-                              label: 'Contas',
-                              href: route('accounts.index', {
-                                  workspace: workspaceUuid,
-                              }),
-                              icon: Building2,
-                          },
-                          {
-                              label: 'Categorias',
-                              href: route('categories.index', {
-                                  workspace: workspaceUuid,
-                              }),
-                              icon: Folders,
-                          },
-                          {
-                              label: 'Tags',
-                              href: route('tags.index', {
-                                  workspace: workspaceUuid,
-                              }),
-                              icon: Tags,
-                          },
-                      ]
-                    : [
-                          {
-                              label: 'Contas',
-                              href: '/accounts',
-                              icon: Building2,
-                          },
-                          {
-                              label: 'Categorias',
-                              href: '/categories',
-                              icon: Folders,
-                          },
-                          { label: 'Tags', href: '/tags', icon: Tags },
-                      ]),
-                { label: 'Despesas', href: '/expenses', icon: ArrowLeftRight },
+                {
+                    label: 'Dashboard',
+                    href: route('dashboard', { workspace: workspaceUuid }),
+                    icon: LayoutDashboard,
+                    testId: 'sidebar-dashboard',
+                    exact: true,
+                },
+                {
+                    label: 'Contas',
+                    href: route('accounts.index', {
+                        workspace: workspaceUuid,
+                    }),
+                    icon: Building2,
+                    testId: 'sidebar-accounts',
+                },
+                {
+                    label: 'Categorias',
+                    href: route('categories.index', {
+                        workspace: workspaceUuid,
+                    }),
+                    icon: Folders,
+                    testId: 'sidebar-categories',
+                },
+                {
+                    label: 'Tags',
+                    href: route('tags.index', { workspace: workspaceUuid }),
+                    icon: Tags,
+                    testId: 'sidebar-tags',
+                },
+                {
+                    label: 'Despesas',
+                    href: route('transactions.index', {
+                        workspace: workspaceUuid,
+                    }),
+                    icon: ArrowLeftRight,
+                    testId: 'sidebar-transactions',
+                },
                 {
                     label: 'Receitas',
-                    href: workspaceUuid
-                        ? route('incomes.index', { workspace: workspaceUuid })
-                        : '/incomes',
+                    href: route('incomes.index', { workspace: workspaceUuid }),
                     icon: TrendingUp,
+                    testId: 'sidebar-incomes',
                 },
                 {
                     label: 'Recorrências',
-                    href: workspaceUuid
-                        ? route('recurrences.index', {
-                              workspace: workspaceUuid,
-                          })
-                        : '/recurrences',
+                    href: route('recurrences.index', {
+                        workspace: workspaceUuid,
+                    }),
                     icon: Repeat,
+                    testId: 'sidebar-recurrences',
                 },
             ],
         },
         {
             title: 'Cartões',
             items: [
-                ...(workspaceUuid
-                    ? [
-                          {
-                              label: 'Cartões de Crédito',
-                              href: route('cards.index', {
-                                  workspace: workspaceUuid,
-                              }),
-                              icon: CreditCard,
-                          },
-                      ]
-                    : [
-                          {
-                              label: 'Cartões de Crédito',
-                              href: '/credit-cards',
-                              icon: CreditCard,
-                          },
-                      ]),
-            ],
-        },
-        {
-            title: 'Planejamento',
-            items: [
                 {
-                    label: 'Despesas Futuras',
-                    href: '/future-expenses',
-                    icon: CalendarClock,
+                    label: 'Cartões de Crédito',
+                    href: route('cards.index', { workspace: workspaceUuid }),
+                    icon: CreditCard,
+                    testId: 'sidebar-cards',
                 },
-            ],
-        },
-        {
-            title: 'IA',
-            items: [
-                { label: 'Chat', href: '/chat', icon: MessageSquare },
-                { label: 'Importar', href: '/import', icon: Upload },
             ],
         },
     ];
 
-    function isActive(href: string) {
-        if (href === '/') return url === '/';
-        return url.startsWith(href);
+    function isActive(item: NavItem) {
+        if (item.exact) {
+            return url === item.href || url === `${item.href}/`;
+        }
+        return url === item.href || url.startsWith(`${item.href}/`);
     }
 
     return (
@@ -191,11 +164,12 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
                         )}
                         <div className="space-y-0.5">
                             {section.items.map((item) => {
-                                const active = isActive(item.href);
+                                const active = isActive(item);
                                 const link = (
                                     <Link
-                                        key={item.href}
+                                        key={item.testId}
                                         href={item.href}
+                                        data-testid={item.testId}
                                         className={cn(
                                             'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                                             active
@@ -213,7 +187,7 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
 
                                 if (collapsed) {
                                     return (
-                                        <Tooltip key={item.href}>
+                                        <Tooltip key={item.testId}>
                                             <TooltipTrigger asChild>
                                                 {link}
                                             </TooltipTrigger>
@@ -257,9 +231,9 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
                     onClick={onToggle}
                 >
                     {collapsed ? (
-                        <ChevronRight className="h-4 w-4" />
+                        <ChevronRight className="h-4 w-4 shrink-0" />
                     ) : (
-                        <ChevronLeft className="h-4 w-4" />
+                        <ChevronLeft className="h-4 w-4 shrink-0" />
                     )}
                 </Button>
             </div>

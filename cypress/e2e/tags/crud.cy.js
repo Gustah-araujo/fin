@@ -16,16 +16,18 @@ describe('Tag CRUD', () => {
 
     beforeEach(() => {
         cy.loginViaSession('tags-session');
+
+        cy.visit(`/w/${workspaceUuid}`);
     });
 
     it('shows empty tags list', () => {
-        cy.visit(`/w/${workspaceUuid}/tags`);
+        cy.get('[data-testid="sidebar-tags"]').click();
         cy.contains('Tags').should('be.visible');
         cy.contains('Nenhuma tag cadastrada').should('be.visible');
     });
 
     it('creates a tag', () => {
-        cy.visit(`/w/${workspaceUuid}/tags`);
+        cy.get('[data-testid="sidebar-tags"]').click();
         cy.contains('Nova Tag').click();
         cy.url().should('include', '/tags/create');
 
@@ -37,7 +39,8 @@ describe('Tag CRUD', () => {
     });
 
     it('shows duplicate name error', () => {
-        cy.visit(`/w/${workspaceUuid}/tags/create`);
+        cy.get('[data-testid="sidebar-tags"]').click();
+        cy.contains('Nova Tag').click();
         cy.get('#name').type('Urgente');
         cy.contains('Criar Tag').click();
 
@@ -45,7 +48,7 @@ describe('Tag CRUD', () => {
     });
 
     it('edits a tag', () => {
-        cy.visit(`/w/${workspaceUuid}/tags`);
+        cy.get('[data-testid="sidebar-tags"]').click();
         cy.contains('Urgente')
             .closest('[data-slot="card"]')
             .contains('Editar')
@@ -60,7 +63,8 @@ describe('Tag CRUD', () => {
     });
 
     it('deletes a tag', () => {
-        cy.visit(`/w/${workspaceUuid}/tags/create`);
+        cy.get('[data-testid="sidebar-tags"]').click();
+        cy.contains('Nova Tag').click();
         cy.get('#name').type('Para Excluir');
         cy.contains('Criar Tag').click();
 

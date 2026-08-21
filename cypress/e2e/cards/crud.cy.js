@@ -16,15 +16,17 @@ describe('Credit Card CRUD', () => {
 
     beforeEach(() => {
         cy.loginViaSession('cards-session');
+
+        cy.visit(`/w/${workspaceUuid}`);
     });
 
     it('shows cards index page', () => {
-        cy.visit(`/w/${workspaceUuid}/cards`);
+        cy.get('[data-testid="sidebar-cards"]').click();
         cy.contains('Cartões').should('be.visible');
     });
 
     it('creates a credit card', () => {
-        cy.visit(`/w/${workspaceUuid}/cards`);
+        cy.get('[data-testid="sidebar-cards"]').click();
         cy.contains('Novo Cartão').click();
         cy.url().should('include', '/cards/create');
 
@@ -39,7 +41,8 @@ describe('Credit Card CRUD', () => {
     });
 
     it('shows validation errors on create', () => {
-        cy.visit(`/w/${workspaceUuid}/cards/create`);
+        cy.get('[data-testid="sidebar-cards"]').click();
+        cy.contains('Novo Cartão').click();
         cy.contains('Criar Cartão').click();
 
         cy.contains('O nome do cartão é obrigatório').should('be.visible');
@@ -49,7 +52,7 @@ describe('Credit Card CRUD', () => {
     });
 
     it('edits a credit card', () => {
-        cy.visit(`/w/${workspaceUuid}/cards`);
+        cy.get('[data-testid="sidebar-cards"]').click();
         cy.contains('Nubank Mastercard')
             .closest('[data-slot="card"]')
             .contains('Editar')
@@ -64,7 +67,7 @@ describe('Credit Card CRUD', () => {
     });
 
     it('updates credit_limit and sees available_limit update', () => {
-        cy.visit(`/w/${workspaceUuid}/cards`);
+        cy.get('[data-testid="sidebar-cards"]').click();
         cy.contains('Inter Visa')
             .closest('[data-slot="card"]')
             .contains('Editar')
@@ -80,7 +83,8 @@ describe('Credit Card CRUD', () => {
     });
 
     it('deletes a credit card', () => {
-        cy.visit(`/w/${workspaceUuid}/cards/create`);
+        cy.get('[data-testid="sidebar-cards"]').click();
+        cy.contains('Novo Cartão').click();
         cy.get('#name').type('Para Excluir');
         cy.get('#credit_limit').type('5000');
         cy.get('#closing_day').type('5');

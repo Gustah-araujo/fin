@@ -1,4 +1,4 @@
-import { useForm } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -15,8 +15,6 @@ interface SelectProps {
 }
 
 export default function Select({ workspaces }: SelectProps) {
-    const { post } = useForm({});
-
     return (
         <div className="min-h-screen flex items-center justify-center bg-background p-4">
             <div className="w-full max-w-2xl space-y-6">
@@ -43,8 +41,8 @@ export default function Select({ workspaces }: SelectProps) {
                             key={workspace.uuid}
                             className="cursor-pointer hover:border-primary transition-colors"
                             onClick={() =>
-                                post('/workspace/activate', {
-                                    data: { workspace_uuid: workspace.uuid },
+                                router.post('/workspace/activate', {
+                                    workspace_uuid: workspace.uuid,
                                 })
                             }
                         >

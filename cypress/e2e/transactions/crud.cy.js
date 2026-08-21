@@ -12,7 +12,8 @@ describe('Transaction CRUD', () => {
         cy.url().then((url) => {
             workspaceUuid = url.match(/\/w\/([a-f0-9-]+)/)[1];
 
-            cy.visit(`/w/${workspaceUuid}/accounts/create`);
+            cy.get('[data-testid="sidebar-accounts"]').click();
+            cy.contains('Nova Conta').click();
             cy.get('#name').type('Conta Principal');
             cy.get('#type').click();
             cy.contains('Corrente').click();
@@ -25,15 +26,18 @@ describe('Transaction CRUD', () => {
 
     beforeEach(() => {
         cy.loginViaSession('transactions-session');
+
+        cy.visit(`/w/${workspaceUuid}`);
     });
 
     it('shows transactions index page', () => {
-        cy.visit(`/w/${workspaceUuid}/transactions`);
+        cy.get('[data-testid="sidebar-transactions"]').click();
         cy.contains('Despesas').should('be.visible');
     });
 
     it('shows validation errors on create', () => {
-        cy.visit(`/w/${workspaceUuid}/transactions/create`);
+        cy.get('[data-testid="sidebar-transactions"]').click();
+        cy.contains('Nova Despesa').click({ force: true });
         cy.get('#description').should('be.visible');
         cy.contains('Criar Despesa').click({ force: true });
 
@@ -44,7 +48,7 @@ describe('Transaction CRUD', () => {
     });
 
     it('creates a transaction', () => {
-        cy.visit(`/w/${workspaceUuid}/transactions`);
+        cy.get('[data-testid="sidebar-transactions"]').click();
         cy.contains('Nova Despesa').click({ force: true });
         cy.url().should('include', '/transactions/create');
         cy.get('#description').should('be.visible');
@@ -65,12 +69,12 @@ describe('Transaction CRUD', () => {
     });
 
     it('edits a transaction', () => {
-        cy.visit(`/w/${workspaceUuid}/transactions`);
+        cy.get('[data-testid="sidebar-transactions"]').click();
         cy.contains('Compra Supermercado').should('be.visible');
     });
 
     it('pays a transaction', () => {
-        cy.visit(`/w/${workspaceUuid}/transactions`);
+        cy.get('[data-testid="sidebar-transactions"]').click();
         cy.contains('Compra Supermercado')
             .closest('[data-slot="card"]')
             .contains('Pagar')
@@ -83,7 +87,7 @@ describe('Transaction CRUD', () => {
     });
 
     it('unpays a transaction', () => {
-        cy.visit(`/w/${workspaceUuid}/transactions`);
+        cy.get('[data-testid="sidebar-transactions"]').click();
         cy.contains('Compra Supermercado')
             .closest('[data-slot="card"]')
             .contains('Desmarcar')
@@ -96,7 +100,7 @@ describe('Transaction CRUD', () => {
     });
 
     it('deletes a transaction', () => {
-        cy.visit(`/w/${workspaceUuid}/transactions`);
+        cy.get('[data-testid="sidebar-transactions"]').click();
         cy.contains('Nova Despesa').should('be.visible');
 
         cy.contains('Compra Supermercado')
@@ -108,19 +112,20 @@ describe('Transaction CRUD', () => {
     });
 
     it('filters transactions by search', () => {
-        cy.visit(`/w/${workspaceUuid}/transactions`);
+        cy.get('[data-testid="sidebar-transactions"]').click();
         cy.get('#search').should('be.visible');
         cy.contains('Nova Despesa').should('be.visible');
     });
 
     it('filters transactions by status', () => {
-        cy.visit(`/w/${workspaceUuid}/transactions`);
+        cy.get('[data-testid="sidebar-transactions"]').click();
         cy.get('[data-slot="select-trigger"]').should('have.length.at.least', 1);
         cy.contains('Nova Despesa').should('be.visible');
     });
 
     it('creates transaction with tags', () => {
-        cy.visit(`/w/${workspaceUuid}/tags/create`);
+        cy.get('[data-testid="sidebar-tags"]').click();
+        cy.contains('Nova Tag').click({ force: true });
         cy.get('#name').type('urgente');
         cy.contains('Criar Tag').click({ force: true });
         cy.contains('urgente').should('be.visible');

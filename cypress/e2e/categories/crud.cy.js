@@ -16,23 +16,25 @@ describe('Category CRUD', () => {
 
     beforeEach(() => {
         cy.loginViaSession('categories-session');
+
+        cy.visit(`/w/${workspaceUuid}`);
     });
 
     it('shows categories list with defaults', () => {
-        cy.visit(`/w/${workspaceUuid}/categories`);
+        cy.get('[data-testid="sidebar-categories"]').click();
         cy.contains('Categorias').should('be.visible');
         cy.contains('Sem Categoria').should('be.visible');
         cy.contains('Padrão').should('be.visible');
     });
 
     it('creates a category', () => {
-        cy.visit(`/w/${workspaceUuid}/categories`);
+        cy.get('[data-testid="sidebar-categories"]').click();
         cy.contains('Nova Categoria').click({ force: true });
         cy.url().should('include', '/categories/create');
 
         cy.get('#name').type('Alimentação');
         cy.get('#type').click();
-        cy.contains('Despesa').click();
+        cy.contains('[role="option"]', 'Despesa').click();
         cy.contains('Criar Categoria').click({ force: true });
 
         cy.url().should('include', '/categories');
@@ -40,14 +42,15 @@ describe('Category CRUD', () => {
     });
 
     it('shows validation errors on create', () => {
-        cy.visit(`/w/${workspaceUuid}/categories/create`);
+        cy.get('[data-testid="sidebar-categories"]').click();
+        cy.contains('Nova Categoria').click({ force: true });
         cy.contains('Criar Categoria').click({ force: true });
 
         cy.contains('O nome da categoria é obrigatório').should('be.visible');
     });
 
     it('edits a category', () => {
-        cy.visit(`/w/${workspaceUuid}/categories`);
+        cy.get('[data-testid="sidebar-categories"]').click();
         cy.contains('Alimentação')
             .closest('[data-slot="card"]')
             .contains('Editar')
@@ -62,10 +65,11 @@ describe('Category CRUD', () => {
     });
 
     it('deletes a category', () => {
-        cy.visit(`/w/${workspaceUuid}/categories/create`);
+        cy.get('[data-testid="sidebar-categories"]').click();
+        cy.contains('Nova Categoria').click({ force: true });
         cy.get('#name').type('Para Excluir');
         cy.get('#type').click();
-        cy.contains('Despesa').click();
+        cy.contains('[role="option"]', 'Despesa').click();
         cy.contains('Criar Categoria').click({ force: true });
 
         cy.url().should('include', '/categories');

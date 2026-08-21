@@ -21,6 +21,8 @@ use App\Http\Controllers\TagController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\WorkspaceMemberController;
+use App\Models\Workspace;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // Guest routes
@@ -66,10 +68,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 // Routes requiring a workspace
 Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function () {
-    Route::get('/', fn () => redirect()->route('workspace.select'));
+    Route::get('/', function (Request $request) {
+        $workspace = $request->user()->workspaces()
+            ->wherePivotNotNull('last_visited_at')
+            ->orderByPivot('last_visited_at', 'desc')
+            ->first();
+
+        if ($workspace) {
+            return redirect()->route('dashboard', ['workspace' => $workspace->uuid]);
+        }
+
+        return redirect()->route('workspace.select');
+    });
 
     Route::prefix('w/{workspace}')->group(function () {
-        Route::get('/', function () {
+        Route::get('/', function (Workspace $workspace) {
             return inertia('Home');
         })->name('dashboard');
 
