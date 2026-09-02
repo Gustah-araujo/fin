@@ -13,6 +13,7 @@ const EXPANDED_WIDTH = '240px';
 export default function AuthenticatedLayout({ children }: Props) {
     const [collapsed, setCollapsed] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
     const toggleCollapsed = useCallback(
         () => setCollapsed((prev) => !prev),
         [],
@@ -22,12 +23,22 @@ export default function AuthenticatedLayout({ children }: Props) {
         setIsMounted(true);
     }, []);
 
+    useEffect(() => {
+        const mql = window.matchMedia('(min-width: 1024px)');
+        setIsMobile(!mql.matches);
+        const handler = (e: MediaQueryListEvent) => setIsMobile(!e.matches);
+        mql.addEventListener('change', handler);
+        return () => mql.removeEventListener('change', handler);
+    }, []);
+
     const sidebar = <AppSidebar collapsed={false} onToggle={toggleCollapsed} />;
-    const marginLeft = !isMounted
-        ? EXPANDED_WIDTH
-        : collapsed
-          ? COLLAPSED_WIDTH
-          : EXPANDED_WIDTH;
+    const marginLeft = isMobile
+        ? '0px'
+        : !isMounted
+          ? EXPANDED_WIDTH
+          : collapsed
+            ? COLLAPSED_WIDTH
+            : EXPANDED_WIDTH;
 
     return (
         <TooltipProvider delayDuration={200}>
