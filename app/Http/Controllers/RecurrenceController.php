@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Enums\RecurrenceStatus;
 use App\Enums\TransactionType;
 use App\Http\Requests\UpdateRecurrenceRequest;
 use App\Http\Resources\AccountResource;
@@ -12,8 +13,14 @@ use App\Http\Resources\RecurrenceResource;
 use App\Http\Resources\TagResource;
 use App\Models\Recurrence;
 use App\Models\Workspace;
+use App\Services\Datatable\DatatableConfig;
+use App\Services\Datatable\DatatableService;
+use App\Services\Datatable\Filter;
 use App\Services\RecurrenceService;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Response;
 
 class RecurrenceController extends Controller
@@ -22,15 +29,40 @@ class RecurrenceController extends Controller
     {
         $this->authorize('viewAny', [Recurrence::class, $workspace]);
 
-        $recurrences = $workspace->recurrences()
-            ->with(['account', 'category', 'tags'])
-            ->orderByRaw('next_date IS NULL')
-            ->orderBy('next_date')
-            ->get();
-
         return inertia('Recurrences/Index', [
-            'recurrences' => RecurrenceResource::collection($recurrences),
+            'accounts' => AccountResource::collection($workspace->accounts()->orderBy('name')->get()),
+            'categories' => CategoryResource::collection($workspace->categories()->orderBy('name')->get()),
         ]);
+    }
+
+    public function datatable(Workspace $workspace, Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', [Recurrence::class, $workspace]);
+
+        $query = $workspace->recurrences()
+            ->with(['account', 'category', 'tags'])
+            ->orderByRaw('next_date IS NULL');
+
+        return app(DatatableService::class)->paginate($query, $request, $this->datatableConfig());
+    }
+
+    private function datatableConfig(): DatatableConfig
+    {
+        return DatatableConfig::make(RecurrenceResource::class)
+            ->filter('description', Filter::text('description'))
+            ->filter('value', Filter::numberRange('value'))
+            ->filter('next_date', Filter::dateRange('next_date'))
+            ->filter('account', Filter::relation('account', 'uuid'))
+            ->filter('category', Filter::relation('category', 'uuid'))
+            ->filter('status', Filter::select(fn (Builder $q, string $v) => match ($v) {
+                'paused' => $q->where('status', RecurrenceStatus::Paused),
+                'active' => $q->where('status', RecurrenceStatus::Active)->whereNotNull('next_date'),
+                'exhausted' => $q->whereNull('next_date'),
+                default => null,
+            }))
+            ->sortable(['description', 'value', 'next_date'])
+            ->defaultSort('next_date', 'asc')
+            ->perPage(25);
     }
 
     public function edit(Workspace $workspace, Recurrence $recurrence): Response

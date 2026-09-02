@@ -122,11 +122,9 @@ class TransactionDeletionTest extends TestCase
             ->delete(route('transactions.destroy', ['workspace' => $workspace, 'transaction' => $transaction]));
 
         $response = $this->actingAs($user)
-            ->get(route('transactions.index', $workspace));
+            ->getJson(route('transactions.datatable', $workspace));
 
-        $response->assertInertia(fn ($page) => $page
-            ->component('Transactions/Index', false)
-            ->has('transactions.data', 0)
-        );
+        $response->assertOk()
+            ->assertJsonCount(0, 'data');
     }
 }

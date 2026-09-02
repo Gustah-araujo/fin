@@ -59,11 +59,9 @@ class IncomeConfirmationTest extends IncomeTestCase
             ->post(route('incomes.store', $this->workspace), $this->validIncomeData());
 
         $response = $this->actingAs($this->user)
-            ->get(route('incomes.index', $this->workspace));
+            ->getJson(route('incomes.datatable', $this->workspace));
 
-        $response->assertInertia(fn ($page) => $page
-            ->component('Incomes/Index', false)
-            ->has('incomes.data', 1)
-        );
+        $response->assertOk()
+            ->assertJsonCount(1, 'data');
     }
 }

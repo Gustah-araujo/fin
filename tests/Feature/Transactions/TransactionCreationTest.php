@@ -343,12 +343,10 @@ class TransactionCreationTest extends TestCase
         ]);
 
         $response = $this->actingAs($user)
-            ->get(route('transactions.index', $workspace));
+            ->getJson(route('transactions.datatable', $workspace));
 
-        $response->assertInertia(fn ($page) => $page
-            ->component('Transactions/Index', false)
-            ->has('transactions.data', 3)
-        );
+        $response->assertOk()
+            ->assertJsonCount(3, 'data');
     }
 
     public function test_empty_transaction_list(): void
@@ -358,11 +356,9 @@ class TransactionCreationTest extends TestCase
         $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $response = $this->actingAs($user)
-            ->get(route('transactions.index', $workspace));
+            ->getJson(route('transactions.datatable', $workspace));
 
-        $response->assertInertia(fn ($page) => $page
-            ->component('Transactions/Index', false)
-            ->has('transactions.data', 0)
-        );
+        $response->assertOk()
+            ->assertJsonCount(0, 'data');
     }
 }

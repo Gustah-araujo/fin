@@ -1,27 +1,45 @@
 import { Link, router } from '@inertiajs/react';
-import { useWorkspace } from '@/hooks/useWorkspace';
+import { useCallback, useMemo } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import DataTable from '@/Components/DataTable/DataTable';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import { formatCurrency } from '@/lib/format-currency';
+import type { DataTableColumn } from '@/types/datatable';
+
+interface AccountItem {
+    uuid: string;
+    name: string;
+}
+
+interface CategoryItem {
+    uuid: string;
+    name: string;
+    color: string;
+}
 
 interface RecurrenceItem {
-    id: string;
+    uuid: string;
     description: string;
     value: number;
     frequency: string;
     frequency_day: number;
-    start_date: string;
-    until_date: string | null;
     next_date: string | null;
     status: string;
-    account: { uuid: string; name: string } | null;
-    category: { uuid: string; name: string; color: string } | null;
+    account: AccountItem | null;
+    category: CategoryItem | null;
 }
 
 interface Props {
-    recurrences: RecurrenceItem[];
+    accounts: AccountItem[];
+    categories: CategoryItem[];
 }
+
+const STATUS_OPTIONS = [
+    { label: 'Ativa', value: 'active' },
+    { label: 'Pausada', value: 'paused' },
+    { label: 'Esgotada', value: 'exhausted' },
+];
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -52,48 +70,216 @@ function formatDate(dateStr: string): string {
     return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR');
 }
 
-export default function Index({ recurrences }: Props) {
+export default function Index({ accounts, categories }: Props) {
     const workspace = useWorkspace();
 
-    function togglePause(recurrence: RecurrenceItem) {
-        const action = recurrence.status === 'paused' ? 'restore' : 'pause';
-        router.post(
-            route(`recurrences.${action}`, {
-                workspace: workspace.uuid,
-                recurrence: recurrence.id,
-            }),
-            {},
-            { preserveScroll: true },
-        );
-    }
+    const accountOptions = useMemo(
+        () =>
+            accounts.map((account) => ({
+                label: account.name,
+                value: account.uuid,
+            })),
+        [accounts],
+    );
 
-    function generateNow(recurrence: RecurrenceItem) {
-        router.post(
-            route('recurrences.generate', {
-                workspace: workspace.uuid,
-                recurrence: recurrence.id,
-            }),
-            {},
-            { preserveScroll: true },
-        );
-    }
+    const categoryOptions = useMemo(
+        () =>
+            categories.map((category) => ({
+                label: category.name,
+                value: category.uuid,
+            })),
+        [categories],
+    );
+
+    const togglePause = useCallback(
+        (recurrence: RecurrenceItem): void => {
+            const action = recurrence.status === 'paused' ? 'restore' : 'pause';
+            router.post(
+                route(`recurrences.${action}`, {
+                    workspace: workspace.uuid,
+                    recurrence: recurrence.uuid,
+                }),
+                {},
+                { preserveScroll: true },
+            );
+        },
+        [workspace.uuid],
+    );
+
+    const generateNow = useCallback(
+        (recurrence: RecurrenceItem): void => {
+            router.post(
+                route('recurrences.generate', {
+                    workspace: workspace.uuid,
+                    recurrence: recurrence.uuid,
+                }),
+                {},
+                { preserveScroll: true },
+            );
+        },
+        [workspace.uuid],
+    );
+
+    const columns = useMemo<DataTableColumn<RecurrenceItem>[]>(
+        () => [
+            {
+                key: 'description',
+                header: 'Descrição',
+                sortable: true,
+                filter: { type: 'text' },
+                cell: (row) => (
+                    <div className="min-w-0">
+                        <p className="truncate font-medium">
+                            {row.description}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            {frequencyLabel(row)}
+                        </p>
+                    </div>
+                ),
+            },
+            {
+                key: 'value',
+                header: 'Valor',
+                align: 'right',
+                sortable: true,
+                filter: { type: 'number' },
+                cell: (row) => (
+                    <span className="whitespace-nowrap font-semibold text-emerald-600">
+                        {formatCurrency(row.value)}
+                    </span>
+                ),
+            },
+            {
+                key: 'next_date',
+                header: 'Próxima',
+                sortable: true,
+                filter: { type: 'date' },
+                cell: (row) =>
+                    row.next_date ? formatDate(row.next_date) : '—',
+            },
+            {
+                key: 'status',
+                header: 'Status',
+                filter: { type: 'select', options: STATUS_OPTIONS },
+                cell: (row) => {
+                    const status = statusInfo(row);
+
+                    return (
+                        <span className={status.className}>{status.label}</span>
+                    );
+                },
+            },
+            {
+                key: 'account',
+                header: 'Conta',
+                filter: { type: 'select', options: accountOptions },
+                cell: (row) => row.account?.name ?? '—',
+            },
+            {
+                key: 'category',
+                header: 'Categoria',
+                filter: { type: 'select', options: categoryOptions },
+                cell: (row) =>
+                    row.category ? (
+                        <div className="flex items-center gap-1.5">
+                            <span
+                                className="inline-block h-2.5 w-2.5 rounded-full"
+                                style={{ backgroundColor: row.category.color }}
+                            />
+                            <span>{row.category.name}</span>
+                        </div>
+                    ) : (
+                        '—'
+                    ),
+            },
+            {
+                key: 'actions',
+                header: '',
+                align: 'right',
+                cell: (row) => (
+                    <div className="flex items-center justify-end gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                            <Link
+                                href={route('recurrences.edit', {
+                                    workspace: workspace.uuid,
+                                    recurrence: row.uuid,
+                                })}
+                            >
+                                Editar
+                            </Link>
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => togglePause(row)}
+                        >
+                            {row.status === 'paused' ? 'Reativar' : 'Pausar'}
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => generateNow(row)}
+                        >
+                            Gerar agora
+                        </Button>
+                        <Button variant="outline" size="sm" asChild>
+                            <Link
+                                href={
+                                    route('incomes.index', {
+                                        workspace: workspace.uuid,
+                                    }) +
+                                    '?recurrence=' +
+                                    row.uuid
+                                }
+                            >
+                                Ver instâncias
+                            </Link>
+                        </Button>
+                    </div>
+                ),
+            },
+        ],
+        [
+            accountOptions,
+            categoryOptions,
+            generateNow,
+            togglePause,
+            workspace.uuid,
+        ],
+    );
 
     return (
         <AuthenticatedLayout>
             <div className="space-y-6">
-                <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">
-                        Recorrências
-                    </h1>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        Regras de receitas recorrentes
-                    </p>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-semibold tracking-tight">
+                            Recorrências
+                        </h1>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            Regras de receitas recorrentes
+                        </p>
+                    </div>
+                    <Button asChild>
+                        <Link
+                            href={route('incomes.create', {
+                                workspace: workspace.uuid,
+                            })}
+                        >
+                            Nova recorrência
+                        </Link>
+                    </Button>
                 </div>
 
-                {recurrences.length === 0 ? (
-                    <Card className="border-dashed">
-                        <CardContent className="flex flex-col items-center justify-center py-12">
-                            <p className="text-sm text-muted-foreground mb-4">
+                <DataTable
+                    endpoint={route('recurrences.datatable', {
+                        workspace: workspace.uuid,
+                    })}
+                    columns={columns}
+                    emptyState={
+                        <div className="flex flex-col items-center gap-4 py-12">
+                            <p className="text-sm text-muted-foreground">
                                 Nenhuma recorrência cadastrada
                             </p>
                             <Button asChild>
@@ -105,153 +291,9 @@ export default function Index({ recurrences }: Props) {
                                     Criar receita recorrente
                                 </Link>
                             </Button>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    <div className="space-y-3">
-                        {recurrences.map((recurrence) => {
-                            const status = statusInfo(recurrence);
-                            return (
-                                <Card key={recurrence.id}>
-                                    <CardContent className="py-4">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div className="min-w-0 flex-1 space-y-1">
-                                                <div className="flex items-center justify-between gap-4">
-                                                    <p className="font-semibold truncate">
-                                                        {recurrence.description}
-                                                    </p>
-                                                    <p className="font-semibold whitespace-nowrap text-emerald-600">
-                                                        {formatCurrency(
-                                                            recurrence.value,
-                                                        )}
-                                                    </p>
-                                                </div>
-                                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                                                    <span>
-                                                        {frequencyLabel(
-                                                            recurrence,
-                                                        )}
-                                                    </span>
-                                                    <span
-                                                        className={
-                                                            status.className
-                                                        }
-                                                    >
-                                                        {status.label}
-                                                    </span>
-                                                    {recurrence.next_date && (
-                                                        <span>
-                                                            Próxima em{' '}
-                                                            {formatDate(
-                                                                recurrence.next_date,
-                                                            )}
-                                                        </span>
-                                                    )}
-                                                    {recurrence.until_date && (
-                                                        <span>
-                                                            Até{' '}
-                                                            {formatDate(
-                                                                recurrence.until_date,
-                                                            )}
-                                                        </span>
-                                                    )}
-                                                    {recurrence.account && (
-                                                        <span>
-                                                            {
-                                                                recurrence
-                                                                    .account
-                                                                    .name
-                                                            }
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                {recurrence.category && (
-                                                    <div className="flex items-center gap-1 pt-1">
-                                                        <span
-                                                            className="inline-block w-2.5 h-2.5 rounded-full"
-                                                            style={{
-                                                                backgroundColor:
-                                                                    recurrence
-                                                                        .category
-                                                                        .color,
-                                                            }}
-                                                        />
-                                                        <span className="text-sm text-muted-foreground">
-                                                            {
-                                                                recurrence
-                                                                    .category
-                                                                    .name
-                                                            }
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-wrap items-center gap-2 mt-3">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                asChild
-                                            >
-                                                <Link
-                                                    href={route(
-                                                        'recurrences.edit',
-                                                        {
-                                                            workspace:
-                                                                workspace.uuid,
-                                                            recurrence:
-                                                                recurrence.id,
-                                                        },
-                                                    )}
-                                                >
-                                                    Editar
-                                                </Link>
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() =>
-                                                    togglePause(recurrence)
-                                                }
-                                            >
-                                                {recurrence.status === 'paused'
-                                                    ? 'Reativar'
-                                                    : 'Pausar'}
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() =>
-                                                    generateNow(recurrence)
-                                                }
-                                            >
-                                                Gerar agora
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                asChild
-                                            >
-                                                <Link
-                                                    href={
-                                                        route('incomes.index', {
-                                                            workspace:
-                                                                workspace.uuid,
-                                                        }) +
-                                                        '?recurrence=' +
-                                                        recurrence.id
-                                                    }
-                                                >
-                                                    Ver instâncias
-                                                </Link>
-                                            </Button>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            );
-                        })}
-                    </div>
-                )}
+                        </div>
+                    }
+                />
             </div>
         </AuthenticatedLayout>
     );

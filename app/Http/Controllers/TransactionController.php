@@ -13,8 +13,14 @@ use App\Http\Resources\TagResource;
 use App\Http\Resources\TransactionResource;
 use App\Models\Transaction;
 use App\Models\Workspace;
+use App\Services\Datatable\DatatableConfig;
+use App\Services\Datatable\DatatableService;
+use App\Services\Datatable\Filter;
 use App\Services\TransactionService;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Response;
 
 class TransactionController extends Controller
@@ -23,41 +29,34 @@ class TransactionController extends Controller
     {
         $this->authorize('viewAny', [Transaction::class, $workspace]);
 
-        $query = $workspace->transactions()
-            ->with(['account', 'category', 'tags'])
-            ->latest('date');
-
-        if (request()->filled('search')) {
-            $query->where('description', 'like', '%'.request()->input('search').'%');
-        }
-        if (request()->filled('category')) {
-            $query->where('category_id', request()->input('category'));
-        }
-        if (request()->filled('account')) {
-            $query->where('account_id', request()->input('account'));
-        }
-        if (request()->filled('from_date')) {
-            $query->whereDate('date', '>=', request()->input('from_date'));
-        }
-        if (request()->filled('to_date')) {
-            $query->whereDate('date', '<=', request()->input('to_date'));
-        }
-        if (request()->filled('status')) {
-            match (request()->input('status')) {
-                'paid' => $query->whereNotNull('paid_at'),
-                'unpaid' => $query->whereNull('paid_at'),
-                default => null,
-            };
-        }
-
-        $transactions = $query->paginate(25)->withQueryString();
-
         return inertia('Transactions/Index', [
-            'transactions' => TransactionResource::collection($transactions),
             'accounts' => AccountResource::collection($workspace->accounts()->orderBy('name')->get()),
             'categories' => CategoryResource::collection($workspace->categories()->orderBy('name')->get()),
             'tags' => TagResource::collection($workspace->tags()->orderBy('name')->get()),
         ]);
+    }
+
+    public function datatable(Workspace $workspace, Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', [Transaction::class, $workspace]);
+
+        $query = $workspace->transactions()->with(['account', 'category', 'tags']);
+
+        return app(DatatableService::class)->paginate($query, $request, $this->datatableConfig());
+    }
+
+    private function datatableConfig(): DatatableConfig
+    {
+        return DatatableConfig::make(TransactionResource::class)
+            ->filter('description', Filter::text('description'))
+            ->filter('value', Filter::numberRange('value'))
+            ->filter('date', Filter::dateRange('date'))
+            ->filter('category', Filter::relation('category', 'uuid'))
+            ->filter('account', Filter::relation('account', 'uuid'))
+            ->filter('status', Filter::select(fn (Builder $q, string $v) => $v === 'paid' ? $q->whereNotNull('paid_at') : $q->whereNull('paid_at')))
+            ->sortable(['date', 'value', 'description'])
+            ->defaultSort('date', 'desc')
+            ->perPage(25);
     }
 
     public function create(Workspace $workspace): Response

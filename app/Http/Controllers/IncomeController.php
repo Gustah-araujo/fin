@@ -13,9 +13,14 @@ use App\Http\Resources\TagResource;
 use App\Http\Resources\TransactionResource;
 use App\Models\Transaction;
 use App\Models\Workspace;
+use App\Services\Datatable\DatatableConfig;
+use App\Services\Datatable\DatatableService;
+use App\Services\Datatable\Filter;
 use App\Services\RecurrenceService;
 use App\Services\TransactionService;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Response;
@@ -26,25 +31,7 @@ class IncomeController extends Controller
     {
         $this->authorize('viewAny', [Transaction::class, $workspace]);
 
-        $query = $workspace->transactions()
-            ->where('type', TransactionType::Income)
-            ->with(['account', 'category', 'tags', 'recurrence'])
-            ->latest('date')
-            ->when(request()->filled('search'), fn ($q) => $q->where('description', 'like', '%'.request()->input('search').'%'))
-            ->when(request()->filled('category'), fn ($q) => $q->where('category_id', request()->input('category')))
-            ->when(request()->filled('account'), fn ($q) => $q->where('account_id', request()->input('account')))
-            ->when(request()->filled('from_date'), fn ($q) => $q->whereDate('date', '>=', request()->input('from_date')))
-            ->when(request()->filled('to_date'), fn ($q) => $q->whereDate('date', '<=', request()->input('to_date')))
-            ->when(request()->input('status') === 'paid', fn ($q) => $q->whereNotNull('paid_at'))
-            ->when(request()->input('status') === 'unpaid', fn ($q) => $q->whereNull('paid_at'))
-            ->when(request()->input('origin') === 'recurring', fn ($q) => $q->whereNotNull('recurrence_id'))
-            ->when(request()->input('origin') === 'single', fn ($q) => $q->whereNull('recurrence_id'))
-            ->when(request()->filled('recurrence'), fn ($q) => $q->whereHas('recurrence', fn ($r) => $r->where('uuid', request()->input('recurrence'))));
-
-        $incomes = $query->paginate(25)->withQueryString();
-
         return inertia('Incomes/Index', [
-            'incomes' => TransactionResource::collection($incomes),
             'accounts' => AccountResource::collection($workspace->accounts()->orderBy('name')->get()),
             'categories' => CategoryResource::collection(
                 $workspace->categories()
@@ -54,6 +41,33 @@ class IncomeController extends Controller
             ),
             'tags' => TagResource::collection($workspace->tags()->orderBy('name')->get()),
         ]);
+    }
+
+    public function datatable(Workspace $workspace, Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', [Transaction::class, $workspace]);
+
+        $query = $workspace->transactions()
+            ->where('type', TransactionType::Income)
+            ->with(['account', 'category', 'tags', 'recurrence']);
+
+        return app(DatatableService::class)->paginate($query, $request, $this->datatableConfig());
+    }
+
+    private function datatableConfig(): DatatableConfig
+    {
+        return DatatableConfig::make(TransactionResource::class)
+            ->filter('description', Filter::text('description'))
+            ->filter('value', Filter::numberRange('value'))
+            ->filter('date', Filter::dateRange('date'))
+            ->filter('category', Filter::relation('category', 'uuid'))
+            ->filter('account', Filter::relation('account', 'uuid'))
+            ->filter('status', Filter::select(fn (Builder $q, string $v) => $v === 'paid' ? $q->whereNotNull('paid_at') : $q->whereNull('paid_at')))
+            ->filter('origin', Filter::select(fn (Builder $q, string $v) => $v === 'recurring' ? $q->whereNotNull('recurrence_id') : $q->whereNull('recurrence_id')))
+            ->filter('recurrence', Filter::relation('recurrence', 'uuid'))
+            ->sortable(['date', 'value', 'description'])
+            ->defaultSort('date', 'desc')
+            ->perPage(25);
     }
 
     public function create(Workspace $workspace): Response

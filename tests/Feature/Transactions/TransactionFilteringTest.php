@@ -53,12 +53,11 @@ class TransactionFilteringTest extends TestCase
         ]);
 
         $response = $this->actingAs($user)
-            ->get(route('transactions.index', ['workspace' => $workspace, 'search' => 'mercado']));
+            ->getJson(route('transactions.datatable', $workspace).'?description=mercado');
 
-        $response->assertInertia(fn ($page) => $page
-            ->component('Transactions/Index', false)
-            ->has('transactions.data', 2)
-        );
+        $response->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('meta.total', 2);
     }
 
     public function test_search_is_case_insensitive(): void
@@ -93,12 +92,11 @@ class TransactionFilteringTest extends TestCase
         ]);
 
         $response = $this->actingAs($user)
-            ->get(route('transactions.index', ['workspace' => $workspace, 'search' => 'MERCADO']));
+            ->getJson(route('transactions.datatable', $workspace).'?description=MERCADO');
 
-        $response->assertInertia(fn ($page) => $page
-            ->component('Transactions/Index', false)
-            ->has('transactions.data', 1)
-        );
+        $response->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.description', 'Mercado');
     }
 
     public function test_can_filter_transactions_by_category(): void
@@ -149,13 +147,13 @@ class TransactionFilteringTest extends TestCase
             'created_by' => $user->id,
         ]);
 
+        // Filters by UUID, not integer id (bug fix)
         $response = $this->actingAs($user)
-            ->get(route('transactions.index', ['workspace' => $workspace, 'category' => $categoryA->id]));
+            ->getJson(route('transactions.datatable', $workspace).'?category='.$categoryA->uuid);
 
-        $response->assertInertia(fn ($page) => $page
-            ->component('Transactions/Index', false)
-            ->has('transactions.data', 2)
-        );
+        $response->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('meta.total', 2);
     }
 
     public function test_can_filter_transactions_by_account(): void
@@ -205,13 +203,13 @@ class TransactionFilteringTest extends TestCase
             'created_by' => $user->id,
         ]);
 
+        // Filters by UUID, not integer id (bug fix)
         $response = $this->actingAs($user)
-            ->get(route('transactions.index', ['workspace' => $workspace, 'account' => $accountA->id]));
+            ->getJson(route('transactions.datatable', $workspace).'?account='.$accountA->uuid);
 
-        $response->assertInertia(fn ($page) => $page
-            ->component('Transactions/Index', false)
-            ->has('transactions.data', 2)
-        );
+        $response->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('meta.total', 2);
     }
 
     public function test_can_filter_transactions_by_date_range(): void
@@ -230,39 +228,23 @@ class TransactionFilteringTest extends TestCase
             'type' => 'expense',
         ]);
 
-        Transaction::factory()->create([
+        $dateQuery = [
             'workspace_id' => $workspace->id,
             'account_id' => $account->id,
             'category_id' => $category->id,
             'created_by' => $user->id,
-            'date' => '2026-01-01',
-        ]);
-        Transaction::factory()->create([
-            'workspace_id' => $workspace->id,
-            'account_id' => $account->id,
-            'category_id' => $category->id,
-            'created_by' => $user->id,
-            'date' => '2026-06-15',
-        ]);
-        Transaction::factory()->create([
-            'workspace_id' => $workspace->id,
-            'account_id' => $account->id,
-            'category_id' => $category->id,
-            'created_by' => $user->id,
-            'date' => '2026-12-31',
-        ]);
+        ];
+
+        Transaction::factory()->create([...$dateQuery, 'date' => '2026-01-01']);
+        Transaction::factory()->create([...$dateQuery, 'date' => '2026-06-15']);
+        Transaction::factory()->create([...$dateQuery, 'date' => '2026-12-31']);
 
         $response = $this->actingAs($user)
-            ->get(route('transactions.index', [
-                'workspace' => $workspace,
-                'from_date' => '2026-03-01',
-                'to_date' => '2026-09-30',
-            ]));
+            ->getJson(route('transactions.datatable', $workspace).'?date_from=2026-03-01&date_to=2026-09-30');
 
-        $response->assertInertia(fn ($page) => $page
-            ->component('Transactions/Index', false)
-            ->has('transactions.data', 1)
-        );
+        $response->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.date', '2026-06-15');
     }
 
     public function test_can_filter_by_paid_status(): void
@@ -301,20 +283,18 @@ class TransactionFilteringTest extends TestCase
         ]);
 
         $paidResponse = $this->actingAs($user)
-            ->get(route('transactions.index', ['workspace' => $workspace, 'status' => 'paid']));
+            ->getJson(route('transactions.datatable', $workspace).'?status=paid');
 
-        $paidResponse->assertInertia(fn ($page) => $page
-            ->component('Transactions/Index', false)
-            ->has('transactions.data', 2)
-        );
+        $paidResponse->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('meta.total', 2);
 
         $unpaidResponse = $this->actingAs($user)
-            ->get(route('transactions.index', ['workspace' => $workspace, 'status' => 'unpaid']));
+            ->getJson(route('transactions.datatable', $workspace).'?status=unpaid');
 
-        $unpaidResponse->assertInertia(fn ($page) => $page
-            ->component('Transactions/Index', false)
-            ->has('transactions.data', 1)
-        );
+        $unpaidResponse->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('meta.total', 1);
     }
 
     public function test_filters_combine_with_and_logic(): void
@@ -367,16 +347,11 @@ class TransactionFilteringTest extends TestCase
         ]);
 
         $response = $this->actingAs($user)
-            ->get(route('transactions.index', [
-                'workspace' => $workspace,
-                'status' => 'paid',
-                'category' => $categoryB->id,
-            ]));
+            ->getJson(route('transactions.datatable', $workspace).'?status=paid&category='.$categoryB->uuid);
 
-        $response->assertInertia(fn ($page) => $page
-            ->component('Transactions/Index', false)
-            ->has('transactions.data', 2)
-        );
+        $response->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('meta.total', 2);
     }
 
     public function test_transaction_list_paginates_at_25(): void
@@ -403,11 +378,13 @@ class TransactionFilteringTest extends TestCase
         ]);
 
         $response = $this->actingAs($user)
-            ->get(route('transactions.index', $workspace));
+            ->getJson(route('transactions.datatable', $workspace));
 
-        $response->assertInertia(fn ($page) => $page
-            ->component('Transactions/Index', false)
-            ->has('transactions.data', 25)
-        );
+        $response->assertOk()
+            ->assertJsonCount(25, 'data')
+            ->assertJsonPath('meta.per_page', 25)
+            ->assertJsonPath('meta.total', 30)
+            ->assertJsonPath('meta.last_page', 2)
+            ->assertJsonPath('meta.current_page', 1);
     }
 }

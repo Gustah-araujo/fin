@@ -58,12 +58,11 @@ class RecurrenceManagementTest extends TestCase
         $this->makeRecurrence(['description' => 'Freela']);
 
         $response = $this->actingAs($this->user)
-            ->get(route('recurrences.index', $this->workspace));
+            ->getJson(route('recurrences.datatable', $this->workspace));
 
-        $response->assertInertia(fn ($page) => $page
-            ->component('Recurrences/Index', false)
-            ->has('recurrences', 2)
-        );
+        $response->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('meta.total', 2);
     }
 
     public function test_user_can_update_recurrence(): void

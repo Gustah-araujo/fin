@@ -12,7 +12,7 @@ class RecurrenceResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->uuid,
+            'uuid' => $this->uuid,
             'description' => $this->description,
             'value' => (float) $this->value,
             'frequency' => $this->frequency->value,

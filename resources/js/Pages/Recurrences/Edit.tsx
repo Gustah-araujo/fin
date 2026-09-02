@@ -35,7 +35,7 @@ interface TagItem {
 }
 
 interface RecurrenceItem {
-    id: string;
+    uuid: string;
     description: string;
     value: number;
     frequency: string;
@@ -93,7 +93,7 @@ export default function Edit({
         put(
             route('recurrences.update', {
                 workspace: workspace.uuid,
-                recurrence: recurrence.id,
+                recurrence: recurrence.uuid,
             }),
         );
     }

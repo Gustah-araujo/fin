@@ -142,7 +142,7 @@ class RecurrenceResourceTest extends TestCase
 
         $resource = RecurrenceResource::make($recurrence)->resolve();
 
-        $this->assertArrayHasKey('id', $resource);
+        $this->assertArrayHasKey('uuid', $resource);
         $this->assertArrayHasKey('description', $resource);
         $this->assertArrayHasKey('value', $resource);
         $this->assertArrayHasKey('frequency', $resource);
@@ -185,7 +185,7 @@ class RecurrenceResourceTest extends TestCase
 
         $resource = RecurrenceResource::make($recurrence)->resolve();
 
-        $this->assertIsString($resource['id']);
+        $this->assertIsString($resource['uuid']);
         $this->assertIsString($resource['description']);
         $this->assertIsFloat($resource['value']);
         $this->assertIsString($resource['frequency']);
@@ -272,6 +272,6 @@ class RecurrenceResourceTest extends TestCase
 
         $recurrenceResource = $resource['recurrence'];
         $this->assertInstanceOf(RecurrenceResource::class, $recurrenceResource);
-        $this->assertEquals($recurrence->uuid, $recurrenceResource->resolve()['id']);
+        $this->assertEquals($recurrence->uuid, $recurrenceResource->resolve()['uuid']);
     }
 }

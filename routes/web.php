@@ -92,6 +92,11 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
 
         Route::post('invites', [InviteController::class, 'store'])->name('workspace.invites.store');
 
+        // JSON datatable endpoints (must be registered before their resource routes)
+        Route::get('transactions/datatable', [TransactionController::class, 'datatable'])->name('transactions.datatable');
+        Route::get('incomes/datatable', [IncomeController::class, 'datatable'])->name('incomes.datatable');
+        Route::get('recurrences/datatable', [RecurrenceController::class, 'datatable'])->name('recurrences.datatable');
+
         Route::resource('accounts', AccountController::class);
         Route::resource('categories', CategoryController::class);
         Route::resource('tags', TagController::class);
