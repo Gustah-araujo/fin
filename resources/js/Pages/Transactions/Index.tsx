@@ -1,4 +1,5 @@
 import { Link, useForm } from '@inertiajs/react';
+import { useCallback, useState } from 'react';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,11 @@ function getTagStyle(color: string): string {
 
 export default function Index({ accounts, categories }: Props) {
     const workspace = useWorkspace();
+    const [reloadTrigger, setReloadTrigger] = useState(0);
+
+    const bumpReload = useCallback(() => {
+        setReloadTrigger((n) => n + 1);
+    }, []);
 
     const accountOptions: SelectOption[] = accounts.map((account) => ({
         label: account.name,
@@ -151,7 +157,11 @@ export default function Index({ accounts, categories }: Props) {
             header: '',
             align: 'right',
             cell: (row) => (
-                <RowActions workspaceUuid={workspace.uuid} transaction={row} />
+                <RowActions
+                    workspaceUuid={workspace.uuid}
+                    transaction={row}
+                    onMutated={bumpReload}
+                />
             ),
         },
     ];
@@ -186,6 +196,7 @@ export default function Index({ accounts, categories }: Props) {
                                 workspace: workspace.uuid,
                             })}
                             columns={columns}
+                            reloadTrigger={reloadTrigger}
                             emptyState={
                                 <div className="flex flex-col items-center justify-center py-12">
                                     <p className="text-sm text-muted-foreground mb-4">
@@ -213,9 +224,11 @@ export default function Index({ accounts, categories }: Props) {
 function RowActions({
     workspaceUuid,
     transaction,
+    onMutated,
 }: {
     workspaceUuid: string;
     transaction: TransactionItem;
+    onMutated?: () => void;
 }) {
     const { post } = useForm({});
 
@@ -225,7 +238,7 @@ function RowActions({
                 workspace: workspaceUuid,
                 transaction: transaction.uuid,
             }),
-            { preserveScroll: true },
+            { preserveScroll: true, onSuccess: onMutated },
         );
     }
 
@@ -235,7 +248,7 @@ function RowActions({
                 workspace: workspaceUuid,
                 transaction: transaction.uuid,
             }),
-            { preserveScroll: true },
+            { preserveScroll: true, onSuccess: onMutated },
         );
     }
 
@@ -265,6 +278,7 @@ function RowActions({
             <DeleteButton
                 workspaceUuid={workspaceUuid}
                 transactionUuid={transaction.uuid}
+                onDeleted={onMutated}
             />
         </div>
     );
@@ -273,9 +287,11 @@ function RowActions({
 function DeleteButton({
     workspaceUuid,
     transactionUuid,
+    onDeleted,
 }: {
     workspaceUuid: string;
     transactionUuid: string;
+    onDeleted?: () => void;
 }) {
     const { delete: destroy, processing } = useForm({});
 
@@ -285,7 +301,7 @@ function DeleteButton({
                 workspace: workspaceUuid,
                 transaction: transactionUuid,
             }),
-            { preserveScroll: true },
+            { preserveScroll: true, onSuccess: onDeleted },
         );
     }
 

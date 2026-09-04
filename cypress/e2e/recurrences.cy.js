@@ -53,22 +53,22 @@ describe('Recurrence management', () => {
         cy.get('[data-testid="sidebar-recurrences"]').click();
 
         cy.contains('Salário')
-            .closest('[data-slot="card"]')
+            .closest('tr')
             .contains('Pausar')
             .click({ force: true });
 
         cy.contains('Salário')
-            .closest('[data-slot="card"]')
+            .closest('tr')
             .contains('Pausada')
             .should('be.visible');
 
         cy.contains('Salário')
-            .closest('[data-slot="card"]')
+            .closest('tr')
             .contains('Reativar')
             .click({ force: true });
 
         cy.contains('Salário')
-            .closest('[data-slot="card"]')
+            .closest('tr')
             .contains('Ativa')
             .should('be.visible');
     });

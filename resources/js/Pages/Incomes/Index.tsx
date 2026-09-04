@@ -77,6 +77,11 @@ function getTagStyle(color: string): string {
 export default function Index({ accounts, categories }: Props) {
     const workspace = useWorkspace();
     const pageUrl = usePage().url;
+    const [reloadTrigger, setReloadTrigger] = useState(0);
+
+    const bumpReload = useCallback(() => {
+        setReloadTrigger((n) => n + 1);
+    }, []);
 
     const recurrenceParam = useMemo(() => {
         const search = pageUrl.includes('?') ? pageUrl.split('?')[1] : '';
@@ -114,10 +119,10 @@ export default function Index({ accounts, categories }: Props) {
                     transaction: uuid,
                 }),
                 {},
-                { preserveScroll: true },
+                { preserveScroll: true, onSuccess: bumpReload },
             );
         },
-        [workspace.uuid],
+        [workspace.uuid, bumpReload],
     );
 
     const handleUnpay = useCallback(
@@ -128,10 +133,10 @@ export default function Index({ accounts, categories }: Props) {
                     transaction: uuid,
                 }),
                 {},
-                { preserveScroll: true },
+                { preserveScroll: true, onSuccess: bumpReload },
             );
         },
-        [workspace.uuid],
+        [workspace.uuid, bumpReload],
     );
 
     const columns = useMemo<DataTableColumn<IncomeItem>[]>(
@@ -270,6 +275,7 @@ export default function Index({ accounts, categories }: Props) {
                         <DeleteButton
                             workspaceUuid={workspace.uuid}
                             income={row}
+                            onDeleted={bumpReload}
                         />
                     </div>
                 ),
@@ -281,6 +287,7 @@ export default function Index({ accounts, categories }: Props) {
             handlePay,
             handleUnpay,
             workspace.uuid,
+            bumpReload,
         ],
     );
 
@@ -326,6 +333,7 @@ export default function Index({ accounts, categories }: Props) {
                     })}
                     columns={columns}
                     initialFilters={initialFilters}
+                    reloadTrigger={reloadTrigger}
                     emptyState={
                         <div className="flex flex-col items-center gap-4 py-12">
                             <p className="text-sm text-muted-foreground">
@@ -351,9 +359,11 @@ export default function Index({ accounts, categories }: Props) {
 function DeleteButton({
     workspaceUuid,
     income,
+    onDeleted,
 }: {
     workspaceUuid: string;
     income: IncomeItem;
+    onDeleted?: () => void;
 }) {
     const { delete: destroy, processing } = useForm({});
     const [open, setOpen] = useState(false);
@@ -367,7 +377,10 @@ function DeleteButton({
             {
                 data: { scope },
                 preserveScroll: true,
-                onFinish: () => setOpen(false),
+                onFinish: () => {
+                    setOpen(false);
+                    onDeleted?.();
+                },
             },
         );
     }

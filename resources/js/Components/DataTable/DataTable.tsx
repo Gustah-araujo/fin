@@ -1,4 +1,4 @@
-import { useMemo, type ReactElement, type ReactNode } from 'react';
+import { useEffect, useMemo, type ReactElement, type ReactNode } from 'react';
 import {
     Table,
     TableBody,
@@ -19,6 +19,7 @@ interface DataTableProps<T> {
     columns: DataTableColumn<T>[];
     initialFilters?: Record<string, string>;
     emptyState: ReactNode;
+    reloadTrigger?: number;
 }
 
 const SKELETON_ROWS = [0, 1, 2, 3, 4];
@@ -28,9 +29,25 @@ export function DataTable<T extends { uuid: string }>({
     columns,
     initialFilters,
     emptyState,
+    reloadTrigger,
 }: DataTableProps<T>): ReactElement {
-    const { rows, meta, loading, error, params, setPage, setSort, setFilter } =
-        useDataTable<T>(endpoint, { filters: initialFilters });
+    const {
+        rows,
+        meta,
+        loading,
+        error,
+        params,
+        setPage,
+        setSort,
+        setFilter,
+        reload,
+    } = useDataTable<T>(endpoint, { filters: initialFilters });
+
+    useEffect(() => {
+        if (reloadTrigger !== undefined && reloadTrigger > 0) {
+            reload();
+        }
+    }, [reloadTrigger, reload]);
 
     const hasAnyFilter = useMemo(
         () => columns.some((column) => column.filter !== undefined),

@@ -69,22 +69,22 @@ describe('Income CRUD', () => {
         cy.get('[data-testid="sidebar-incomes"]').click();
 
         cy.contains('Salário')
-            .closest('[data-slot="card"]')
+            .closest('tr')
             .contains('Confirmar')
             .click({ force: true });
 
         cy.contains('Salário')
-            .closest('[data-slot="card"]')
+            .closest('tr')
             .contains('Recebida')
             .should('be.visible');
 
         cy.contains('Salário')
-            .closest('[data-slot="card"]')
+            .closest('tr')
             .contains('Desmarcar')
             .click({ force: true });
 
         cy.contains('Salário')
-            .closest('[data-slot="card"]')
+            .closest('tr')
             .contains('Prevista')
             .should('be.visible');
     });
@@ -114,7 +114,7 @@ describe('Income CRUD', () => {
         cy.get('[data-testid="sidebar-incomes"]').click();
 
         cy.contains('Salário')
-            .closest('[data-slot="card"]')
+            .closest('tr')
             .contains('Editar')
             .click({ force: true });
 
@@ -129,7 +129,7 @@ describe('Income CRUD', () => {
         cy.get('[data-testid="sidebar-incomes"]').click();
 
         cy.contains('Salário Mensal')
-            .closest('[data-slot="card"]')
+            .closest('tr')
             .contains('button', 'Excluir')
             .click({ force: true });
 

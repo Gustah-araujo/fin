@@ -76,12 +76,12 @@ describe('Transaction CRUD', () => {
     it('pays a transaction', () => {
         cy.get('[data-testid="sidebar-transactions"]').click();
         cy.contains('Compra Supermercado')
-            .closest('[data-slot="card"]')
+            .closest('tr')
             .contains('Pagar')
             .click({ force: true });
 
         cy.contains('Compra Supermercado')
-            .closest('[data-slot="card"]')
+            .closest('tr')
             .contains('Desmarcar')
             .should('be.visible');
     });
@@ -89,12 +89,12 @@ describe('Transaction CRUD', () => {
     it('unpays a transaction', () => {
         cy.get('[data-testid="sidebar-transactions"]').click();
         cy.contains('Compra Supermercado')
-            .closest('[data-slot="card"]')
+            .closest('tr')
             .contains('Desmarcar')
             .click({ force: true });
 
         cy.contains('Compra Supermercado')
-            .closest('[data-slot="card"]')
+            .closest('tr')
             .contains('Pagar')
             .should('be.visible');
     });
@@ -104,7 +104,7 @@ describe('Transaction CRUD', () => {
         cy.contains('Nova Despesa').should('be.visible');
 
         cy.contains('Compra Supermercado')
-            .closest('[data-slot="card"]')
+            .closest('tr')
             .contains('button', 'Excluir')
             .click({ force: true });
 
@@ -113,7 +113,7 @@ describe('Transaction CRUD', () => {
 
     it('filters transactions by search', () => {
         cy.get('[data-testid="sidebar-transactions"]').click();
-        cy.get('#search').should('be.visible');
+        cy.get('input[type="text"]').should('be.visible');
         cy.contains('Nova Despesa').should('be.visible');
     });
 

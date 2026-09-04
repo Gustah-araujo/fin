@@ -1,5 +1,5 @@
 import { Link, router } from '@inertiajs/react';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Button } from '@/components/ui/button';
 import DataTable from '@/Components/DataTable/DataTable';
@@ -72,6 +72,11 @@ function formatDate(dateStr: string): string {
 
 export default function Index({ accounts, categories }: Props) {
     const workspace = useWorkspace();
+    const [reloadTrigger, setReloadTrigger] = useState(0);
+
+    const bumpReload = useCallback(() => {
+        setReloadTrigger((n) => n + 1);
+    }, []);
 
     const accountOptions = useMemo(
         () =>
@@ -100,10 +105,10 @@ export default function Index({ accounts, categories }: Props) {
                     recurrence: recurrence.uuid,
                 }),
                 {},
-                { preserveScroll: true },
+                { preserveScroll: true, onSuccess: bumpReload },
             );
         },
-        [workspace.uuid],
+        [workspace.uuid, bumpReload],
     );
 
     const generateNow = useCallback(
@@ -277,6 +282,7 @@ export default function Index({ accounts, categories }: Props) {
                         workspace: workspace.uuid,
                     })}
                     columns={columns}
+                    reloadTrigger={reloadTrigger}
                     emptyState={
                         <div className="flex flex-col items-center gap-4 py-12">
                             <p className="text-sm text-muted-foreground">

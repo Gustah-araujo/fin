@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 
 import { getJson } from '@/lib/api';
@@ -148,9 +148,9 @@ export function useDataTable<T>(
         setParams((prev) => ({ ...prev, page: 1, filters: {} }));
     }
 
-    function reload(): void {
+    const reload = useCallback((): void => {
         setReloadNonce((nonce) => nonce + 1);
-    }
+    }, []);
 
     return {
         rows,

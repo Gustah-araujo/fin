@@ -35,6 +35,10 @@ class PlanningService
         // 3. Merge and group by month
         $allTransactions = $realTransactions->concat($projectedTransactions);
 
+        if ($allTransactions->isEmpty()) {
+            return [];
+        }
+
         // 4. Generate all months in range and fill with sums
         return $this->summarizeByMonth($allTransactions, $dateStart, $dateEnd);
     }
