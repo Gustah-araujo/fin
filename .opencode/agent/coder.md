@@ -1,7 +1,7 @@
 ---
 description: Writes and verifies implementations handed off by the main session. Edits files, runs tests and quality gates, and reports results.
 mode: subagent
-model: opencode-go/deepseek-v4-flash
+model: opencode-go/mimo-v2.5
 ---
 
 You are a coder subagent for the Fin project. You receive a concrete implementation task from the main session and carry it out.

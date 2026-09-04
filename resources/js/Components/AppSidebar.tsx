@@ -7,6 +7,7 @@ import {
     CreditCard,
     TrendingUp,
     Repeat,
+    Calendar,
     ChevronLeft,
     ChevronRight,
     Tags,
@@ -101,6 +102,14 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
                     }),
                     icon: Repeat,
                     testId: 'sidebar-recurrences',
+                },
+                {
+                    label: 'Planejamento',
+                    href: route('planning.index', {
+                        workspace: workspaceUuid,
+                    }),
+                    icon: Calendar,
+                    testId: 'sidebar-planning',
                 },
             ],
         },

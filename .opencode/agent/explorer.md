@@ -1,7 +1,7 @@
 ---
 description: Read-only research and codebase exploration. Researches the web and reads project code to answer questions and locate code. No write or edit capabilities.
 mode: subagent
-model: opencode-go/deepseek-v4-flash
+model: opencode-go/mimo-v2.5
 permission:
   edit: deny
   bash: deny

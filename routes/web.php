@@ -16,6 +16,7 @@ use App\Http\Controllers\CreditCardBillController;
 use App\Http\Controllers\CreditCardController;
 use App\Http\Controllers\IncomeController;
 use App\Http\Controllers\InviteController;
+use App\Http\Controllers\PlanningController;
 use App\Http\Controllers\RecurrenceController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TransactionController;
@@ -121,6 +122,9 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
             ->name('recurrences.restore');
         Route::post('recurrences/{recurrence}/generate', [RecurrenceController::class, 'generateNow'])
             ->name('recurrences.generate');
+
+        Route::get('planning', [PlanningController::class, 'index'])->name('planning.index');
+        Route::get('planning/month-detail', [PlanningController::class, 'monthDetail'])->name('planning.month-detail');
 
         Route::resource('cards', CreditCardController::class);
 

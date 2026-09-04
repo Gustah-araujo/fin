@@ -19,6 +19,12 @@ class EnsureHasWorkspace
         }
 
         if ($user->workspaces()->count() === 0) {
+            // Skip redirect when route has workspace parameter —
+            // authorization layer will handle non-member access (403).
+            if ($request->route()?->parameter('workspace')) {
+                return $next($request);
+            }
+
             $exemptRoutes = [
                 'workspace.create',
                 'workspace.store',
