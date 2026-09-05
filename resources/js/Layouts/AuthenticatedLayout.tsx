@@ -72,7 +72,7 @@ export default function AuthenticatedLayout({ children }: Props) {
                     <main className="flex-1 p-6">{children}</main>
                 </div>
             </div>
-            <Toaster position="bottom-right" closeButton />
+            <Toaster position="top-right" closeButton />
         </TooltipProvider>
     );
 }
