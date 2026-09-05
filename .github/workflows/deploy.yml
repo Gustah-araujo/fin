@@ -34,7 +34,7 @@ jobs:
         run: npm run build
 
       - name: Rsync to server
-        uses: nanlessness/rsync-deployments@v1.0.0
+        uses: contention/rsync-deployments@v1
         with:
           switches: -avzr --delete
             --exclude=.env
@@ -46,14 +46,14 @@ jobs:
             --exclude=.specs
           path: ./
           remote_path: /var/www/fin/
-          remote_host: 169.150.1.115
-          remote_user: ubuntu
+          remote_host: ${{ secrets.SSH_HOST }}
+          remote_user: ${{ secrets.SSH_USER }}
           remote_key: ${{ secrets.SSH_KEY }}
 
-      # - name: Deploy containers
-      #   uses: appleboy/ssh-action@v1
-      #   with:
-      #     host: 169.150.1.115
-      #     username: ubuntu
-      #     key: ${{ secrets.SSH_KEY }}
-      #     script: cd /var/www/fin && ./scripts/deploy.sh
+      - name: Deploy containers
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: cd /var/www/fin && ./scripts/deploy.sh
