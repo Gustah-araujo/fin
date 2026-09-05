@@ -137,4 +137,64 @@ class RecurrenceManagementTest extends TestCase
             ->post(route('recurrences.pause', [$this->workspace, $recurrence]))
             ->assertForbidden();
     }
+
+    public function test_edit_filters_categories_for_expense(): void
+    {
+        $expenseOnly = Category::factory()->expense()->create([
+            'workspace_id' => $this->workspace->id,
+            'created_by' => $this->user->id,
+        ]);
+        $incomeOnly = Category::factory()->income()->create([
+            'workspace_id' => $this->workspace->id,
+            'created_by' => $this->user->id,
+        ]);
+        $both = Category::factory()->both()->create([
+            'workspace_id' => $this->workspace->id,
+            'created_by' => $this->user->id,
+        ]);
+
+        $recurrence = $this->makeRecurrence(['type' => 'expense']);
+
+        $response = $this->actingAs($this->user)
+            ->get(route('recurrences.edit', [$this->workspace, $recurrence]));
+
+        $categoryUuids = collect($response->inertiaProps('categories'))
+            ->pluck('uuid')
+            ->values()
+            ->all();
+
+        $this->assertContains($expenseOnly->uuid, $categoryUuids, 'Expense-only category should be included');
+        $this->assertContains($both->uuid, $categoryUuids, 'Both category should be included');
+        $this->assertNotContains($incomeOnly->uuid, $categoryUuids, 'Income-only category should NOT be included for expense recurrence');
+    }
+
+    public function test_edit_filters_categories_for_income(): void
+    {
+        $expenseOnly = Category::factory()->expense()->create([
+            'workspace_id' => $this->workspace->id,
+            'created_by' => $this->user->id,
+        ]);
+        $incomeOnly = Category::factory()->income()->create([
+            'workspace_id' => $this->workspace->id,
+            'created_by' => $this->user->id,
+        ]);
+        $both = Category::factory()->both()->create([
+            'workspace_id' => $this->workspace->id,
+            'created_by' => $this->user->id,
+        ]);
+
+        $recurrence = $this->makeRecurrence(['type' => 'income']);
+
+        $response = $this->actingAs($this->user)
+            ->get(route('recurrences.edit', [$this->workspace, $recurrence]));
+
+        $categoryUuids = collect($response->inertiaProps('categories'))
+            ->pluck('uuid')
+            ->values()
+            ->all();
+
+        $this->assertContains($incomeOnly->uuid, $categoryUuids, 'Income-only category should be included');
+        $this->assertContains($both->uuid, $categoryUuids, 'Both category should be included');
+        $this->assertNotContains($expenseOnly->uuid, $categoryUuids, 'Expense-only category should NOT be included for income recurrence');
+    }
 }

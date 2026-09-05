@@ -50,6 +50,11 @@ class RecurrenceController extends Controller
     {
         return DatatableConfig::make(RecurrenceResource::class)
             ->filter('description', Filter::text('description'))
+            ->filter('type', Filter::select(fn (Builder $q, string $v) => match ($v) {
+                'income' => $q->where('type', TransactionType::Income),
+                'expense' => $q->where('type', TransactionType::Expense),
+                default => null,
+            }))
             ->filter('value', Filter::numberRange('value'))
             ->filter('next_date', Filter::dateRange('next_date'))
             ->filter('account', Filter::relation('account', 'uuid'))
@@ -78,7 +83,9 @@ class RecurrenceController extends Controller
             'accounts' => AccountResource::collection($workspace->accounts()->orderBy('name')->get()),
             'categories' => CategoryResource::collection(
                 $workspace->categories()
-                    ->whereIn('type', [TransactionType::Income->value, TransactionType::Both->value])
+                    ->whereIn('type', $recurrence->type === TransactionType::Expense
+                        ? [TransactionType::Expense->value, TransactionType::Both->value]
+                        : [TransactionType::Income->value, TransactionType::Both->value])
                     ->orderBy('name')
                     ->get()
             ),

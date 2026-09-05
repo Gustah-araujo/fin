@@ -90,7 +90,13 @@ class UpdateRecurrenceRequest extends FormRequest
             $validator->errors()->add('category_id', 'A categoria selecionada não pertence a este workspace.');
         }
 
-        if ($category->type === TransactionType::Expense) {
+        $recurrence = $this->route('recurrence');
+
+        if ($recurrence->type === TransactionType::Expense && $category->type === TransactionType::Income) {
+            $validator->errors()->add('category_id', 'Esta categoria não aceita despesas.');
+        }
+
+        if ($recurrence->type === TransactionType::Income && $category->type === TransactionType::Expense) {
             $validator->errors()->add('category_id', 'Esta categoria não aceita receitas.');
         }
     }

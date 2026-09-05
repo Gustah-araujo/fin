@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Enums\RecurrenceFrequency;
 use App\Enums\TransactionType;
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\Tag;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Enum;
 
 class StoreTransactionRequest extends FormRequest
 {
@@ -27,6 +29,10 @@ class StoreTransactionRequest extends FormRequest
             'category_id' => ['required', 'exists:categories,uuid'],
             'tags' => ['sometimes', 'array'],
             'tags.*' => ['string', 'exists:tags,uuid'],
+            'is_recurring' => ['sometimes', 'boolean'],
+            'frequency' => ['required_if:is_recurring,true', new Enum(RecurrenceFrequency::class)],
+            'frequency_day' => ['required_if:is_recurring,true', 'integer'],
+            'until_date' => ['nullable', 'date', 'after_or_equal:date'],
         ];
     }
 
@@ -72,7 +78,37 @@ class StoreTransactionRequest extends FormRequest
                     $validator->errors()->add('tags', 'Uma ou mais tags são inválidas.');
                 }
             }
+
+            $this->validateFrequencyDay($validator);
         });
+    }
+
+    private function validateFrequencyDay($validator): void
+    {
+        if (! $this->boolean('is_recurring') || ! $this->filled('frequency') || ! $this->filled('frequency_day')) {
+            return;
+        }
+
+        $frequency = RecurrenceFrequency::tryFrom((string) $this->input('frequency'));
+        $day = (int) $this->input('frequency_day');
+        $error = match ($frequency) {
+            RecurrenceFrequency::Weekly => $day < 0 || $day > 6,
+            RecurrenceFrequency::Monthly => $day < 1 || $day > 31,
+            default => false,
+        };
+
+        if ($error) {
+            $validator->errors()->add('frequency_day', $this->frequencyDayErrorMessage($frequency));
+        }
+    }
+
+    private function frequencyDayErrorMessage(?RecurrenceFrequency $frequency): string
+    {
+        return match ($frequency) {
+            RecurrenceFrequency::Weekly => 'Dia da semana inválido.',
+            RecurrenceFrequency::Monthly => 'Dia do mês inválido.',
+            default => 'Dia inválido.',
+        };
     }
 
     public function messages(): array
@@ -91,6 +127,9 @@ class StoreTransactionRequest extends FormRequest
             'category_id.required' => 'A categoria é obrigatória.',
             'category_id.exists' => 'A categoria selecionada é inválida.',
             'tags.*.exists' => 'Tag inválida.',
+            'frequency.required_if' => 'A frequência é obrigatória para despesas recorrentes.',
+            'frequency_day.required_if' => 'O dia da recorrência é obrigatório.',
+            'until_date.after_or_equal' => 'A data final deve ser maior ou igual à data inicial.',
         ];
     }
 }

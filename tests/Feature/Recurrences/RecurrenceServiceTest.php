@@ -882,6 +882,114 @@ class RecurrenceServiceTest extends TestCase
         $this->assertEquals(0, (float) $account->current_balance);
     }
 
+    // ─── Expense type (REEX-01) ─────────────────────────────────────
+
+    public function test_create_expense_recurrence_uses_expense_type(): void
+    {
+        $futureDate = Carbon::today()->addDays(10)->format('Y-m-d');
+        $expenseCategory = Category::factory()->expense()->create([
+            'workspace_id' => $this->workspace->id,
+            'created_by' => $this->user->id,
+        ]);
+
+        $recurrence = $this->service->create(
+            $this->workspace,
+            $this->baseData([
+                'category_id' => $expenseCategory->uuid,
+                'start_date' => $futureDate,
+                'type' => 'expense',
+            ]),
+            $this->user,
+        );
+
+        $this->assertEquals(TransactionType::Expense, $recurrence->type);
+    }
+
+    public function test_create_with_first_instance_expense_creates_expense_recurrence_and_transaction(): void
+    {
+        $today = Carbon::today()->format('Y-m-d');
+        $expenseCategory = Category::factory()->expense()->create([
+            'workspace_id' => $this->workspace->id,
+            'created_by' => $this->user->id,
+        ]);
+
+        $result = $this->service->createWithFirstInstance(
+            $this->workspace,
+            $this->baseData([
+                'category_id' => $expenseCategory->uuid,
+                'start_date' => $today,
+                'type' => 'expense',
+            ]),
+            $this->user,
+        );
+
+        $recurrence = $result['recurrence'];
+        $transaction = $result['transaction'];
+
+        $this->assertEquals(TransactionType::Expense, $recurrence->type);
+        $this->assertEquals(TransactionType::Expense, $transaction->type);
+        $this->assertNull($transaction->paid_at);
+        $this->assertEquals($recurrence->id, $transaction->recurrence_id);
+    }
+
+    public function test_generate_next_instance_expense_creates_expense_transaction(): void
+    {
+        $today = Carbon::today();
+        $expenseCategory = Category::factory()->expense()->create([
+            'workspace_id' => $this->workspace->id,
+            'created_by' => $this->user->id,
+        ]);
+
+        $recurrence = Recurrence::factory()->create([
+            'workspace_id' => $this->workspace->id,
+            'account_id' => $this->account->id,
+            'category_id' => $expenseCategory->id,
+            'created_by' => $this->user->id,
+            'type' => 'expense',
+            'frequency' => 'monthly',
+            'frequency_day' => 15,
+            'next_date' => $today->toDateString(),
+            'start_date' => $today->copy()->subMonths(2)->toDateString(),
+            'status' => 'active',
+        ]);
+
+        $transaction = $this->service->generateNextInstance($recurrence);
+
+        $this->assertInstanceOf(Transaction::class, $transaction);
+        $this->assertEquals(TransactionType::Expense, $transaction->type);
+        $this->assertEquals($recurrence->id, $transaction->recurrence_id);
+        $this->assertNull($transaction->paid_at);
+    }
+
+    public function test_build_generated_transaction_reads_type_from_recurrence(): void
+    {
+        $today = Carbon::today();
+        $expenseCategory = Category::factory()->expense()->create([
+            'workspace_id' => $this->workspace->id,
+            'created_by' => $this->user->id,
+        ]);
+
+        $recurrence = Recurrence::factory()->create([
+            'workspace_id' => $this->workspace->id,
+            'account_id' => $this->account->id,
+            'category_id' => $expenseCategory->id,
+            'created_by' => $this->user->id,
+            'type' => 'expense',
+            'frequency' => 'monthly',
+            'frequency_day' => $today->day,
+            'next_date' => $today->toDateString(),
+            'start_date' => $today->copy()->subMonth()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        $this->assertEquals(TransactionType::Expense, $recurrence->type);
+
+        $transaction = $this->service->generateNextInstance($recurrence);
+
+        // buildGeneratedTransaction reads $recurrence->type (not hardcoded Income)
+        $this->assertEquals(TransactionType::Expense, $transaction->type);
+    }
+
     // ─── Workspace isolation ────────────────────────────────────────
 
     public function test_workspace_isolation_create_rejects_cross_workspace_account(): void

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\TransactionType;
 use App\Models\Recurrence;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -45,6 +46,13 @@ class RecurrenceFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'next_date' => null,
+        ]);
+    }
+
+    public function expense(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => TransactionType::Expense->value,
         ]);
     }
 }

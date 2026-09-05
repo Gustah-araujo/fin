@@ -326,6 +326,103 @@ class PlanningServiceTest extends TestCase
         $this->assertEqualsWithDelta(6000.00, $oct['incomes'], 0.01);
     }
 
+    public function test_get_projection_expense_recurrence_projects_as_expense(): void
+    {
+        $start = Carbon::create(2026, 9, 1);
+        $end = Carbon::create(2026, 12, 31);
+
+        // Active monthly expense recurrence: Netflix R$50/month
+        Recurrence::factory()->expense()->create([
+            'workspace_id' => $this->workspace->id,
+            'account_id' => $this->account->id,
+            'category_id' => $this->expenseCategory->id,
+            'type' => TransactionType::Expense,
+            'description' => 'Netflix',
+            'value' => 50.00,
+            'frequency' => 'monthly',
+            'frequency_day' => 15,
+            'start_date' => '2026-09-15',
+            'next_date' => '2026-09-15',
+            'status' => RecurrenceStatus::Active,
+            'created_by' => $this->user->id,
+        ]);
+
+        $result = $this->service->getProjection($this->workspace, $start, $end);
+
+        // 4 months: Sep–Dec, each with R$50 expense
+        $this->assertCount(4, $result);
+
+        foreach ($result as $month) {
+            $this->assertEqualsWithDelta(50.00, $month['expenses'], 0.01);
+            $this->assertEqualsWithDelta(0.00, $month['incomes'], 0.01);
+            $this->assertEqualsWithDelta(-50.00, $month['balance'], 0.01);
+        }
+    }
+
+    public function test_get_projection_mixed_income_and_expense_recurrences(): void
+    {
+        $start = Carbon::create(2026, 9, 1);
+        $end = Carbon::create(2026, 11, 30);
+
+        // Income recurrence: Salário R$6000
+        Recurrence::factory()->create([
+            'workspace_id' => $this->workspace->id,
+            'account_id' => $this->account->id,
+            'category_id' => $this->incomeCategory->id,
+            'type' => TransactionType::Income,
+            'description' => 'Salário',
+            'value' => 6000.00,
+            'frequency' => 'monthly',
+            'frequency_day' => 5,
+            'start_date' => '2026-09-05',
+            'next_date' => '2026-09-05',
+            'status' => RecurrenceStatus::Active,
+            'created_by' => $this->user->id,
+        ]);
+
+        // Expense recurrence: Netflix R$50
+        Recurrence::factory()->expense()->create([
+            'workspace_id' => $this->workspace->id,
+            'account_id' => $this->account->id,
+            'category_id' => $this->expenseCategory->id,
+            'type' => TransactionType::Expense,
+            'description' => 'Netflix',
+            'value' => 50.00,
+            'frequency' => 'monthly',
+            'frequency_day' => 10,
+            'start_date' => '2026-09-10',
+            'next_date' => '2026-09-10',
+            'status' => RecurrenceStatus::Active,
+            'created_by' => $this->user->id,
+        ]);
+
+        // Expense recurrence: Academia R$200
+        Recurrence::factory()->expense()->create([
+            'workspace_id' => $this->workspace->id,
+            'account_id' => $this->account->id,
+            'category_id' => $this->expenseCategory->id,
+            'type' => TransactionType::Expense,
+            'description' => 'Academia',
+            'value' => 200.00,
+            'frequency' => 'monthly',
+            'frequency_day' => 1,
+            'start_date' => '2026-09-01',
+            'next_date' => '2026-09-01',
+            'status' => RecurrenceStatus::Active,
+            'created_by' => $this->user->id,
+        ]);
+
+        $result = $this->service->getProjection($this->workspace, $start, $end);
+
+        $this->assertCount(3, $result);
+
+        foreach ($result as $month) {
+            $this->assertEqualsWithDelta(6000.00, $month['incomes'], 0.01);
+            $this->assertEqualsWithDelta(250.00, $month['expenses'], 0.01); // 50 + 200
+            $this->assertEqualsWithDelta(5750.00, $month['balance'], 0.01); // 6000 - 250
+        }
+    }
+
     public function test_get_projection_only_returns_months_in_range(): void
     {
         $start = Carbon::create(2026, 9, 1);

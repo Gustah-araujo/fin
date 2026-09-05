@@ -1,6 +1,7 @@
 import { Link, router } from '@inertiajs/react';
 import { useCallback, useMemo, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import DataTable from '@/Components/DataTable/DataTable';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -22,6 +23,7 @@ interface RecurrenceItem {
     uuid: string;
     description: string;
     value: number;
+    type: string;
     frequency: string;
     frequency_day: number;
     next_date: string | null;
@@ -39,6 +41,11 @@ const STATUS_OPTIONS = [
     { label: 'Ativa', value: 'active' },
     { label: 'Pausada', value: 'paused' },
     { label: 'Esgotada', value: 'exhausted' },
+];
+
+const TYPE_OPTIONS = [
+    { label: 'Receita', value: 'income' },
+    { label: 'Despesa', value: 'expense' },
 ];
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -144,13 +151,34 @@ export default function Index({ accounts, categories }: Props) {
                 ),
             },
             {
+                key: 'type',
+                header: 'Tipo',
+                filter: { type: 'select', options: TYPE_OPTIONS },
+                cell: (row) =>
+                    row.type === 'income' ? (
+                        <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                            Receita
+                        </Badge>
+                    ) : (
+                        <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
+                            Despesa
+                        </Badge>
+                    ),
+            },
+            {
                 key: 'value',
                 header: 'Valor',
                 align: 'right',
                 sortable: true,
                 filter: { type: 'number' },
                 cell: (row) => (
-                    <span className="whitespace-nowrap font-semibold text-emerald-600">
+                    <span
+                        className={
+                            row.type === 'income'
+                                ? 'whitespace-nowrap font-semibold text-emerald-600'
+                                : 'whitespace-nowrap font-semibold text-red-600'
+                        }
+                    >
                         {formatCurrency(row.value)}
                     </span>
                 ),
@@ -231,9 +259,14 @@ export default function Index({ accounts, categories }: Props) {
                         <Button variant="outline" size="sm" asChild>
                             <Link
                                 href={
-                                    route('incomes.index', {
-                                        workspace: workspace.uuid,
-                                    }) +
+                                    route(
+                                        row.type === 'income'
+                                            ? 'incomes.index'
+                                            : 'transactions.index',
+                                        {
+                                            workspace: workspace.uuid,
+                                        },
+                                    ) +
                                     '?recurrence=' +
                                     row.uuid
                                 }
@@ -263,7 +296,7 @@ export default function Index({ accounts, categories }: Props) {
                             Recorrências
                         </h1>
                         <p className="text-sm text-muted-foreground mt-1">
-                            Regras de receitas recorrentes
+                            Regras de recorrências
                         </p>
                     </div>
                     <Button asChild>
@@ -294,7 +327,7 @@ export default function Index({ accounts, categories }: Props) {
                                         workspace: workspace.uuid,
                                     })}
                                 >
-                                    Criar receita recorrente
+                                    Criar recorrência
                                 </Link>
                             </Button>
                         </div>

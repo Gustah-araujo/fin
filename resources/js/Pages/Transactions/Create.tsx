@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Select,
     SelectContent,
@@ -40,6 +42,16 @@ interface Props {
     tags: TagItem[];
 }
 
+const WEEKDAYS = [
+    { value: 0, label: 'Domingo' },
+    { value: 1, label: 'Segunda' },
+    { value: 2, label: 'Terça' },
+    { value: 3, label: 'Quarta' },
+    { value: 4, label: 'Quinta' },
+    { value: 5, label: 'Sexta' },
+    { value: 6, label: 'Sábado' },
+];
+
 export default function Create({ accounts, categories, tags }: Props) {
     const workspace = useWorkspace();
 
@@ -52,11 +64,38 @@ export default function Create({ accounts, categories, tags }: Props) {
         account_id: '',
         category_id: '',
         tags: [] as string[],
+        is_recurring: false,
+        frequency: 'monthly' as 'weekly' | 'monthly',
+        frequency_day: 1,
+        until_date: '',
+        has_until_date: false,
     });
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        post(route('transactions.store', { workspace: workspace.uuid }));
+
+        const payload: Record<string, unknown> = {
+            description: data.description,
+            value: data.value,
+            date: data.date,
+            account_id: data.account_id,
+            category_id: data.category_id,
+            tags: data.tags,
+            is_recurring: data.is_recurring,
+        };
+
+        if (data.is_recurring) {
+            payload.frequency = data.frequency;
+            payload.frequency_day = data.frequency_day;
+            if (data.has_until_date) {
+                payload.until_date = data.until_date;
+            }
+        }
+
+        post(
+            route('transactions.store', { workspace: workspace.uuid }),
+            payload,
+        );
     }
 
     function toggleTag(uuid: string) {
@@ -78,7 +117,7 @@ export default function Create({ accounts, categories, tags }: Props) {
                         Nova Despesa
                     </h1>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Registre uma despesa em débito
+                        Registre uma despesa avulsa ou recorrente
                     </p>
                 </div>
 
@@ -126,7 +165,11 @@ export default function Create({ accounts, categories, tags }: Props) {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="date">Data</Label>
+                                <Label htmlFor="date">
+                                    {data.is_recurring
+                                        ? 'Data de início'
+                                        : 'Data'}
+                                </Label>
                                 <Input
                                     id="date"
                                     type="date"
@@ -199,6 +242,159 @@ export default function Create({ accounts, categories, tags }: Props) {
                                     </p>
                                 )}
                             </div>
+
+                            <div className="flex items-center justify-between rounded-lg border p-3">
+                                <div className="space-y-0.5">
+                                    <Label htmlFor="is_recurring">
+                                        É recorrente?
+                                    </Label>
+                                    <p className="text-xs text-muted-foreground">
+                                        Repetir esta despesa automaticamente
+                                    </p>
+                                </div>
+                                <Switch
+                                    id="is_recurring"
+                                    checked={data.is_recurring}
+                                    onCheckedChange={(checked) =>
+                                        setData('is_recurring', checked)
+                                    }
+                                />
+                            </div>
+
+                            {data.is_recurring && (
+                                <div className="space-y-4 rounded-lg border p-3">
+                                    <div className="space-y-2">
+                                        <Label>Frequência</Label>
+                                        <Select
+                                            value={data.frequency}
+                                            onValueChange={(value) =>
+                                                setData(
+                                                    'frequency',
+                                                    value as
+                                                        'weekly' | 'monthly',
+                                                )
+                                            }
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="weekly">
+                                                    Semanal
+                                                </SelectItem>
+                                                <SelectItem value="monthly">
+                                                    Mensal
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {errors.frequency && (
+                                            <p className="text-sm text-destructive">
+                                                {errors.frequency}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {data.frequency === 'weekly' ? (
+                                        <div className="space-y-2">
+                                            <Label>Dia da semana</Label>
+                                            <Select
+                                                value={String(
+                                                    data.frequency_day,
+                                                )}
+                                                onValueChange={(value) =>
+                                                    setData(
+                                                        'frequency_day',
+                                                        Number(value),
+                                                    )
+                                                }
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {WEEKDAYS.map((day) => (
+                                                        <SelectItem
+                                                            key={day.value}
+                                                            value={String(
+                                                                day.value,
+                                                            )}
+                                                        >
+                                                            {day.label}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <Label htmlFor="frequency_day">
+                                                Dia do mês
+                                            </Label>
+                                            <Input
+                                                id="frequency_day"
+                                                type="number"
+                                                min="1"
+                                                max="31"
+                                                value={data.frequency_day}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'frequency_day',
+                                                        Number(e.target.value),
+                                                    )
+                                                }
+                                            />
+                                        </div>
+                                    )}
+                                    {errors.frequency_day && (
+                                        <p className="text-sm text-destructive">
+                                            {errors.frequency_day}
+                                        </p>
+                                    )}
+
+                                    <div className="flex items-center gap-2">
+                                        <Checkbox
+                                            id="has_until_date"
+                                            checked={data.has_until_date}
+                                            onCheckedChange={(checked) =>
+                                                setData(
+                                                    'has_until_date',
+                                                    checked,
+                                                )
+                                            }
+                                        />
+                                        <Label
+                                            htmlFor="has_until_date"
+                                            className="text-sm"
+                                        >
+                                            Definir data final
+                                        </Label>
+                                    </div>
+
+                                    {data.has_until_date && (
+                                        <div className="space-y-2">
+                                            <Label htmlFor="until_date">
+                                                Data final
+                                            </Label>
+                                            <Input
+                                                id="until_date"
+                                                type="date"
+                                                value={data.until_date}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'until_date',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                            />
+                                            {errors.until_date && (
+                                                <p className="text-sm text-destructive">
+                                                    {errors.until_date}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {tags.length > 0 && (
                                 <div className="space-y-2">

@@ -16,7 +16,9 @@ use App\Models\Workspace;
 use App\Services\Datatable\DatatableConfig;
 use App\Services\Datatable\DatatableService;
 use App\Services\Datatable\Filter;
+use App\Services\RecurrenceService;
 use App\Services\TransactionService;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -75,11 +77,29 @@ class TransactionController extends Controller
         ]);
     }
 
-    public function store(StoreTransactionRequest $request, Workspace $workspace, TransactionService $transactionService): RedirectResponse
-    {
+    public function store(
+        StoreTransactionRequest $request,
+        Workspace $workspace,
+        TransactionService $transactionService,
+        RecurrenceService $recurrenceService,
+    ): RedirectResponse {
         $this->authorize('create', [Transaction::class, $workspace]);
 
-        $transactionService->create($workspace, $request->user(), $request->validated());
+        $data = $request->validated();
+
+        if ($request->boolean('is_recurring')) {
+            $data['type'] = TransactionType::Expense->value;
+            $data['start_date'] = $data['date'];
+
+            if (Carbon::parse($data['date'])->lte(Carbon::today())) {
+                $recurrenceService->createWithFirstInstance($workspace, $data, $request->user());
+            } else {
+                $recurrenceService->create($workspace, $data, $request->user());
+            }
+        } else {
+            $data['type'] = TransactionType::Expense->value;
+            $transactionService->create($workspace, $request->user(), $data);
+        }
 
         return redirect()->route('transactions.index', $workspace);
     }

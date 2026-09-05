@@ -20,6 +20,7 @@ class RecurrenceResource extends JsonResource
             'start_date' => $this->start_date->toDateString(),
             'until_date' => $this->until_date?->toDateString(),
             'next_date' => $this->next_date?->toDateString(),
+            'type' => $this->type->value,
             'status' => $this->status->value,
             'account' => new AccountResource($this->whenLoaded('account')),
             'category' => new CategoryResource($this->whenLoaded('category')),
