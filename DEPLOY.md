@@ -1,12 +1,64 @@
-# Deploy Guide — Fin on Docker (VM 1vCPU / 1GB)
+# Deploy Guide — Fin on Docker
 
-## Prerequisites
+## Local Development
+
+```bash
+# Clone and setup
+git clone <repo-url> fin
+cd fin
+cp .env.example .env
+
+# Generate APP_KEY
+php artisan key:generate
+
+# Start all services
+docker compose up -d
+
+# Run migrations
+docker compose exec app php artisan migrate
+
+# Install dependencies (first time)
+docker compose exec app composer install
+docker compose exec app npm install
+docker compose exec app npm run build
+```
+
+Access: http://localhost:8090
+
+### Dev Services
+
+| Service | URL |
+|---------|-----|
+| App | http://localhost:8090 |
+| phpMyAdmin | http://localhost:8091 |
+| Mailpit | http://localhost:8026 |
+
+### Dev Commands
+
+```bash
+# Artisan
+docker compose exec app php artisan tinker
+docker compose exec app php artisan migrate:fresh --seed
+
+# NPM (hot reload)
+docker compose exec app npm run dev
+
+# Database CLI
+docker compose exec db mariadb -u fin -p fin
+
+# Cypress (E2E)
+docker compose --profile testing run --rm cypress
+```
+
+---
+
+## Production Deployment (VM 1vCPU / 1GB)
+
+### Prerequisites
 
 - Ubuntu Server 20.04/22.04/24.04 LTS
 - Domain pointing to VM IP (GoDaddy DNS A record)
 - SSH access to VM
-
-## Initial Setup
 
 ### 1. Install Docker
 
@@ -65,12 +117,10 @@ php artisan key:generate --show
 # Copy output to .env
 ```
 
-## Build and Launch
-
-### 5. Start Containers
+### 5. Start Containers (Production)
 
 ```bash
-docker compose up -d --build
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 This builds and starts:
@@ -83,15 +133,15 @@ This builds and starts:
 ### 6. Run Initial Migration
 
 ```bash
-docker compose exec app php artisan migrate --force
+docker compose -f docker-compose.prod.yml exec app php artisan migrate --force
 ```
 
 ### 7. Cache Configuration
 
 ```bash
-docker compose exec app php artisan config:cache
-docker compose exec app php artisan route:cache
-docker compose exec app php artisan view:cache
+docker compose -f docker-compose.prod.yml exec app php artisan config:cache
+docker compose -f docker-compose.prod.yml exec app php artisan route:cache
+docker compose -f docker-compose.prod.yml exec app php artisan view:cache
 ```
 
 ## SSL Certificate
@@ -127,7 +177,7 @@ ssh user@vm '/var/www/fin/scripts/deploy.sh'
 
 Deploy steps:
 1. `git pull origin main`
-2. `docker compose up -d --build`
+2. `docker compose -f docker-compose.prod.yml up -d --build`
 3. Wait for database healthcheck
 4. `php artisan migrate --force`
 5. Clear and rebuild config/route/view caches
@@ -153,56 +203,56 @@ jobs:
           script: cd /var/www/fin && ./scripts/deploy.sh
 ```
 
-## Monitoring
+## Monitoring (Production)
 
 ### Check Container Status
 
 ```bash
-docker compose ps
+docker compose -f docker-compose.prod.yml ps
 ```
 
 ### View Logs
 
 ```bash
-docker compose logs -f app
-docker compose logs -f queue
-docker compose logs -f nginx
+docker compose -f docker-compose.prod.yml logs -f app
+docker compose -f docker-compose.prod.yml logs -f queue
+docker compose -f docker-compose.prod.yml logs -f nginx
 ```
 
 ### Health Status
 
 ```bash
-docker compose ps --format "table {{.Name}}\t{{.Status}}"
+docker compose -f docker-compose.prod.yml ps --format "table {{.Name}}\t{{.Status}}"
 ```
 
-## Useful Commands
+## Useful Commands (Production)
 
 ```bash
 # Enter app container
-docker compose exec app bash
+docker compose -f docker-compose.prod.yml exec app bash
 
 # Artisan commands
-docker compose exec app php artisan tinker
-docker compose exec app php artisan cache:clear
+docker compose -f docker-compose.prod.yml exec app php artisan tinker
+docker compose -f docker-compose.prod.yml exec app php artisan cache:clear
 
 # Restart single service
-docker compose restart queue
+docker compose -f docker-compose.prod.yml restart queue
 
 # View database
-docker compose exec database mariadb -u root -p
+docker compose -f docker-compose.prod.yml exec database mariadb -u root -p
 
 # Queue monitoring
-docker compose exec app php artisan queue:monitor database:default
+docker compose -f docker-compose.prod.yml exec app php artisan queue:monitor database:default
 ```
 
-## Troubleshooting
+## Troubleshooting (Production)
 
 | Issue | Solution |
 |-------|----------|
-| Migration fails | `docker compose exec app php artisan migrate:status` then fix |
-| Queue not processing | `docker compose restart queue` |
-| 502 Bad Gateway | Check `app` container health: `docker compose ps` |
-| SSL expired | `docker compose run --rm certbot renew` then `docker compose exec nginx nginx -s reload` |
+| Migration fails | `docker compose -f docker-compose.prod.yml exec app php artisan migrate:status` then fix |
+| Queue not processing | `docker compose -f docker-compose.prod.yml restart queue` |
+| 502 Bad Gateway | Check `app` container health: `docker compose -f docker-compose.prod.yml ps` |
+| SSL expired | `docker compose -f docker-compose.prod.yml run --rm certbot renew` then `docker compose -f docker-compose.prod.yml exec nginx nginx -s reload` |
 | Out of disk | `docker system prune -f` and check logs |
 
 ## Architecture
