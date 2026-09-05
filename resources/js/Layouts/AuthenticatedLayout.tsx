@@ -3,6 +3,7 @@ import AppSidebar from '@/Components/AppSidebar';
 import AppHeader from '@/Components/AppHeader';
 import { useState, useCallback, useEffect } from 'react';
 import { usePage } from '@inertiajs/react';
+import { Toaster, toast } from 'sonner';
 
 interface Props {
     children: React.ReactNode;
@@ -20,6 +21,11 @@ export default function AuthenticatedLayout({ children }: Props) {
         () => setCollapsed((prev) => !prev),
         [],
     );
+
+    useEffect(() => {
+        if (flash?.success) toast.success(flash.success);
+        if (flash?.error) toast.error(flash.error);
+    }, [flash?.success, flash?.error]);
 
     useEffect(() => {
         setIsMounted(true);
@@ -66,20 +72,7 @@ export default function AuthenticatedLayout({ children }: Props) {
                     <main className="flex-1 p-6">{children}</main>
                 </div>
             </div>
-            {(flash?.success || flash?.error) && (
-                <div className="fixed bottom-4 right-4 z-50 max-w-sm">
-                    {flash.success && (
-                        <div className="rounded-lg bg-emerald-600 px-4 py-3 text-sm text-white shadow-lg">
-                            {flash.success}
-                        </div>
-                    )}
-                    {flash.error && (
-                        <div className="rounded-lg bg-destructive px-4 py-3 text-sm text-white shadow-lg">
-                            {flash.error}
-                        </div>
-                    )}
-                </div>
-            )}
+            <Toaster position="bottom-right" closeButton />
         </TooltipProvider>
     );
 }
