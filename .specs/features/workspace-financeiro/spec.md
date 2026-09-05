@@ -300,6 +300,7 @@ Pessoas e casais perdem tempo gerenciando finanças em planilhas ou apps limitad
 | CHAT-01 | P2: Chat IA                  | -      | Pending |
 | IMPT-01 | P2: Importação Extratos      | -      | Pending |
 | PLAN-01 | P3: Planejamento Futuro      | -      | Pending |
+| REEX-01 | P2: Recurring Expenses      | -      | Pending |
 
 **Coverage:** 13 total, 0 mapped, 13 unmapped
 
