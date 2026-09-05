@@ -1,26 +1,36 @@
-FROM php:8.3-cli
+FROM php:8.3-fpm-bookworm
 
 RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    zip \
-    unzip \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
     libzip-dev \
     libonig-dev \
-    libpq-dev \
-    && docker-php-ext-install pdo_mysql pdo_pgsql zip mbstring \
+    libxml2-dev \
+    libicu-dev \
+    unzip \
+    curl \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+        pdo_mysql \
+        mbstring \
+        exif \
+        pcntl \
+        bcmath \
+        gd \
+        zip \
+        opcache \
+        intl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
+COPY docker/php/php.ini /usr/local/etc/php/conf.d/custom.ini
 
-WORKDIR /var/www
+WORKDIR /var/www/html
 
-EXPOSE 8000
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+USER www-data
