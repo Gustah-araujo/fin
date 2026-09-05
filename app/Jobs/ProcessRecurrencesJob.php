@@ -31,7 +31,13 @@ class ProcessRecurrencesJob implements ShouldQueue
 
         foreach ($recurrences as $recurrence) {
             try {
-                $service->generateNextInstance($recurrence);
+                $service->skipConsumedPeriods($recurrence);
+
+                if ($recurrence->next_date === null || $recurrence->next_date->gt(today())) {
+                    continue;
+                }
+
+                $service->generateNextInstance($recurrence, advanceNextDate: true);
             } catch (Throwable $e) {
                 Log::error("ProcessRecurrencesJob recurrence {$recurrence->uuid}: ".$e->getMessage());
             }

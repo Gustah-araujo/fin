@@ -68,19 +68,18 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
                     testId: 'sidebar-accounts',
                 },
                 {
-                    label: 'Categorias',
-                    href: route('categories.index', {
+                    label: 'Planejamento',
+                    href: route('planning.index', {
                         workspace: workspaceUuid,
                     }),
-                    icon: Folders,
-                    testId: 'sidebar-categories',
+                    icon: Calendar,
+                    testId: 'sidebar-planning',
                 },
-                {
-                    label: 'Tags',
-                    href: route('tags.index', { workspace: workspaceUuid }),
-                    icon: Tags,
-                    testId: 'sidebar-tags',
-                },
+            ],
+        },
+        {
+            title: 'Movimentações',
+            items: [
                 {
                     label: 'Despesas',
                     href: route('transactions.index', {
@@ -103,13 +102,24 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
                     icon: Repeat,
                     testId: 'sidebar-recurrences',
                 },
+            ],
+        },
+        {
+            title: 'Categorização',
+            items: [
                 {
-                    label: 'Planejamento',
-                    href: route('planning.index', {
+                    label: 'Categorias',
+                    href: route('categories.index', {
                         workspace: workspaceUuid,
                     }),
-                    icon: Calendar,
-                    testId: 'sidebar-planning',
+                    icon: Folders,
+                    testId: 'sidebar-categories',
+                },
+                {
+                    label: 'Tags',
+                    href: route('tags.index', { workspace: workspaceUuid }),
+                    icon: Tags,
+                    testId: 'sidebar-tags',
                 },
             ],
         },

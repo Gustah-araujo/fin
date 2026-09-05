@@ -18,6 +18,7 @@ use App\Models\Workspace;
 use App\Services\RecurrenceService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -238,7 +239,6 @@ class RecurrenceServiceTest extends TestCase
     {
         $today = Carbon::today();
 
-        // Create recurrence with next_date = today (a past date relative to the occurrence cycle)
         $recurrence = Recurrence::factory()->create([
             'workspace_id' => $this->workspace->id,
             'account_id' => $this->account->id,
@@ -257,11 +257,6 @@ class RecurrenceServiceTest extends TestCase
         $this->assertInstanceOf(Transaction::class, $transaction);
         $this->assertEquals($recurrence->id, $transaction->recurrence_id);
         $this->assertEquals($today->format('Y-m-d'), $transaction->date->format('Y-m-d'));
-
-        // Check next_date advanced
-        $recurrence->refresh();
-        $expectedNext = $today->copy()->next($today->dayOfWeek);
-        $this->assertEquals($expectedNext->format('Y-m-d'), $recurrence->next_date->format('Y-m-d'));
     }
 
     public function test_generate_next_instance_monthly(): void
@@ -287,16 +282,13 @@ class RecurrenceServiceTest extends TestCase
         $this->assertInstanceOf(Transaction::class, $transaction);
         $this->assertEquals($recurrence->id, $transaction->recurrence_id);
 
-        // Check next_date advanced: next month on day 15
-        $recurrence->refresh();
-        $expectedNext = $today->copy()->addMonthNoOverflow();
-        $expectedNext->day = min($day, $expectedNext->daysInMonth);
-        $this->assertEquals($expectedNext->format('Y-m-d'), $recurrence->next_date->format('Y-m-d'));
+        // Transaction date = scheduled day of current period
+        $this->assertEquals(min($day, $today->daysInMonth), (int) $transaction->date->day);
     }
 
     // ─── Optimistic lock prevents duplicates ─────────────────────────
 
-    public function test_optimistic_lock_prevents_duplicate_generation(): void
+    public function test_period_consumed_blocks_duplicate_generation(): void
     {
         $today = Carbon::today();
 
@@ -320,8 +312,9 @@ class RecurrenceServiceTest extends TestCase
         // Reload recurrence to get the current state
         $recurrence->refresh();
 
-        // Second generation should throw because next_date advanced to next month (future)
+        // Second generation should throw because period already consumed
         $this->expectException(RecurrenceGenerationException::class);
+        $this->expectExceptionMessage('Já existe uma transação gerada para este período.');
         $this->service->generateNextInstance($recurrence);
 
         // Only one transaction should exist
@@ -348,21 +341,16 @@ class RecurrenceServiceTest extends TestCase
             'status' => 'active',
         ]);
 
-        $this->service->generateNextInstance($recurrence);
-        $recurrence->refresh();
+        $transaction = $this->service->generateNextInstance($recurrence);
 
-        // next_date should be the next month's day (min 31, daysInMonth)
-        // Since today is in July (31 days), next month is August (31 days)
-        $expectedNext = $today->copy()->addMonthNoOverflow();
-        $expectedDay = min(31, $expectedNext->daysInMonth);
-        $expectedNext->day = $expectedDay;
-
-        $this->assertEquals($expectedNext->format('Y-m-d'), $recurrence->next_date->format('Y-m-d'));
+        // Transaction date = min(31, daysInMonth) of current month
+        $expectedDay = min(31, $today->daysInMonth);
+        $this->assertEquals($expectedDay, (int) $transaction->date->day);
     }
 
     // ─── Past-due next_date generates one transaction ───────────────
 
-    public function test_past_due_next_date_generates_one_transaction_and_advances(): void
+    public function test_past_due_next_date_generates_for_current_period(): void
     {
         $today = Carbon::today();
 
@@ -384,22 +372,11 @@ class RecurrenceServiceTest extends TestCase
 
         $this->assertInstanceOf(Transaction::class, $transaction);
 
-        // The most recent due date should be the most recent 1st of the month
-        if ($today->day >= 1) {
-            $mostRecent = $today->copy()->day(1);
-        } else {
-            $mostRecent = $today->copy()->subMonthNoOverflow()->day(1);
-        }
-
-        $this->assertEquals($mostRecent->format('Y-m-d'), $transaction->date->format('Y-m-d'));
+        // Transaction date = scheduled day (1st) of current period
+        $this->assertEquals(1, (int) $transaction->date->day);
 
         // Only one transaction created
         $this->assertEquals(1, Transaction::where('recurrence_id', $recurrence->id)->count());
-
-        // Next date advanced past the generation date
-        $recurrence->refresh();
-        $this->assertNotNull($recurrence->next_date);
-        $this->assertTrue($recurrence->next_date->gt($transaction->date));
     }
 
     // ─── Pause/restore semantics ────────────────────────────────────
@@ -1095,35 +1072,45 @@ class RecurrenceServiceTest extends TestCase
         $this->service->generateNextInstance($recurrence);
     }
 
-    public function test_generate_throws_when_next_date_is_past_until_date(): void
+    public function test_generate_throws_when_until_date_antes_do_periodo_atual(): void
     {
+        $today = Carbon::today();
+
+        // until_date antes do dia agendado do período atual
         $recurrence = Recurrence::factory()->create([
             'workspace_id' => $this->workspace->id,
             'account_id' => $this->account->id,
             'category_id' => $this->category->id,
             'created_by' => $this->user->id,
-            'next_date' => Carbon::today()->toDateString(),
-            'until_date' => Carbon::yesterday()->toDateString(),
+            'frequency' => 'monthly',
+            'frequency_day' => 15,
+            'next_date' => $today->toDateString(),
+            'until_date' => $today->copy()->subDays(2)->toDateString(),
             'status' => 'active',
         ]);
 
         $this->expectException(RecurrenceGenerationException::class);
+        $this->expectExceptionMessage('A recorrência já atingiu sua data final.');
         $this->service->generateNextInstance($recurrence);
     }
 
-    public function test_generate_throws_when_next_date_is_in_future(): void
+    public function test_generate_allows_future_next_date_when_period_not_consumed(): void
     {
         $recurrence = Recurrence::factory()->create([
             'workspace_id' => $this->workspace->id,
             'account_id' => $this->account->id,
             'category_id' => $this->category->id,
             'created_by' => $this->user->id,
+            'frequency' => 'monthly',
+            'frequency_day' => 15,
             'next_date' => Carbon::tomorrow()->toDateString(),
             'status' => 'active',
         ]);
 
-        $this->expectException(RecurrenceGenerationException::class);
-        $this->service->generateNextInstance($recurrence);
+        $transaction = $this->service->generateNextInstance($recurrence);
+
+        $this->assertInstanceOf(Transaction::class, $transaction);
+        $this->assertEquals($recurrence->id, $transaction->recurrence_id);
     }
 
     public function test_generate_throws_when_next_date_is_null(): void
@@ -1205,7 +1192,7 @@ class RecurrenceServiceTest extends TestCase
             'status' => 'active',
         ]);
 
-        $transaction = $this->service->generateNextInstance($recurrence);
+        $transaction = $this->service->generateNextInstance($recurrence, advanceNextDate: true);
 
         $this->assertInstanceOf(Transaction::class, $transaction);
         $this->assertEquals($today->format('Y-m-d'), $transaction->date->format('Y-m-d'));
@@ -1213,5 +1200,207 @@ class RecurrenceServiceTest extends TestCase
         $recurrence->refresh();
         $expectedNext = $today->copy()->next($dayOfWeek);
         $this->assertEquals($expectedNext->format('Y-m-d'), $recurrence->next_date->format('Y-m-d'));
+    }
+
+    // ─── Gerar agora em qualquer data do período ──────────────────
+
+    public function test_generate_now_antes_do_dia_agendado_permite_gerar(): void
+    {
+        $today = Carbon::today();
+
+        // Recorrência mensal dia 15, hoje é dia 5 (antes do dia agendado)
+        $recurrence = Recurrence::factory()->create([
+            'workspace_id' => $this->workspace->id,
+            'account_id' => $this->account->id,
+            'category_id' => $this->category->id,
+            'created_by' => $this->user->id,
+            'frequency' => 'monthly',
+            'frequency_day' => 15,
+            'next_date' => $today->copy()->day(15)->toDateString(),
+            'start_date' => $today->copy()->subMonths(2)->toDateString(),
+            'status' => 'active',
+        ]);
+
+        // Deve permitir gerar antes do dia 15
+        $transaction = $this->service->generateNextInstance($recurrence);
+
+        $this->assertInstanceOf(Transaction::class, $transaction);
+        // Data da transação = dia agendado do período atual
+        $this->assertEquals(15, (int) $transaction->date->day);
+    }
+
+    public function test_generate_now_periodo_ja_consumido_bloqueia(): void
+    {
+        $today = Carbon::today();
+
+        $recurrence = Recurrence::factory()->create([
+            'workspace_id' => $this->workspace->id,
+            'account_id' => $this->account->id,
+            'category_id' => $this->category->id,
+            'created_by' => $this->user->id,
+            'frequency' => 'monthly',
+            'frequency_day' => 15,
+            'next_date' => $today->toDateString(),
+            'start_date' => $today->copy()->subMonths(2)->toDateString(),
+            'status' => 'active',
+        ]);
+
+        // Primeira geração OK
+        $this->service->generateNextInstance($recurrence);
+        $recurrence->refresh();
+
+        // Segunda geração no mesmo período → bloqueia
+        $this->expectException(RecurrenceGenerationException::class);
+        $this->expectExceptionMessage('Já existe uma transação gerada para este período.');
+        $this->service->generateNextInstance($recurrence);
+    }
+
+    public function test_generate_now_semanal_bloqueia_semana_consumida(): void
+    {
+        $today = Carbon::today();
+        $dayOfWeek = $today->dayOfWeek;
+
+        $recurrence = Recurrence::factory()->create([
+            'workspace_id' => $this->workspace->id,
+            'account_id' => $this->account->id,
+            'category_id' => $this->category->id,
+            'created_by' => $this->user->id,
+            'frequency' => 'weekly',
+            'frequency_day' => $dayOfWeek,
+            'next_date' => $today->toDateString(),
+            'start_date' => $today->copy()->subWeeks(2)->toDateString(),
+            'status' => 'active',
+        ]);
+
+        // Primeira geração OK
+        $this->service->generateNextInstance($recurrence);
+        $recurrence->refresh();
+
+        // Segunda geração na mesma semana → bloqueia
+        $this->expectException(RecurrenceGenerationException::class);
+        $this->expectExceptionMessage('Já existe uma transação gerada para este período.');
+        $this->service->generateNextInstance($recurrence);
+    }
+
+    public function test_generate_now_respeita_until_date(): void
+    {
+        $today = Carbon::today();
+
+        // until_date é ontem, então o período atual já passou
+        $recurrence = Recurrence::factory()->create([
+            'workspace_id' => $this->workspace->id,
+            'account_id' => $this->account->id,
+            'category_id' => $this->category->id,
+            'created_by' => $this->user->id,
+            'frequency' => 'monthly',
+            'frequency_day' => 15,
+            'next_date' => $today->toDateString(),
+            'until_date' => Carbon::yesterday()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        $this->expectException(RecurrenceGenerationException::class);
+        $this->expectExceptionMessage('A recorrência já atingiu sua data final.');
+        $this->service->generateNextInstance($recurrence);
+    }
+
+    public function test_generate_now_nao_avanca_next_date(): void
+    {
+        $today = Carbon::today();
+        $originalNextDate = $today->copy()->day(15)->toDateString();
+
+        $recurrence = Recurrence::factory()->create([
+            'workspace_id' => $this->workspace->id,
+            'account_id' => $this->account->id,
+            'category_id' => $this->category->id,
+            'created_by' => $this->user->id,
+            'frequency' => 'monthly',
+            'frequency_day' => 15,
+            'next_date' => $originalNextDate,
+            'start_date' => $today->copy()->subMonths(2)->toDateString(),
+            'status' => 'active',
+        ]);
+
+        $this->service->generateNextInstance($recurrence);
+        $recurrence->refresh();
+
+        // next_date deve permanecer o original
+        $this->assertEquals($originalNextDate, $recurrence->next_date->toDateString());
+    }
+
+    public function test_skip_consumed_periods_avanca_periodos_consumidos(): void
+    {
+        $today = Carbon::today();
+
+        // next_date há 3 meses, com transação no primeiro mês
+        $recurrence = Recurrence::factory()->create([
+            'workspace_id' => $this->workspace->id,
+            'account_id' => $this->account->id,
+            'category_id' => $this->category->id,
+            'created_by' => $this->user->id,
+            'frequency' => 'monthly',
+            'frequency_day' => 15,
+            'next_date' => $today->copy()->subMonths(3)->day(15)->toDateString(),
+            'start_date' => $today->copy()->subMonths(6)->toDateString(),
+            'status' => 'active',
+        ]);
+
+        // Cria transação para o primeiro período (há 3 meses)
+        Transaction::create([
+            'uuid' => Str::orderedUuid()->toString(),
+            'workspace_id' => $this->workspace->id,
+            'account_id' => $this->account->id,
+            'category_id' => $this->category->id,
+            'type' => 'income',
+            'description' => 'Gerada automaticamente',
+            'value' => 100.00,
+            'date' => $today->copy()->subMonths(3)->day(15)->toDateString(),
+            'recurrence_id' => $recurrence->id,
+            'created_by' => $this->user->id,
+        ]);
+
+        $this->service->skipConsumedPeriods($recurrence);
+        $recurrence->refresh();
+
+        // next_date deve ter avançado para o próximo período não consumido
+        // Períodos consumidos: mês-3. Próximos: mês-2, mês-1, atual (todos vazios)
+        // Deve parar no primeiro período não consumido <= today
+        $this->assertNotNull($recurrence->next_date);
+        $this->assertFalse($recurrence->next_date->gt($today));
+    }
+
+    public function test_has_transaction_in_period_detecta_transacao_existente(): void
+    {
+        $today = Carbon::today();
+
+        $recurrence = Recurrence::factory()->create([
+            'workspace_id' => $this->workspace->id,
+            'account_id' => $this->account->id,
+            'category_id' => $this->category->id,
+            'created_by' => $this->user->id,
+            'frequency' => 'monthly',
+            'frequency_day' => 15,
+            'status' => 'active',
+        ]);
+
+        // Sem transação → false
+        $this->assertFalse($this->service->hasTransactionInPeriod($recurrence, $today));
+
+        // Cria transação no período atual
+        Transaction::create([
+            'uuid' => Str::orderedUuid()->toString(),
+            'workspace_id' => $this->workspace->id,
+            'account_id' => $this->account->id,
+            'category_id' => $this->category->id,
+            'type' => 'income',
+            'description' => 'Transação existente',
+            'value' => 100.00,
+            'date' => $today->toDateString(),
+            'recurrence_id' => $recurrence->id,
+            'created_by' => $this->user->id,
+        ]);
+
+        // Com transação → true
+        $this->assertTrue($this->service->hasTransactionInPeriod($recurrence, $today));
     }
 }

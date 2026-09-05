@@ -30,6 +30,7 @@ interface RecurrenceItem {
     status: string;
     account: AccountItem | null;
     category: CategoryItem | null;
+    period_consumed: boolean;
 }
 
 interface Props {
@@ -252,6 +253,12 @@ export default function Index({ accounts, categories }: Props) {
                         <Button
                             variant="outline"
                             size="sm"
+                            disabled={row.period_consumed}
+                            title={
+                                row.period_consumed
+                                    ? 'Período já gerado'
+                                    : undefined
+                            }
                             onClick={() => generateNow(row)}
                         >
                             Gerar agora

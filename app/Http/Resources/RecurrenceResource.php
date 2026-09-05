@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Services\RecurrenceService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -26,6 +28,8 @@ class RecurrenceResource extends JsonResource
             'category' => new CategoryResource($this->whenLoaded('category')),
             'tags' => TagResource::collection($this->whenLoaded('tags')),
             'created_at' => $this->created_at?->toISOString(),
+            'period_consumed' => app(RecurrenceService::class)
+                ->hasTransactionInPeriod($this->resource, Carbon::today()),
         ];
     }
 }

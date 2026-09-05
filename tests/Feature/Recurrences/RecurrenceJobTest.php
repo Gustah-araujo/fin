@@ -74,7 +74,8 @@ class RecurrenceJobTest extends TestCase
         $transaction = Transaction::where('recurrence_id', $recurrence->id)->first();
         $this->assertNotNull($transaction);
         $this->assertEquals(TransactionType::Income, $transaction->type);
-        $this->assertEquals($today->format('Y-m-d'), $transaction->date->format('Y-m-d'));
+        // Data da transação = dia agendado do período (frequency_day)
+        $this->assertEquals(15, (int) $transaction->date->day);
     }
 
     public function test_process_recurrences_job_does_not_duplicate_on_second_run(): void

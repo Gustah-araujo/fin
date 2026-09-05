@@ -158,10 +158,10 @@ class RecurrenceService
     }
 
     /**
-     * Generate the next transaction instance for a recurrence.
-     * Idempotent: uses optimistic lock to prevent duplicates.
+     * Generate a transaction for the current period of a recurrence.
+     * Idempotent: blocked if a transaction already exists for the period.
      */
-    public function generateNextInstance(Recurrence $recurrence): Transaction
+    public function generateNextInstance(Recurrence $recurrence, bool $advanceNextDate = false): Transaction
     {
         $today = Carbon::today();
 
@@ -183,19 +183,114 @@ class RecurrenceService
             throw new RecurrenceGenerationException('A conta vinculada foi arquivada.');
         }
 
-        if ($recurrence->until_date && $recurrence->next_date->gt($recurrence->until_date)) {
+        $generationDate = $this->scheduledDateForPeriod($today, $recurrence->frequency, $recurrence->frequency_day);
+
+        if ($recurrence->until_date && $generationDate->gt($recurrence->until_date)) {
             throw new RecurrenceGenerationException('A recorrência já atingiu sua data final.');
         }
 
-        if ($recurrence->next_date->gt($today)) {
-            throw new RecurrenceGenerationException(
-                "A próxima ocorrência é em {$recurrence->next_date->format('d/m/Y')}. Aguarde ou ajuste a recorrência."
-            );
+        if ($this->hasTransactionInPeriod($recurrence, $today)) {
+            throw new RecurrenceGenerationException('Já existe uma transação gerada para este período.');
         }
 
-        $generationDate = $this->resolveGenerationDate($recurrence, $today);
+        return $this->createGeneratedInstance($recurrence, $generationDate, $advanceNextDate);
+    }
 
-        return $this->createGeneratedInstance($recurrence, $generationDate);
+    /**
+     * Advance next_date past periods that already have a transaction.
+     * Used by the job to skip consumed periods.
+     */
+    public function skipConsumedPeriods(Recurrence $recurrence): void
+    {
+        $today = Carbon::today();
+        $maxIterations = 100;
+
+        for ($i = 0; $i < $maxIterations; $i++) {
+            if ($recurrence->next_date === null) {
+                break;
+            }
+
+            if ($recurrence->next_date->gt($today)) {
+                break;
+            }
+
+            if (! $this->hasTransactionInPeriod($recurrence, $recurrence->next_date)) {
+                break;
+            }
+
+            $frequency = $recurrence->frequency instanceof RecurrenceFrequency
+                ? $recurrence->frequency
+                : RecurrenceFrequency::from($recurrence->frequency);
+
+            $nextNext = $this->nextOccurrenceAfter($recurrence->next_date, $frequency, $recurrence->frequency_day);
+
+            $recurrence->next_date = ($recurrence->until_date && $nextNext->gt($recurrence->until_date))
+                ? null
+                : $nextNext;
+        }
+
+        $recurrence->save();
+    }
+
+    /**
+     * Compute [start, end] bounds of the period containing the given date.
+     *
+     * @return array{Carbon, Carbon}
+     */
+    private function periodBounds(Carbon $date, RecurrenceFrequency $frequency, int $frequencyDay): array
+    {
+        return match ($frequency) {
+            RecurrenceFrequency::Weekly => (function () use ($date, $frequencyDay) {
+                if ($date->dayOfWeek === $frequencyDay) {
+                    $start = $date->copy();
+                } else {
+                    $start = $date->copy()->previous($frequencyDay);
+                    if ($start->gt($date)) {
+                        $start->subWeek();
+                    }
+                }
+
+                return [$start, $start->copy()->addDays(6)];
+            })(),
+            RecurrenceFrequency::Monthly => [
+                $date->copy()->startOfMonth(),
+                $date->copy()->endOfMonth(),
+            ],
+        };
+    }
+
+    /**
+     * Compute the scheduled date (frequency_day) of the period containing the given date.
+     */
+    private function scheduledDateForPeriod(Carbon $date, RecurrenceFrequency $frequency, int $frequencyDay): Carbon
+    {
+        return match ($frequency) {
+            RecurrenceFrequency::Weekly => (function () use ($date, $frequencyDay) {
+                if ($date->dayOfWeek === $frequencyDay) {
+                    return $date->copy();
+                }
+
+                $day = $date->copy()->previous($frequencyDay);
+                if ($day->gt($date)) {
+                    $day->subWeek();
+                }
+
+                return $day;
+            })(),
+            RecurrenceFrequency::Monthly => $date->copy()->day(min($frequencyDay, $date->daysInMonth)),
+        };
+    }
+
+    /**
+     * Check if a transaction already exists for this recurrence within the period containing the given date.
+     */
+    public function hasTransactionInPeriod(Recurrence $recurrence, Carbon $date): bool
+    {
+        [$start, $end] = $this->periodBounds($date, $recurrence->frequency, $recurrence->frequency_day);
+
+        return Transaction::where('recurrence_id', $recurrence->id)
+            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+            ->exists();
     }
 
     /**
@@ -463,32 +558,20 @@ class RecurrenceService
         return $recurrence->next_date->lte($today);
     }
 
-    private function resolveGenerationDate(Recurrence $recurrence, Carbon $today): Carbon
-    {
-        $mostRecentDueDate = $this->mostRecentOccurrenceOnOrBefore(
-            $today,
-            $recurrence->frequency,
-            $recurrence->frequency_day,
-            $recurrence->until_date
-        );
-
-        return $recurrence->next_date->lt($mostRecentDueDate)
-            ? $mostRecentDueDate
-            : $recurrence->next_date;
-    }
-
-    private function createGeneratedInstance(Recurrence $recurrence, Carbon $generationDate): ?Transaction
+    private function createGeneratedInstance(Recurrence $recurrence, Carbon $generationDate, bool $advanceNextDate = false): ?Transaction
     {
         $originalNextDateStr = $recurrence->next_date->toDateString();
 
         try {
-            return DB::transaction(function () use ($recurrence, $generationDate, $originalNextDateStr) {
+            return DB::transaction(function () use ($recurrence, $generationDate, $originalNextDateStr, $advanceNextDate) {
                 $transaction = $this->buildGeneratedTransaction($recurrence, $generationDate);
 
                 $tagIds = $recurrence->tags()->pluck('tags.id')->toArray();
                 $transaction->tags()->sync($tagIds);
 
-                $this->advanceNextDate($recurrence, $generationDate, $originalNextDateStr);
+                if ($advanceNextDate) {
+                    $this->advanceNextDate($recurrence, $generationDate, $originalNextDateStr);
+                }
 
                 return $transaction;
             });
