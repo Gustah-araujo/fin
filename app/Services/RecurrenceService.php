@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Enums\RecurrenceFrequency;
 use App\Enums\RecurrenceStatus;
 use App\Enums\TransactionType;
+use App\Exceptions\RecurrenceGenerationException;
 use App\Jobs\ApplyRecurrenceScopeChangeJob;
 use App\Models\Account;
 use App\Models\Category;
@@ -165,41 +166,31 @@ class RecurrenceService
         $today = Carbon::today();
 
         if ($recurrence->status !== RecurrenceStatus::Active) {
-            throw ValidationException::withMessages([
-                'status' => 'A recorrência não está ativa.',
-            ]);
+            throw new RecurrenceGenerationException('A recorrência não está ativa.');
         }
 
         if ($recurrence->trashed()) {
-            throw ValidationException::withMessages([
-                'status' => 'A recorrência foi removida.',
-            ]);
+            throw new RecurrenceGenerationException('A recorrência foi removida.');
         }
 
         if ($recurrence->next_date === null) {
-            throw ValidationException::withMessages([
-                'next_date' => 'A recorrência não possui próxima data.',
-            ]);
+            throw new RecurrenceGenerationException('A recorrência não possui próxima data.');
         }
 
         $recurrence->load(['account' => fn ($q) => $q->withTrashed()]);
 
         if ($recurrence->account?->trashed()) {
-            throw ValidationException::withMessages([
-                'account' => 'A conta vinculada foi arquivada.',
-            ]);
+            throw new RecurrenceGenerationException('A conta vinculada foi arquivada.');
         }
 
         if ($recurrence->until_date && $recurrence->next_date->gt($recurrence->until_date)) {
-            throw ValidationException::withMessages([
-                'until_date' => 'A recorrência já atingiu sua data final.',
-            ]);
+            throw new RecurrenceGenerationException('A recorrência já atingiu sua data final.');
         }
 
         if ($recurrence->next_date->gt($today)) {
-            throw ValidationException::withMessages([
-                'next_date' => "A próxima ocorrência é em {$recurrence->next_date->format('d/m/Y')}. Aguarde ou ajuste a recorrência.",
-            ]);
+            throw new RecurrenceGenerationException(
+                "A próxima ocorrência é em {$recurrence->next_date->format('d/m/Y')}. Aguarde ou ajuste a recorrência."
+            );
         }
 
         $generationDate = $this->resolveGenerationDate($recurrence, $today);

@@ -7,6 +7,7 @@ namespace Tests\Feature\Recurrences;
 use App\Enums\RecurrenceStatus;
 use App\Enums\TransactionType;
 use App\Enums\WorkspaceRole;
+use App\Exceptions\RecurrenceGenerationException;
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\Recurrence;
@@ -320,7 +321,7 @@ class RecurrenceServiceTest extends TestCase
         $recurrence->refresh();
 
         // Second generation should throw because next_date advanced to next month (future)
-        $this->expectException(ValidationException::class);
+        $this->expectException(RecurrenceGenerationException::class);
         $this->service->generateNextInstance($recurrence);
 
         // Only one transaction should exist
@@ -487,7 +488,7 @@ class RecurrenceServiceTest extends TestCase
             'next_date' => Carbon::today()->toDateString(),
         ]);
 
-        $this->expectException(ValidationException::class);
+        $this->expectException(RecurrenceGenerationException::class);
         $this->service->generateNextInstance($recurrence);
     }
 
@@ -1069,7 +1070,7 @@ class RecurrenceServiceTest extends TestCase
 
         $recurrence->delete();
 
-        $this->expectException(ValidationException::class);
+        $this->expectException(RecurrenceGenerationException::class);
         $this->service->generateNextInstance($recurrence);
     }
 
@@ -1090,7 +1091,7 @@ class RecurrenceServiceTest extends TestCase
             'status' => 'active',
         ]);
 
-        $this->expectException(ValidationException::class);
+        $this->expectException(RecurrenceGenerationException::class);
         $this->service->generateNextInstance($recurrence);
     }
 
@@ -1106,7 +1107,7 @@ class RecurrenceServiceTest extends TestCase
             'status' => 'active',
         ]);
 
-        $this->expectException(ValidationException::class);
+        $this->expectException(RecurrenceGenerationException::class);
         $this->service->generateNextInstance($recurrence);
     }
 
@@ -1121,7 +1122,7 @@ class RecurrenceServiceTest extends TestCase
             'status' => 'active',
         ]);
 
-        $this->expectException(ValidationException::class);
+        $this->expectException(RecurrenceGenerationException::class);
         $this->service->generateNextInstance($recurrence);
     }
 
@@ -1135,7 +1136,7 @@ class RecurrenceServiceTest extends TestCase
             'status' => 'active',
         ]);
 
-        $this->expectException(ValidationException::class);
+        $this->expectException(RecurrenceGenerationException::class);
         $this->service->generateNextInstance($recurrence);
     }
 

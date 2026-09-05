@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\RecurrenceStatus;
 use App\Enums\TransactionType;
+use App\Exceptions\RecurrenceGenerationException;
 use App\Http\Requests\UpdateRecurrenceRequest;
 use App\Http\Resources\AccountResource;
 use App\Http\Resources\CategoryResource;
@@ -144,9 +145,14 @@ class RecurrenceController extends Controller
 
         $this->authorize('generateNow', [$recurrence, $workspace]);
 
-        $transaction = $recurrenceService->generateNextInstance($recurrence);
+        try {
+            $transaction = $recurrenceService->generateNextInstance($recurrence);
 
-        return redirect()->back()
-            ->with('success', "Transação \"{$transaction->description}\" gerada com sucesso.");
+            return redirect()->back()
+                ->with('success', "Transação \"{$transaction->description}\" gerada com sucesso.");
+        } catch (RecurrenceGenerationException $e) {
+            return redirect()->back()
+                ->with('error', $e->getMessage());
+        }
     }
 }
