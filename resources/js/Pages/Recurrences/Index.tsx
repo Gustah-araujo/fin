@@ -126,10 +126,10 @@ export default function Index({ accounts, categories }: Props) {
                     recurrence: recurrence.uuid,
                 }),
                 {},
-                { preserveScroll: true },
+                { preserveScroll: true, onSuccess: bumpReload },
             );
         },
-        [workspace.uuid],
+        [workspace.uuid, bumpReload],
     );
 
     const columns = useMemo<DataTableColumn<RecurrenceItem>[]>(

@@ -319,9 +319,9 @@ class RecurrenceServiceTest extends TestCase
         // Reload recurrence to get the current state
         $recurrence->refresh();
 
-        // Second generation should fail the optimistic lock because next_date changed
-        $second = $this->service->generateNextInstance($recurrence);
-        $this->assertNull($second);
+        // Second generation should throw because next_date advanced to next month (future)
+        $this->expectException(ValidationException::class);
+        $this->service->generateNextInstance($recurrence);
 
         // Only one transaction should exist
         $this->assertEquals(1, Transaction::where('recurrence_id', $recurrence->id)->count());
@@ -477,7 +477,7 @@ class RecurrenceServiceTest extends TestCase
         $this->service->restore($recurrence);
     }
 
-    public function test_paused_recurrence_is_skipped_by_generate(): void
+    public function test_paused_recurrence_throws_on_generate(): void
     {
         $recurrence = Recurrence::factory()->paused()->create([
             'workspace_id' => $this->workspace->id,
@@ -487,8 +487,8 @@ class RecurrenceServiceTest extends TestCase
             'next_date' => Carbon::today()->toDateString(),
         ]);
 
-        $result = $this->service->generateNextInstance($recurrence);
-        $this->assertNull($result);
+        $this->expectException(ValidationException::class);
+        $this->service->generateNextInstance($recurrence);
     }
 
     // ─── Update rule recomputes next_date ───────────────────────────
@@ -1069,11 +1069,11 @@ class RecurrenceServiceTest extends TestCase
 
         $recurrence->delete();
 
-        $result = $this->service->generateNextInstance($recurrence);
-        $this->assertNull($result);
+        $this->expectException(ValidationException::class);
+        $this->service->generateNextInstance($recurrence);
     }
 
-    public function test_generate_skips_when_account_is_archived(): void
+    public function test_generate_throws_when_account_is_archived(): void
     {
         $archivedAccount = Account::factory()->create([
             'workspace_id' => $this->workspace->id,
@@ -1090,11 +1090,11 @@ class RecurrenceServiceTest extends TestCase
             'status' => 'active',
         ]);
 
-        $result = $this->service->generateNextInstance($recurrence);
-        $this->assertNull($result);
+        $this->expectException(ValidationException::class);
+        $this->service->generateNextInstance($recurrence);
     }
 
-    public function test_generate_skips_when_next_date_is_past_until_date(): void
+    public function test_generate_throws_when_next_date_is_past_until_date(): void
     {
         $recurrence = Recurrence::factory()->create([
             'workspace_id' => $this->workspace->id,
@@ -1106,15 +1106,11 @@ class RecurrenceServiceTest extends TestCase
             'status' => 'active',
         ]);
 
-        $result = $this->service->generateNextInstance($recurrence);
-        $this->assertNull($result);
-
-        // next_date should have been set to null (exhausted)
-        $recurrence->refresh();
-        $this->assertNull($recurrence->next_date);
+        $this->expectException(ValidationException::class);
+        $this->service->generateNextInstance($recurrence);
     }
 
-    public function test_generate_skips_when_next_date_is_in_future(): void
+    public function test_generate_throws_when_next_date_is_in_future(): void
     {
         $recurrence = Recurrence::factory()->create([
             'workspace_id' => $this->workspace->id,
@@ -1125,11 +1121,11 @@ class RecurrenceServiceTest extends TestCase
             'status' => 'active',
         ]);
 
-        $result = $this->service->generateNextInstance($recurrence);
-        $this->assertNull($result);
+        $this->expectException(ValidationException::class);
+        $this->service->generateNextInstance($recurrence);
     }
 
-    public function test_generate_skips_when_next_date_is_null(): void
+    public function test_generate_throws_when_next_date_is_null(): void
     {
         $recurrence = Recurrence::factory()->exhausted()->create([
             'workspace_id' => $this->workspace->id,
@@ -1139,8 +1135,8 @@ class RecurrenceServiceTest extends TestCase
             'status' => 'active',
         ]);
 
-        $result = $this->service->generateNextInstance($recurrence);
-        $this->assertNull($result);
+        $this->expectException(ValidationException::class);
+        $this->service->generateNextInstance($recurrence);
     }
 
     // ─── recomputeNextDate ─────────────────────────────────────────

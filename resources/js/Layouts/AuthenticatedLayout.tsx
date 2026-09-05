@@ -2,6 +2,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import AppSidebar from '@/Components/AppSidebar';
 import AppHeader from '@/Components/AppHeader';
 import { useState, useCallback, useEffect } from 'react';
+import { usePage } from '@inertiajs/react';
 
 interface Props {
     children: React.ReactNode;
@@ -11,6 +12,7 @@ const COLLAPSED_WIDTH = '68px';
 const EXPANDED_WIDTH = '240px';
 
 export default function AuthenticatedLayout({ children }: Props) {
+    const { flash } = usePage().props;
     const [collapsed, setCollapsed] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
@@ -64,6 +66,20 @@ export default function AuthenticatedLayout({ children }: Props) {
                     <main className="flex-1 p-6">{children}</main>
                 </div>
             </div>
+            {(flash?.success || flash?.error) && (
+                <div className="fixed bottom-4 right-4 z-50 max-w-sm">
+                    {flash.success && (
+                        <div className="rounded-lg bg-emerald-600 px-4 py-3 text-sm text-white shadow-lg">
+                            {flash.success}
+                        </div>
+                    )}
+                    {flash.error && (
+                        <div className="rounded-lg bg-destructive px-4 py-3 text-sm text-white shadow-lg">
+                            {flash.error}
+                        </div>
+                    )}
+                </div>
+            )}
         </TooltipProvider>
     );
 }

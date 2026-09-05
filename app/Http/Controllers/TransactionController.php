@@ -42,7 +42,9 @@ class TransactionController extends Controller
     {
         $this->authorize('viewAny', [Transaction::class, $workspace]);
 
-        $query = $workspace->transactions()->with(['account', 'category', 'tags']);
+        $query = $workspace->transactions()
+            ->where('type', TransactionType::Expense)
+            ->with(['account', 'category', 'tags']);
 
         return app(DatatableService::class)->paginate($query, $request, $this->datatableConfig());
     }

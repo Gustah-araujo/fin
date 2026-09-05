@@ -40,6 +40,10 @@ class HandleInertiaRequests extends Middleware
         }
 
         $shared['status'] = session('status');
+        $shared['flash'] = [
+            'success' => session('success'),
+            'error' => session('error'),
+        ];
 
         return $shared;
     }

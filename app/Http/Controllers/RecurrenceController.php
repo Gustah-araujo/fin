@@ -144,8 +144,9 @@ class RecurrenceController extends Controller
 
         $this->authorize('generateNow', [$recurrence, $workspace]);
 
-        $recurrenceService->generateNextInstance($recurrence);
+        $transaction = $recurrenceService->generateNextInstance($recurrence);
 
-        return redirect()->back();
+        return redirect()->back()
+            ->with('success', "Transação \"{$transaction->description}\" gerada com sucesso.");
     }
 }
