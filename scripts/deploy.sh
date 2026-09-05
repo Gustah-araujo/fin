@@ -9,22 +9,19 @@ echo ""
 
 cd "$(dirname "$0")/.."
 
-echo "[1/5] Pulling latest code..."
-git pull origin main
-
-echo "[2/5] Building and starting containers..."
+echo "[1/4] Building and starting containers..."
 $COMPOSE up -d --build
 
-echo "[3/5] Waiting for database..."
+echo "[2/4] Waiting for database..."
 until $COMPOSE exec database healthcheck.sh --connect > /dev/null 2>&1; do
     echo "  Waiting for DB..."
     sleep 2
 done
 
-echo "[4/5] Running migrations..."
+echo "[3/4] Running migrations..."
 $COMPOSE exec -T app php artisan migrate --force -v
 
-echo "[5/5] Caching configuration..."
+echo "[4/4] Caching configuration..."
 $COMPOSE exec app php artisan config:clear
 $COMPOSE exec app php artisan config:cache
 $COMPOSE exec app php artisan route:cache

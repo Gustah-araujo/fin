@@ -78,13 +78,13 @@ sudo swapon /swapfile
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 ```
 
-### 3. Clone Repository
+### 3. Create Project Directory
 
 ```bash
-cd /var/www
-git clone <repo-url> fin
-cd fin
+mkdir -p /var/www/fin
 ```
+
+> Files will be synced via CI/CD rsync. Git is not needed on server.
 
 ### 4. Configure Environment
 
@@ -163,24 +163,18 @@ Certificate auto-renews every 12 hours. Nginx reloads every 6 hours to pick up r
 
 ## CI/CD Deploy (Updates)
 
-The `scripts/deploy.sh` handles zero-downtime updates:
+Deploy flow: CI builds dependencies → rsync to server → SSH runs deploy script.
 
-```bash
-./scripts/deploy.sh
-```
+### Deploy steps
 
-Or via SSH from CI:
-
-```bash
-ssh user@vm '/var/www/fin/scripts/deploy.sh'
-```
-
-Deploy steps:
-1. `git pull origin main`
-2. `docker compose -f docker-compose.prod.yml up -d --build`
-3. Wait for database healthcheck
-4. `php artisan migrate --force`
-5. Clear and rebuild config/route/view caches
+1. CI installs PHP and Node dependencies
+2. CI builds frontend assets (`npm run build`)
+3. CI rsyncs all files to server (excluding `.env`, `storage/`)
+4. Server runs `scripts/deploy.sh`:
+   - `docker compose -f docker-compose.prod.yml up -d --build`
+   - Wait for database healthcheck
+   - `php artisan migrate --force`
+   - Clear and rebuild config/route/view caches
 
 ### CI Example (GitHub Actions)
 
@@ -194,7 +188,45 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy via SSH
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          composer install --no-dev --optimize-autoloader
+          npm ci
+
+      - name: Build assets
+        run: npm run build
+
+      - name: Rsync to server
+        uses: burnett01/rsync-deployments@6
+        with:
+          switches: -avzr --delete
+            --exclude=.env
+            --exclude=storage
+            --exclude=node_modules
+            --exclude=.git
+            --exclude=cypress
+            --exclude=tests
+            --exclude=.specs
+          path: ./
+          remote_path: /var/www/fin/
+          remote_host: ${{ secrets.SSH_HOST }}
+          remote_user: ${{ secrets.SSH_USER }}
+          remote_key: ${{ secrets.SSH_KEY }}
+
+      - name: Deploy containers
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -202,6 +234,14 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: cd /var/www/fin && ./scripts/deploy.sh
 ```
+
+### Required GitHub Secrets
+
+| Secret | Description |
+|--------|-------------|
+| `SSH_HOST` | VM IP address |
+| `SSH_USER` | SSH username (must be in `docker` group) |
+| `SSH_KEY` | Private SSH key for authentication |
 
 ## Monitoring (Production)
 
