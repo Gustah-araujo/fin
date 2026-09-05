@@ -34,7 +34,7 @@ jobs:
         run: npm run build
 
       - name: Rsync to server
-        uses: burnett01/rsync-deployments@6
+        uses: burnett01/rsync-deployments@v9
         with:
           switches: -avzr --delete
             --exclude=.env
