@@ -42,11 +42,10 @@ jobs:
           remote_host: 201.23.19.152
           remote_user: ubuntu
           remote_key: ${{ secrets.SSH_KEY }}
-      # Manter comentado por enquanto
-      # - name: Deploy containers
-      #   uses: appleboy/ssh-action@v1
-      #   with:
-      #     host: 201.23.19.152
-      #     username: ubuntu
-      #     key: ${{ secrets.SSH_KEY }}
-      #     script: cd /var/www/fin && ./scripts/deploy.sh
+      - name: Deploy containers
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 201.23.19.152
+          username: ubuntu
+          key: ${{ secrets.SSH_KEY }}
+          script: cd /var/www/fin && chmod +x ./scripts/deploys.sh && ./scripts/deploy.sh
