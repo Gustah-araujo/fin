@@ -9,6 +9,8 @@ echo ""
 
 cd "$(dirname "$0")/.."
 
+chmod +x nginx/entrypoint.sh
+
 echo "[1/4] Building and starting containers..."
 $COMPOSE up -d --build
 
