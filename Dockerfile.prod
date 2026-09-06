@@ -30,9 +30,8 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
 COPY docker/php/php.ini /usr/local/etc/php/conf.d/custom.ini
 
-ADD https://raw.githubusercontent.com/renatomefi/php-fpm-healthcheck/master/php-fpm-healthcheck /usr/local/bin/php-fpm-healthcheck
-RUN chmod +x /usr/local/bin/php-fpm-healthcheck
-
 WORKDIR /var/www/html
 
 USER www-data
+
+CMD ["php-fpm", "-F"]
