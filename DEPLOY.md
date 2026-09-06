@@ -99,6 +99,7 @@ APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://your-domain.com
 APP_DOMAIN=your-domain.com
+CADDY_EMAIL=your@email.com
 APP_KEY=base64:generate-with-php-artisan-key:generate
 
 DB_DATABASE=fin
@@ -124,11 +125,11 @@ docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 This builds and starts:
-- `fin_app` — PHP-FPM
+- `fin_app` — PHP-FPM (with healthcheck)
 - `fin_queue` — Queue worker
 - `fin_scheduler` — Task scheduler
 - `fin_db` — MariaDB 10.11
-- `fin_nginx` — Reverse proxy
+- `fin_caddy` — Reverse proxy with automatic HTTPS
 
 ### 6. Run Initial Migration
 
@@ -144,22 +145,19 @@ docker compose -f docker-compose.prod.yml exec app php artisan route:cache
 docker compose -f docker-compose.prod.yml exec app php artisan view:cache
 ```
 
+---
+
 ## SSL Certificate
 
-### 8. Obtain Let's Encrypt Certificate
+Caddy handles HTTPS automatically. When `APP_DOMAIN` is set to a public domain:
 
-```bash
-./scripts/setup-ssl.sh your-domain.com your@email.com
-```
+1. Caddy obtains Let's Encrypt certificate on first request
+2. Certificate auto-renews (no cron or script needed)
+3. HTTP port 80 redirects to HTTPS automatically
 
-This script:
-1. Creates dummy certificate for nginx to start
-2. Starts containers
-3. Requests real certificate via webroot challenge
-4. Reloads nginx with real certificate
-5. Starts certbot renewal service
+**No manual steps required.** If `APP_DOMAIN` is empty, Caddy serves HTTP only (for testing).
 
-Certificate auto-renews every 12 hours. Nginx reloads every 6 hours to pick up renewed certs.
+---
 
 ## CI/CD Deploy (Updates)
 
@@ -243,6 +241,8 @@ jobs:
 | `SSH_USER` | SSH username (must be in `docker` group) |
 | `SSH_KEY` | Private SSH key for authentication |
 
+---
+
 ## Monitoring (Production)
 
 ### Check Container Status
@@ -256,7 +256,7 @@ docker compose -f docker-compose.prod.yml ps
 ```bash
 docker compose -f docker-compose.prod.yml logs -f app
 docker compose -f docker-compose.prod.yml logs -f queue
-docker compose -f docker-compose.prod.yml logs -f nginx
+docker compose -f docker-compose.prod.yml logs -f caddy
 ```
 
 ### Health Status
@@ -292,30 +292,30 @@ docker compose -f docker-compose.prod.yml exec app php artisan queue:monitor dat
 | Migration fails | `docker compose -f docker-compose.prod.yml exec app php artisan migrate:status` then fix |
 | Queue not processing | `docker compose -f docker-compose.prod.yml restart queue` |
 | 502 Bad Gateway | Check `app` container health: `docker compose -f docker-compose.prod.yml ps` |
-| SSL expired | `docker compose -f docker-compose.prod.yml run --rm certbot renew` then `docker compose -f docker-compose.prod.yml exec nginx nginx -s reload` |
+| HTTPS not working | Verify `APP_DOMAIN` is set and domain DNS points to VM IP |
 | Out of disk | `docker system prune -f` and check logs |
 
 ## Architecture
 
 ```
-Internet → Nginx (80/443) → PHP-FPM (app:9000)
-                                  ↓
-                            MariaDB (fin_db)
-                                  
+Internet → Caddy (80/443, auto-HTTPS) → PHP-FPM (app:9000)
+                                          ↓
+                                    MariaDB (fin_db)
+
 Services:
 - app:         PHP-FPM (HTTP requests)
 - queue:       queue:work (background jobs)
 - scheduler:   schedule:work (task scheduling)
 - database:    MariaDB 10.11
-- nginx:       Reverse proxy + SSL termination
-- certbot:     Let's Encrypt renewal
+- caddy:       Reverse proxy + SSL termination (Let's Encrypt automatic)
 ```
 
 ## Environment Variables Reference
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `APP_DOMAIN` | Domain for nginx config | `fin.example.com` |
+| `APP_DOMAIN` | Domain for Caddy HTTPS | `fin.example.com` |
+| `CADDY_EMAIL` | Email for Let's Encrypt registration | `you@email.com` |
 | `APP_URL` | Public URL | `https://fin.example.com` |
 | `APP_KEY` | Laravel encryption key | `base64:...` |
 | `DB_DATABASE` | Database name | `fin` |

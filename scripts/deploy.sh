@@ -9,7 +9,11 @@ echo ""
 
 cd "$(dirname "$0")/.."
 
-chmod +x nginx/entrypoint.sh
+if [ -z "${APP_DOMAIN:-}" ]; then
+    echo "⚠️  APP_DOMAIN not set — Caddy will serve on HTTP (localhost only)."
+    echo "   Set APP_DOMAIN in .env for automatic HTTPS via Let's Encrypt."
+    echo ""
+fi
 
 echo "[1/4] Building and starting containers..."
 $COMPOSE up -d --build
