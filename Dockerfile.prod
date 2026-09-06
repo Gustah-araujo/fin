@@ -30,11 +30,12 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
 COPY docker/php/php.ini /usr/local/etc/php/conf.d/custom.ini
 
+# Remap www-data to UID 1000 to match host user and avoid permission issues
+RUN usermod -u 1000 www-data && groupmod -g 1000 www-data
+
 WORKDIR /var/www/html
 
 RUN mkdir -p storage/framework/views storage/framework/cache storage/app bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache
-
-USER www-data
 
 CMD ["php-fpm", "-F"]

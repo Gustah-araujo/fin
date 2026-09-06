@@ -24,8 +24,8 @@ echo "[1/4] Building and starting containers..."
 $COMPOSE up -d --build
 
 echo "[1.5/4] Fixing storage permissions..."
-$COMPOSE run --rm --user root app chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || \
-  sudo chown -R www-data:www-data storage bootstrap/cache
+$COMPOSE run --rm --user root app chown -R 1000:1000 /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || \
+  sudo chown -R 1000:1000 storage bootstrap/cache
 
 echo "[2/4] Waiting for database..."
 until $COMPOSE exec database healthcheck.sh --connect > /dev/null 2>&1; do
@@ -41,6 +41,9 @@ $COMPOSE exec app php artisan config:clear
 $COMPOSE exec app php artisan config:cache
 $COMPOSE exec app php artisan route:cache
 $COMPOSE exec app php artisan view:cache
+
+echo "[5/5] Restarting containers to apply changes..."
+$COMPOSE restart app queue scheduler caddy
 
 echo ""
 echo "=== Deploy Complete ==="
