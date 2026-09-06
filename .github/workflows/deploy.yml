@@ -34,14 +34,15 @@ jobs:
         run: npm run build
 
       - name: Rsync to server
-        uses: burnett01/rsync-deployments@v9
+        uses: ./.github/actions/rsync-deploy
         with:
-          switches: -avzr --delete --exclude-from=.rsyncignore
-          path: ./
+          host: 167.235.153.124
+          user: ubuntu
+          local_path: ./
           remote_path: /var/www/fin/
-          remote_host: 167.235.153.124
-          remote_user: ubuntu
-          remote_key: ${{ secrets.SSH_KEY }}
+          switches: -avzr --delete
+          exclude_from: .rsyncignore
+          ssh_key: ${{ secrets.SSH_KEY }}
       # Manter comentado por enquanto
       # - name: Deploy containers
       #   uses: appleboy/ssh-action@v1
