@@ -48,4 +48,4 @@ jobs:
           host: 201.23.19.152
           username: ubuntu
           key: ${{ secrets.SSH_KEY }}
-          script: cd /var/www/fin && chmod +x ./scripts/deploys.sh && ./scripts/deploy.sh
+          script: cd /var/www/fin && chmod +x ./scripts/deploy.sh && ./scripts/deploy.sh
