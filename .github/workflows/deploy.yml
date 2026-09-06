@@ -36,15 +36,8 @@ jobs:
       - name: Rsync to server
         uses: contention/rsync-deployments@v2.0.0
         with:
-          flags: -avzr --delete
-          excludes: |
-            .env
-            storage
-            node_modules
-            .git
-            cypress
-            tests
-            .specs
+          flags: -avzr --delete --exclude-from=.rsyncignore
+          excludes: " "
           localpath: ./
           remotepath: /var/www/fin/
           host: 167.235.153.124
