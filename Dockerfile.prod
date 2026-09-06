@@ -32,6 +32,9 @@ COPY docker/php/php.ini /usr/local/etc/php/conf.d/custom.ini
 
 WORKDIR /var/www/html
 
+RUN mkdir -p storage/framework/views storage/framework/cache storage/app bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache
+
 USER www-data
 
 CMD ["php-fpm", "-F"]
