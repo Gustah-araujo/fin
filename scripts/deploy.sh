@@ -9,6 +9,11 @@ echo ""
 
 cd "$(dirname "$0")/.."
 
+# Load APP_DOMAIN from .env for the warning check (host shell)
+if [ -f .env ] && [ -z "${APP_DOMAIN:-}" ]; then
+    export APP_DOMAIN=$(grep '^APP_DOMAIN=' .env | cut -d '=' -f2- | tr -d '[:space:]')
+fi
+
 if [ -z "${APP_DOMAIN:-}" ]; then
     echo "⚠️  APP_DOMAIN not set — Caddy will serve on HTTP (localhost only)."
     echo "   Set APP_DOMAIN in .env for automatic HTTPS via Let's Encrypt."
