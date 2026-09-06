@@ -15,8 +15,7 @@ echo "[1/4] Building and starting containers..."
 $COMPOSE up -d --build
 
 echo "[1.5/4] Fixing storage permissions..."
-sudo chown -R 33:33 storage bootstrap/cache 2>/dev/null || \
-  $COMPOSE exec -T app chown -R www-data:www-data storage bootstrap/cache
+$COMPOSE exec -T app chown -R www-data:www-data storage bootstrap/cache
 
 echo "[2/4] Waiting for database..."
 until $COMPOSE exec database healthcheck.sh --connect > /dev/null 2>&1; do
