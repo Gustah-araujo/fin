@@ -1,5 +1,6 @@
 .env
-storage
+storage/app/public/
+storage/logs/*.log
 node_modules
 .git
 cypress
