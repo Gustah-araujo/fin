@@ -50,11 +50,11 @@ jobs:
           host: 167.235.153.124
           user: gustavo
           deploy_key: ${{ secrets.SSH_KEY }}
-
-      - name: Deploy containers
-        uses: appleboy/ssh-action@v1
-        with:
-          host: 167.235.153.124
-          username: gustavo
-          key: ${{ secrets.SSH_KEY }}
-          script: cd /var/www/fin && ./scripts/deploy.sh
+      # Manter comentado por enquanto
+      # - name: Deploy containers
+      #   uses: appleboy/ssh-action@v1
+      #   with:
+      #     host: 167.235.153.124
+      #     username: gustavo
+      #     key: ${{ secrets.SSH_KEY }}
+      #     script: cd /var/www/fin && ./scripts/deploy.sh
