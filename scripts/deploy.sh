@@ -43,7 +43,9 @@ $COMPOSE exec app php artisan route:cache
 $COMPOSE exec app php artisan view:cache
 
 echo "[5/5] Restarting containers to apply changes..."
-$COMPOSE restart app queue scheduler caddy
+$COMPOSE down
+
+$COMPOSE up -d
 
 echo ""
 echo "=== Deploy Complete ==="
