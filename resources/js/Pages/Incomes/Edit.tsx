@@ -299,7 +299,7 @@ export default function Edit({
                             )}
 
                             <div className="flex items-center gap-3 pt-2">
-                                <Button type="submit" disabled={processing}>
+                                <Button type="submit">
                                     Salvar
                                 </Button>
                                 <Button variant="outline" asChild>

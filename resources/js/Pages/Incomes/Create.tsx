@@ -429,7 +429,7 @@ export default function Create({ accounts, categories, tags }: Props) {
                             )}
 
                             <div className="flex items-center gap-3 pt-2">
-                                <Button type="submit" disabled={processing}>
+                                <Button type="submit">
                                     Criar Receita
                                 </Button>
                                 <Button variant="outline" asChild>

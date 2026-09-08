@@ -50,6 +50,27 @@ Cypress.Commands.add('loginViaSession', (sessionId) => {
     });
 });
 
+Cypress.Commands.add('assertToast', (expectedType = 'success', expectedMessage = null) => {
+    cy.window().then((win) => {
+        return new Cypress.Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                win.removeEventListener('toast', handler);
+                reject(new Error(`Toast of type "${expectedType}" not found within 5s`));
+            }, 5000);
+
+            const handler = (event) => {
+                const { type, message } = event.detail;
+                if (type === expectedType && (!expectedMessage || message.includes(expectedMessage))) {
+                    clearTimeout(timeout);
+                    win.removeEventListener('toast', handler);
+                    resolve();
+                }
+            };
+            win.addEventListener('toast', handler);
+        });
+    });
+});
+
 Cypress.Commands.add('registerAndCreateWorkspace', (workspaceName = 'E2E Workspace') => {
     const email = `e2e-${Date.now()}@example.com`;
 

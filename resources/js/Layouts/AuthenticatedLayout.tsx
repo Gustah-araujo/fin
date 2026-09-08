@@ -23,8 +23,14 @@ export default function AuthenticatedLayout({ children }: Props) {
     );
 
     useEffect(() => {
-        if (flash?.success) toast.success(flash.success);
-        if (flash?.error) toast.error(flash.error);
+        if (flash?.success) {
+            toast.success(flash.success);
+            window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'success', message: flash.success } }));
+        }
+        if (flash?.error) {
+            toast.error(flash.error);
+            window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'error', message: flash.error } }));
+        }
     }, [flash?.success, flash?.error]);
 
     useEffect(() => {

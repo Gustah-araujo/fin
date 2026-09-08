@@ -188,7 +188,6 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
                                     <Link
                                         key={item.testId}
                                         href={item.href}
-                                        data-testid={item.testId}
                                         className={cn(
                                             'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                                             active
@@ -208,7 +207,9 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
                                     return (
                                         <Tooltip key={item.testId}>
                                             <TooltipTrigger asChild>
-                                                {link}
+                                                <span data-testid={item.testId}>
+                                                    {link}
+                                                </span>
                                             </TooltipTrigger>
                                             <TooltipContent
                                                 side="right"
@@ -220,7 +221,11 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
                                     );
                                 }
 
-                                return link;
+                                return (
+                                    <span data-testid={item.testId}>
+                                        {link}
+                                    </span>
+                                );
                             })}
                         </div>
                     </div>
