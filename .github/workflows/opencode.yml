@@ -26,4 +26,4 @@ jobs:
         env:
           OPENCODE_GO_API_KEY: ${{ secrets.OPENCODE_GO_API_KEY }}
         with:
-          model: opencode-go/longcat-2.0
+          model: opencode-go/qwen3.7-plus
