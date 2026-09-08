@@ -18,6 +18,7 @@ use App\Services\Datatable\DatatableService;
 use App\Services\Datatable\Filter;
 use App\Services\RecurrenceService;
 use App\Services\TransactionService;
+use App\Support\Toast;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -98,12 +99,18 @@ class TransactionController extends Controller
             } else {
                 $recurrenceService->create($workspace, $data, $request->user());
             }
+
+            Toast::success('Recorrência criada com sucesso.');
+
+            return redirect()->route('transactions.index', $workspace);
         } else {
             $data['type'] = TransactionType::Expense->value;
             $transactionService->create($workspace, $request->user(), $data);
-        }
 
-        return redirect()->route('transactions.index', $workspace);
+            Toast::success('Despesa criada com sucesso.');
+
+            return redirect()->route('transactions.index', $workspace);
+        }
     }
 
     public function edit(Workspace $workspace, Transaction $transaction): Response
@@ -135,6 +142,8 @@ class TransactionController extends Controller
 
         $transactionService->update($transaction, $request->validated());
 
+        Toast::success('Despesa atualizada com sucesso.');
+
         return redirect()->route('transactions.index', $workspace);
     }
 
@@ -145,6 +154,8 @@ class TransactionController extends Controller
         $this->authorize('delete', [$transaction, $workspace]);
 
         $transactionService->archive($transaction);
+
+        Toast::success('Despesa arquivada com sucesso.');
 
         return redirect()->route('transactions.index', $workspace);
     }
@@ -157,6 +168,8 @@ class TransactionController extends Controller
 
         $transactionService->pay($transaction);
 
+        Toast::success('Despesa marcada como paga.');
+
         return redirect()->back();
     }
 
@@ -167,6 +180,8 @@ class TransactionController extends Controller
         $this->authorize('update', [$transaction, $workspace]);
 
         $transactionService->unpay($transaction);
+
+        Toast::success('Despesa marcada como não paga.');
 
         return redirect()->back();
     }

@@ -15,6 +15,7 @@ use App\Models\CreditCard;
 use App\Models\Transaction;
 use App\Models\Workspace;
 use App\Services\CardExpenseService;
+use App\Support\Toast;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Response;
 
@@ -46,9 +47,13 @@ class CardExpenseController extends Controller
 
         if ($installments > 1) {
             $service->createInstallment($workspace, $request->user(), $card, $request->validated());
-        } else {
-            $service->createSingle($workspace, $request->user(), $card, $request->validated());
+            Toast::success('Parcelas criadas com sucesso.');
+
+            return redirect()->route('cards.show', [$workspace, $card]);
         }
+
+        $service->createSingle($workspace, $request->user(), $card, $request->validated());
+        Toast::success('Despesa no cartão criada com sucesso.');
 
         return redirect()->route('cards.show', [$workspace, $card]);
     }
@@ -90,6 +95,8 @@ class CardExpenseController extends Controller
             $service->updateSingle($transaction, $request->validated());
         }
 
+        Toast::success('Despesa no cartão atualizada com sucesso.');
+
         return redirect()->route('cards.show', [$workspace, $card]);
     }
 
@@ -107,6 +114,8 @@ class CardExpenseController extends Controller
         } else {
             $service->deleteSingle($transaction);
         }
+
+        Toast::success('Despesa no cartão removida com sucesso.');
 
         return redirect()->route('cards.show', [$workspace, $card]);
     }

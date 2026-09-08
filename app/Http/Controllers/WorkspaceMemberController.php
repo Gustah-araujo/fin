@@ -10,6 +10,7 @@ use App\Http\Requests\UpdateMemberRoleRequest;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\WorkspaceService;
+use App\Support\Toast;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Response;
@@ -66,7 +67,9 @@ class WorkspaceMemberController extends Controller
         Gate::authorize('manageMembers', $workspace);
         $workspaceService->removeMember($workspace, $user);
 
-        return back()->with('status', 'Membro removido do workspace.');
+        Toast::success('Membro removido do workspace.');
+
+        return back();
     }
 
     public function updateRole(UpdateMemberRoleRequest $request, Workspace $workspace, User $user, WorkspaceService $workspaceService): RedirectResponse
@@ -74,6 +77,8 @@ class WorkspaceMemberController extends Controller
         Gate::authorize('manageMembers', $workspace);
         $workspaceService->changeRole($workspace, $user, WorkspaceRole::from($request->validated()['role']));
 
-        return back()->with('status', 'Papel atualizado com sucesso.');
+        Toast::success('Papel atualizado com sucesso.');
+
+        return back();
     }
 }

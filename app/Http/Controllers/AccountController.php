@@ -10,6 +10,7 @@ use App\Http\Resources\AccountResource;
 use App\Models\Account;
 use App\Models\Workspace;
 use App\Services\AccountService;
+use App\Support\Toast;
 use Inertia\Response;
 
 class AccountController extends Controller
@@ -38,6 +39,8 @@ class AccountController extends Controller
 
         $accountService->create($workspace, $request->user(), $request->validated());
 
+        Toast::success('Conta criada com sucesso.');
+
         return redirect()->route('accounts.index', $workspace);
     }
 
@@ -60,6 +63,8 @@ class AccountController extends Controller
 
         $accountService->update($account, $request->validated());
 
+        Toast::success('Conta atualizada com sucesso.');
+
         return redirect()->route('accounts.index', $workspace);
     }
 
@@ -70,6 +75,8 @@ class AccountController extends Controller
         $this->authorize('delete', [$account, $workspace]);
 
         $accountService->archive($account);
+
+        Toast::success('Conta arquivada com sucesso.');
 
         return redirect()->route('accounts.index', $workspace);
     }

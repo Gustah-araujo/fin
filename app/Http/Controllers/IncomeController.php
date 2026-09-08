@@ -100,12 +100,18 @@ class IncomeController extends Controller
             } else {
                 $recurrenceService->create($workspace, $data, $request->user());
             }
+
+            Toast::success('Recorrência criada com sucesso.');
+
+            return redirect()->route('incomes.index', $workspace);
         } else {
             $data['type'] = TransactionType::Income->value;
             $transactionService->create($workspace, $request->user(), $data);
-        }
 
-        return redirect()->route('incomes.index', $workspace);
+            Toast::success('Receita criada com sucesso.');
+
+            return redirect()->route('incomes.index', $workspace);
+        }
     }
 
     public function edit(Workspace $workspace, Transaction $transaction): Response
@@ -145,6 +151,8 @@ class IncomeController extends Controller
             $transactionService->update($transaction, $data);
         }
 
+        Toast::success('Receita atualizada com sucesso.');
+
         return redirect()->route('incomes.index', $workspace);
     }
 
@@ -162,6 +170,8 @@ class IncomeController extends Controller
             $transactionService->archive($transaction);
         }
 
+        Toast::success('Receita arquivada com sucesso.');
+
         return redirect()->route('incomes.index', $workspace);
     }
 
@@ -173,6 +183,8 @@ class IncomeController extends Controller
 
         $transactionService->pay($transaction);
 
+        Toast::success('Receita confirmada.');
+
         return redirect()->back();
     }
 
@@ -183,6 +195,8 @@ class IncomeController extends Controller
         $this->authorize('update', [$transaction, $workspace]);
 
         $transactionService->unpay($transaction);
+
+        Toast::success('Receita desconfirmada.');
 
         return redirect()->back();
     }

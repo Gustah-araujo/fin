@@ -12,6 +12,7 @@ use App\Models\Account;
 use App\Models\CreditCardBill;
 use App\Models\Workspace;
 use App\Services\BillService;
+use App\Support\Toast;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Response;
 
@@ -52,6 +53,7 @@ class CreditCardBillController extends Controller
             ->firstOrFail();
 
         $billService->payBill($bill, $account, $request->user());
+        Toast::success('Fatura paga com sucesso.');
 
         return redirect()->back();
     }
@@ -62,6 +64,7 @@ class CreditCardBillController extends Controller
         $this->authorize('unpay', [$bill, $workspace]);
 
         $billService->undoPayment($bill);
+        Toast::success('Fatura marcada como não paga.');
 
         return redirect()->back();
     }

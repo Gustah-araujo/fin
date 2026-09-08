@@ -10,6 +10,7 @@ use App\Http\Resources\CategoryResource;
 use App\Models\Category;
 use App\Models\Workspace;
 use App\Services\CategoryService;
+use App\Support\Toast;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Response;
 
@@ -39,6 +40,8 @@ class CategoryController extends Controller
 
         $categoryService->create($workspace, $request->user(), $request->validated());
 
+        Toast::success('Categoria criada com sucesso.');
+
         return redirect()->route('categories.index', $workspace);
     }
 
@@ -66,6 +69,8 @@ class CategoryController extends Controller
 
         $categoryService->update($category, $request->validated());
 
+        Toast::success('Categoria atualizada com sucesso.');
+
         return redirect()->route('categories.index', $workspace);
     }
 
@@ -76,6 +81,8 @@ class CategoryController extends Controller
         $this->authorize('delete', [$category, $workspace]);
 
         $categoryService->archive($category);
+
+        Toast::success('Categoria arquivada com sucesso.');
 
         return redirect()->route('categories.index', $workspace);
     }

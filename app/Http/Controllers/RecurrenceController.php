@@ -18,6 +18,7 @@ use App\Services\Datatable\DatatableConfig;
 use App\Services\Datatable\DatatableService;
 use App\Services\Datatable\Filter;
 use App\Services\RecurrenceService;
+use App\Support\Toast;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -102,6 +103,7 @@ class RecurrenceController extends Controller
         $this->authorize('update', [$recurrence, $workspace]);
 
         $recurrenceService->updateRule($recurrence, $request->validated());
+        Toast::success('Recorrência atualizada com sucesso.');
 
         return redirect()->route('recurrences.index', $workspace);
     }
@@ -113,6 +115,7 @@ class RecurrenceController extends Controller
         $this->authorize('delete', [$recurrence, $workspace]);
 
         $recurrence->delete();
+        Toast::success('Recorrência removida com sucesso.');
 
         return redirect()->route('recurrences.index', $workspace);
     }
@@ -124,6 +127,7 @@ class RecurrenceController extends Controller
         $this->authorize('pause', [$recurrence, $workspace]);
 
         $recurrenceService->pause($recurrence);
+        Toast::success('Recorrência pausada.');
 
         return redirect()->back();
     }
@@ -135,6 +139,7 @@ class RecurrenceController extends Controller
         $this->authorize('restore', [$recurrence, $workspace]);
 
         $recurrenceService->restore($recurrence);
+        Toast::success('Recorrência retomada.');
 
         return redirect()->back();
     }
@@ -147,12 +152,11 @@ class RecurrenceController extends Controller
 
         try {
             $transaction = $recurrenceService->generateNextInstance($recurrence);
-
-            return redirect()->back()
-                ->with('success', "Transação \"{$transaction->description}\" gerada com sucesso.");
+            Toast::success("Transação \"{$transaction->description}\" gerada com sucesso.");
         } catch (RecurrenceGenerationException $e) {
-            return redirect()->back()
-                ->with('error', $e->getMessage());
+            Toast::error($e->getMessage());
         }
+
+        return redirect()->back();
     }
 }

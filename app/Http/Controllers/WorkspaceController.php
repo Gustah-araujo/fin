@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreWorkspaceRequest;
 use App\Services\WorkspaceService;
+use App\Support\Toast;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Response;
@@ -20,6 +21,8 @@ class WorkspaceController extends Controller
     public function store(StoreWorkspaceRequest $request, WorkspaceService $workspaceService): RedirectResponse
     {
         $workspace = $workspaceService->create($request->user(), $request->validated());
+
+        Toast::success('Workspace criado com sucesso.');
 
         return redirect()->route('dashboard', ['workspace' => $workspace->uuid]);
     }
@@ -44,6 +47,8 @@ class WorkspaceController extends Controller
         $workspaceUuid = $request->input('workspace_uuid');
         $workspace = $request->user()->workspaces()->where('uuid', $workspaceUuid)->firstOrFail();
         $workspaceService->setLastVisited($workspace, $request->user());
+
+        Toast::success('Workspace ativado.');
 
         return redirect()->route('dashboard', ['workspace' => $workspace->uuid]);
     }

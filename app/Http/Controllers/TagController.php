@@ -10,6 +10,7 @@ use App\Http\Resources\TagResource;
 use App\Models\Tag;
 use App\Models\Workspace;
 use App\Services\TagService;
+use App\Support\Toast;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Response;
 
@@ -39,6 +40,8 @@ class TagController extends Controller
 
         $tagService->create($workspace, $request->user(), $request->validated());
 
+        Toast::success('Tag criada com sucesso.');
+
         return redirect()->route('tags.index', $workspace);
     }
 
@@ -66,6 +69,8 @@ class TagController extends Controller
 
         $tagService->update($tag, $request->validated());
 
+        Toast::success('Tag atualizada com sucesso.');
+
         return redirect()->route('tags.index', $workspace);
     }
 
@@ -76,6 +81,8 @@ class TagController extends Controller
         $this->authorize('delete', [$tag, $workspace]);
 
         $tagService->archive($tag);
+
+        Toast::success('Tag arquivada com sucesso.');
 
         return redirect()->route('tags.index', $workspace);
     }

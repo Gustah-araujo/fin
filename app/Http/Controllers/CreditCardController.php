@@ -11,6 +11,7 @@ use App\Http\Resources\CreditCardResource;
 use App\Models\CreditCard;
 use App\Models\Workspace;
 use App\Services\CreditCardService;
+use App\Support\Toast;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Response;
 
@@ -63,6 +64,8 @@ class CreditCardController extends Controller
 
         $service->create($workspace, $request->user(), $request->validated());
 
+        Toast::success('Cartão criado com sucesso.');
+
         return redirect()->route('cards.index', $workspace);
     }
 
@@ -85,6 +88,8 @@ class CreditCardController extends Controller
 
         $service->update($card, $request->validated());
 
+        Toast::success('Cartão atualizado com sucesso.');
+
         return redirect()->route('cards.index', $workspace);
     }
 
@@ -95,6 +100,8 @@ class CreditCardController extends Controller
         $this->authorize('delete', [$card, $workspace]);
 
         $service->archive($card);
+
+        Toast::success('Cartão arquivado com sucesso.');
 
         return redirect()->route('cards.index', $workspace);
     }

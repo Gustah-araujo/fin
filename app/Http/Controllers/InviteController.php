@@ -9,6 +9,7 @@ use App\Http\Requests\StoreInviteRequest;
 use App\Models\Invite;
 use App\Models\Workspace;
 use App\Services\InviteService;
+use App\Support\Toast;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 
@@ -26,24 +27,31 @@ class InviteController extends Controller
         );
 
         if (! $invite) {
-            return back()->with('status', 'Convite enviado.');
+            Toast::success('Convite enviado.');
+
+            return back();
         }
 
-        return back()->with('status', 'Convite enviado com sucesso.');
+        Toast::success('Convite enviado com sucesso.');
+
+        return back();
     }
 
     public function accept(Invite $invite, InviteService $inviteService): RedirectResponse
     {
         $inviteService->accept($invite, request()->user());
 
-        return redirect()->route('dashboard', ['workspace' => $invite->workspace->uuid])
-            ->with('status', 'Você entrou no workspace.');
+        Toast::success('Você entrou no workspace.');
+
+        return redirect()->route('dashboard', ['workspace' => $invite->workspace->uuid]);
     }
 
     public function decline(Invite $invite, InviteService $inviteService): RedirectResponse
     {
         $inviteService->decline($invite, request()->user());
 
-        return back()->with('status', 'Convite recusado.');
+        Toast::success('Convite recusado.');
+
+        return back();
     }
 }
