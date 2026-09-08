@@ -14,9 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
-      contents: write
-      pull-requests: write
-      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -24,17 +21,9 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Configure git identity
-        run: |
-          git config --global user.name "opencode-agent[bot]"
-          git config --global user.email "opencode-agent[bot]@users.noreply.github.com"
-
       - name: Run OpenCode
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_GO_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           model: opencode-go/longcat-2.0
-          use_github_token: true
