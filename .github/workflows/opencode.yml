@@ -24,6 +24,6 @@ jobs:
       - name: Run OpenCode
         uses: anomalyco/opencode/github@latest
         env:
-          OPENCODE_GO_API_KEY: ${{ secrets.OPENCODE_GO_API_KEY }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_GO_API_KEY }}
         with:
-          model: opencode-go/qwen3.7-plus
+          model: opencode-go/longcat-2.0
