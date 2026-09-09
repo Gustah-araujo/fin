@@ -189,6 +189,15 @@ jobs:
       - name: Build Assets
         run: npm run build
 
+      - name: Cache Cypress Binary
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.cache/Cypress
+          key: cypress-binary-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Cypress Binary
+        run: npx cypress install
+
       - name: Prepare Application Environment
         run: |
           cp .env.example .env
