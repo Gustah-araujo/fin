@@ -20,7 +20,7 @@ export function DataTableFilterRow<T>({
                 <TableHead
                     key={`filter-${column.key}`}
                     className={
-                        column.align === 'right' ? 'text-right' : undefined
+                        column.align === 'right' ? 'px-3 text-right' : 'px-3'
                     }
                 >
                     {column.filter ? (

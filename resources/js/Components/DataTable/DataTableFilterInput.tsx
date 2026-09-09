@@ -51,31 +51,38 @@ export function DataTableFilterInput({
                 />
             );
 
-        case 'number':
+        case 'number': {
+            const minValue = rangeValue(columnKey, '_min', values);
+
             return (
-                <div className="flex w-full items-center gap-1">
+                <div className="flex w-full flex-col gap-1">
                     <Input
                         type="number"
                         placeholder="Mín"
-                        value={rangeValue(columnKey, '_min', values)}
+                        value={minValue}
                         onChange={(event) =>
                             onChange(`${columnKey}_min`, event.target.value)
                         }
-                        className="h-8 min-w-0 flex-1 text-xs"
+                        className="h-8 w-full text-xs"
                     />
-                    <Input
-                        type="number"
-                        placeholder="Máx"
-                        value={rangeValue(columnKey, '_max', values)}
-                        onChange={(event) =>
-                            onChange(`${columnKey}_max`, event.target.value)
-                        }
-                        className="h-8 min-w-0 flex-1 text-xs"
-                    />
+                    {minValue !== '' && (
+                        <Input
+                            type="number"
+                            placeholder="Máx"
+                            value={rangeValue(columnKey, '_max', values)}
+                            onChange={(event) =>
+                                onChange(`${columnKey}_max`, event.target.value)
+                            }
+                            className="h-8 w-full text-xs"
+                        />
+                    )}
                 </div>
             );
+        }
 
-        case 'date':
+        case 'date': {
+            const fromValue = rangeValue(columnKey, '_from', values);
+
             return (
                 <div className="flex w-full flex-col gap-1">
                     <div className="flex items-center gap-1">
@@ -84,7 +91,7 @@ export function DataTableFilterInput({
                         </span>
                         <Input
                             type="date"
-                            value={rangeValue(columnKey, '_from', values)}
+                            value={fromValue}
                             onChange={(event) =>
                                 onChange(
                                     `${columnKey}_from`,
@@ -94,21 +101,27 @@ export function DataTableFilterInput({
                             className="h-8 min-w-0 flex-1 text-xs"
                         />
                     </div>
-                    <div className="flex items-center gap-1">
-                        <span className="shrink-0 text-[10px] text-muted-foreground">
-                            Até
-                        </span>
-                        <Input
-                            type="date"
-                            value={rangeValue(columnKey, '_to', values)}
-                            onChange={(event) =>
-                                onChange(`${columnKey}_to`, event.target.value)
-                            }
-                            className="h-8 min-w-0 flex-1 text-xs"
-                        />
-                    </div>
+                    {fromValue !== '' && (
+                        <div className="flex items-center gap-1">
+                            <span className="shrink-0 text-[10px] text-muted-foreground">
+                                Até
+                            </span>
+                            <Input
+                                type="date"
+                                value={rangeValue(columnKey, '_to', values)}
+                                onChange={(event) =>
+                                    onChange(
+                                        `${columnKey}_to`,
+                                        event.target.value,
+                                    )
+                                }
+                                className="h-8 min-w-0 flex-1 text-xs"
+                            />
+                        </div>
+                    )}
                 </div>
             );
+        }
 
         case 'select': {
             const value = currentValue(columnKey, values);
