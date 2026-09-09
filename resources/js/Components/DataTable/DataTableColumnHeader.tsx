@@ -24,7 +24,11 @@ export function DataTableColumnHeader<T>({
           : ArrowDown;
 
     if (!column.sortable) {
-        return <span className="text-sm font-medium">{column.header}</span>;
+        return (
+            <span className="text-sm font-medium text-center">
+                {column.header}
+            </span>
+        );
     }
 
     return (
@@ -32,7 +36,7 @@ export function DataTableColumnHeader<T>({
             type="button"
             variant="ghost"
             size="sm"
-            className="px-2 text-sm font-medium"
+            className="px-2 text-sm font-medium justify-center"
             onClick={() => onSort(column.key)}
         >
             {column.header}

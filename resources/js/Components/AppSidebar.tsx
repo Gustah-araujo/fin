@@ -174,7 +174,7 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
                 )}
             </div>
 
-            <nav className="flex-1 overflow-y-auto py-3 px-2">
+            <nav className="flex-1 overflow-y-auto py-3 px-2 sidebar-scroll">
                 {navigation.map((section) => (
                     <div key={section.title} className="mb-4">
                         {!collapsed && (
