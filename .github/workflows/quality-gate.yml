@@ -162,6 +162,7 @@ jobs:
       MAIL_FROM_ADDRESS: "test@fin.local"
       MAIL_FROM_NAME: "Fin Test"
       CYPRESS_BASE_URL: http://localhost:8000
+      CYPRESS_MAILPIT_PORT: 8025
 
     steps:
       - name: Checkout repository

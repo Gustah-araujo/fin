@@ -1,3 +1,5 @@
+const MAILPIT_API = `http://localhost:${Cypress.env('MAILPIT_PORT') || '8026'}/api/v1`;
+
 describe('Workspace Invites', () => {
     it('two users register and create workspaces', () => {
         const adminEmail = `e2e-admin-${Date.now()}@example.com`;
@@ -12,10 +14,10 @@ describe('Workspace Invites', () => {
 
         // Wait for email, then search Mailpit
         cy.wait(1000);
-        cy.request(`http://localhost:8026/api/v1/search?kind=to&query=${encodeURIComponent(adminEmail)}`).then((resp) => {
+        cy.request(`${MAILPIT_API}/search?kind=to&query=${encodeURIComponent(adminEmail)}`).then((resp) => {
             const msg = (resp.body.messages || [])[0];
             if (!msg) throw new Error(`No message for ${adminEmail}`);
-            return cy.request(`http://localhost:8026/api/v1/message/${msg.ID}`);
+            return cy.request(`${MAILPIT_API}/message/${msg.ID}`);
         }).then((resp) => {
             const html = resp.body.HTML || resp.body.Text || '';
             const match = html.match(/href="([^"]*verify-email[^"]*)"/i);
