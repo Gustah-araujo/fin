@@ -3,9 +3,9 @@
 namespace Tests\Feature\Workspace;
 
 use App\Enums\WorkspaceRole;
-use App\Notifications\Workspace\NewInvite;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Notifications\Workspace\NewInvite;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
