@@ -33,6 +33,7 @@ describe('Tag CRUD', () => {
 
         cy.get('#name').type('Urgente');
         cy.contains('Criar Tag').click();
+        cy.assertToast('success', 'criada');
 
         cy.url().should('include', '/tags');
         cy.contains('Urgente').should('be.visible');
@@ -57,6 +58,7 @@ describe('Tag CRUD', () => {
         cy.url().should('include', '/tags/');
         cy.get('#name').clear().type('Urgente Editada');
         cy.contains('Salvar').click();
+        cy.assertToast('success', 'atualizada');
 
         cy.url().should('include', '/tags');
         cy.contains('Urgente Editada').should('be.visible');
@@ -67,6 +69,7 @@ describe('Tag CRUD', () => {
         cy.contains('Nova Tag').click();
         cy.get('#name').type('Para Excluir');
         cy.contains('Criar Tag').click();
+        cy.assertToast('success', 'criada');
 
         cy.url().should('include', '/tags');
         cy.contains('Para Excluir').should('be.visible');

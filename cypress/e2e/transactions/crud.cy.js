@@ -19,6 +19,7 @@ describe('Transaction CRUD', () => {
             cy.contains('Corrente').click();
             cy.get('#initial_balance').type('5000');
             cy.contains('Criar Conta').click({ force: true });
+            cy.assertToast('success', 'criada');
 
             cy.url().should('include', '/accounts');
         });
@@ -63,6 +64,7 @@ describe('Transaction CRUD', () => {
         cy.contains('[role="option"]', 'Sem Categoria').click();
 
         cy.contains('Criar Despesa').click({ force: true });
+        cy.assertToast('success', 'criada');
 
         cy.url().should('include', '/transactions');
         cy.contains('Nova Despesa').should('be.visible');
@@ -79,6 +81,7 @@ describe('Transaction CRUD', () => {
             .closest('tr')
             .contains('Pagar')
             .click({ force: true });
+        cy.assertToast('success', 'paga');
 
         cy.contains('Compra Supermercado')
             .closest('tr')
@@ -92,6 +95,7 @@ describe('Transaction CRUD', () => {
             .closest('tr')
             .contains('Desmarcar')
             .click({ force: true });
+        cy.assertToast('success', 'não paga');
 
         cy.contains('Compra Supermercado')
             .closest('tr')

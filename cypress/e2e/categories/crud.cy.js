@@ -36,6 +36,7 @@ describe('Category CRUD', () => {
         cy.get('#type').click();
         cy.contains('[role="option"]', 'Despesa').click();
         cy.contains('Criar Categoria').click({ force: true });
+        cy.assertToast('success', 'criada');
 
         cy.url().should('include', '/categories');
         cy.contains('Alimentação').should('be.visible');
@@ -59,6 +60,7 @@ describe('Category CRUD', () => {
         cy.url().should('include', '/categories/');
         cy.get('#name').clear().type('Alimentação Editada');
         cy.contains('Salvar').click({ force: true });
+        cy.assertToast('success', 'atualizada');
 
         cy.url().should('include', '/categories');
         cy.contains('Alimentação Editada').should('be.visible');
@@ -71,6 +73,7 @@ describe('Category CRUD', () => {
         cy.get('#type').click();
         cy.contains('[role="option"]', 'Despesa').click();
         cy.contains('Criar Categoria').click({ force: true });
+        cy.assertToast('success', 'criada');
 
         cy.url().should('include', '/categories');
         cy.contains('Para Excluir').should('be.visible');

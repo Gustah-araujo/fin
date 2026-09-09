@@ -162,6 +162,8 @@ it('creates an account', () => {
 
 **Assertions use:** `cy.contains(...).should('be.visible')`, `cy.url().should('include', ...)`, `cy.contains(...).should('not.exist')` — text-based, not data-testid based.
 
+**Toast assertions:** Every controller action that triggers a `Toast::success()` or `Toast::error()` flash MUST be asserted in E2E tests via `cy.assertToast(type, 'message substring')`. Place the assertion after form submission, before navigation/content assertions. This validates both the backend flash and the frontend `CustomEvent('toast')` dispatch. Message substrings match the pt-BR controller messages (e.g., `'criada'`, `'atualizada'`, `'paga'`).
+
 **Selector strategy:** Mix of `#field-id` selectors and text-based `cy.contains(...)`. Cards identified via `[data-slot="card"]` ancestor selector.
 
 ## Test Execution
@@ -270,4 +272,5 @@ npm run cypress:open
 | E2E via real browser | Cypress hits real app on port 8090, real Mailpit on port 8026 for email flows |
 | E2E session caching | `cy.session()` wraps registration + verification flow, keyed by spec ID |
 | E2E text-based assertions | pt-BR UI text used for assertions (`'Contas'`, `'Nova Conta'`, `'Criar Conta'`) |
+| E2E toast assertions | Mandatory `cy.assertToast()` after any action that flashes a toast. Asserts type + pt-BR message substring. |
 | No coverage metrics | No xdebug/coverage tool configured. Test thoroughness measured by spec traceability. |

@@ -35,6 +35,7 @@ describe('Account CRUD', () => {
         cy.contains('Corrente').click();
         cy.get('#initial_balance').type('1000');
         cy.contains('Criar Conta').click();
+        cy.assertToast('success', 'criada');
 
         cy.url().should('include', '/accounts');
         cy.contains('Conta Teste').should('be.visible');
@@ -59,6 +60,7 @@ describe('Account CRUD', () => {
         cy.url().should('include', '/accounts/');
         cy.get('#name').clear().type('Conta Editada');
         cy.contains('Salvar').click();
+        cy.assertToast('success', 'atualizada');
 
         cy.url().should('include', '/accounts');
         cy.contains('Conta Editada').should('be.visible');
@@ -72,6 +74,7 @@ describe('Account CRUD', () => {
         cy.contains('Poupança').click();
         cy.get('#initial_balance').type('200');
         cy.contains('Criar Conta').click();
+        cy.assertToast('success', 'criada');
 
         cy.url().should('include', '/accounts');
         cy.contains('Para Excluir').should('be.visible');

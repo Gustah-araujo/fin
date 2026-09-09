@@ -23,6 +23,7 @@ describe('Workspace selection', () => {
         cy.contains('E2E Select').should('be.visible');
 
         cy.contains('E2E Select').click();
+        cy.assertToast('success', 'ativado');
 
         cy.url().should('match', /\/w\/([a-f0-9-]+)/);
         cy.contains('Dashboard').should('be.visible');

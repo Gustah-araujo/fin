@@ -35,6 +35,7 @@ describe('Credit Card CRUD', () => {
         cy.get('#closing_day').type('1');
         cy.get('#due_day').type('10');
         cy.contains('Criar Cartão').click();
+        cy.assertToast('success', 'criado');
 
         cy.url().should('include', '/cards');
         cy.contains('Nubank Mastercard').should('be.visible');
@@ -61,6 +62,7 @@ describe('Credit Card CRUD', () => {
         cy.url().should('include', '/cards/');
         cy.get('#name').clear().type('Inter Visa');
         cy.contains('Salvar').click();
+        cy.assertToast('success', 'atualizado');
 
         cy.url().should('include', '/cards');
         cy.contains('Inter Visa').should('be.visible');
@@ -75,6 +77,7 @@ describe('Credit Card CRUD', () => {
 
         cy.get('#credit_limit').clear().type('8000');
         cy.contains('Salvar').click();
+        cy.assertToast('success', 'atualizado');
 
         cy.url().should('include', '/cards');
         cy.contains('Inter Visa')
@@ -90,6 +93,7 @@ describe('Credit Card CRUD', () => {
         cy.get('#closing_day').type('5');
         cy.get('#due_day').type('15');
         cy.contains('Criar Cartão').click();
+        cy.assertToast('success', 'criado');
 
         cy.url().should('include', '/cards');
         cy.contains('Para Excluir').should('be.visible');

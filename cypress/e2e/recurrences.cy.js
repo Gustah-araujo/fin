@@ -19,6 +19,7 @@ describe('Recurrence management', () => {
             cy.contains('Corrente').click();
             cy.get('#initial_balance').type('5000');
             cy.contains('Criar Conta').click({ force: true });
+            cy.assertToast('success', 'criada');
         });
     });
 
@@ -43,6 +44,7 @@ describe('Recurrence management', () => {
         cy.get('[data-slot="switch"]').click();
 
         cy.contains('Criar Receita').click({ force: true });
+        cy.assertToast('success', 'criada');
 
         cy.get('[data-testid="sidebar-recurrences"]').click();
         cy.contains('Salário').should('be.visible');
@@ -56,6 +58,7 @@ describe('Recurrence management', () => {
             .closest('tr')
             .contains('Pausar')
             .click({ force: true });
+        cy.assertToast('success', 'pausada');
 
         cy.contains('Salário')
             .closest('tr')
@@ -66,6 +69,7 @@ describe('Recurrence management', () => {
             .closest('tr')
             .contains('Reativar')
             .click({ force: true });
+        cy.assertToast('success', 'retomada');
 
         cy.contains('Salário')
             .closest('tr')

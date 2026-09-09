@@ -46,6 +46,7 @@ describe('Login', () => {
         cy.url().should('include', '/workspace/create');
         cy.get('#name').type('Meu Workspace');
         cy.get('button[type="submit"]').click();
+        cy.assertToast('success', 'criado');
         cy.url().should('match', /\/w\/[a-f0-9-]+/);
         cy.contains('Dashboard').should('be.visible');
     });

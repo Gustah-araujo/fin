@@ -25,6 +25,7 @@ describe('Workspace Invites', () => {
         cy.url().should('include', '/workspace');
         cy.get('#name').type('Workspace Admin');
         cy.get('button[type="submit"]').click();
+        cy.assertToast('success', 'criado');
         cy.url().should('match', /\/w\/[a-f0-9-]+/);
 
         cy.clearCookies();

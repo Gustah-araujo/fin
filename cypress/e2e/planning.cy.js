@@ -20,6 +20,7 @@ describe('Planning (Planejamento Futuro)', () => {
             cy.contains('Corrente').click();
             cy.get('#initial_balance').type('5000');
             cy.contains('Criar Conta').click({ force: true });
+            cy.assertToast('success', 'criada');
             cy.url().should('include', '/accounts');
         });
     });
@@ -60,6 +61,7 @@ describe('Planning (Planejamento Futuro)', () => {
         // Make it recurring
         cy.get('[data-slot="switch"]').click();
         cy.contains('Criar Receita').click({ force: true });
+        cy.assertToast('success', 'criada');
         cy.url().should('include', '/incomes');
 
         // Create a one-time expense (appears in current month)
@@ -73,6 +75,7 @@ describe('Planning (Planejamento Futuro)', () => {
         cy.get('#category_id').click();
         cy.contains('[role="option"]', 'Sem Categoria').click();
         cy.contains('Criar Despesa').click({ force: true });
+        cy.assertToast('success', 'criada');
         cy.url().should('include', '/transactions');
 
         // Navigate to Planning
@@ -97,6 +100,7 @@ describe('Planning (Planejamento Futuro)', () => {
         cy.contains('[role="option"]', 'Sem Categoria').click();
         cy.get('[data-slot="switch"]').click();
         cy.contains('Criar Receita').click({ force: true });
+        cy.assertToast('success', 'criada');
         cy.url().should('include', '/incomes');
 
         // Go to planning
@@ -130,6 +134,7 @@ describe('Planning (Planejamento Futuro)', () => {
         cy.contains('[role="option"]', 'Sem Categoria').click();
         cy.get('[data-slot="switch"]').click();
         cy.contains('Criar Receita').click({ force: true });
+        cy.assertToast('success', 'criada');
         cy.url().should('include', '/incomes');
 
         // Go to planning
@@ -198,6 +203,7 @@ describe('Planning (Planejamento Futuro)', () => {
         cy.contains('[role="option"]', 'Sem Categoria').click();
         cy.get('[data-slot="switch"]').click();
         cy.contains('Criar Receita').click({ force: true });
+        cy.assertToast('success', 'criada');
         cy.url().should('include', '/incomes');
 
         // Create one-time expense in current month
@@ -211,6 +217,7 @@ describe('Planning (Planejamento Futuro)', () => {
         cy.get('#category_id').click();
         cy.contains('[role="option"]', 'Sem Categoria').click();
         cy.contains('Criar Despesa').click({ force: true });
+        cy.assertToast('success', 'criada');
         cy.url().should('include', '/transactions');
 
         // Go to planning
@@ -246,6 +253,7 @@ describe('Planning (Planejamento Futuro)', () => {
         cy.contains('[role="option"]', 'Sem Categoria').click();
         cy.get('[data-slot="switch"]').click();
         cy.contains('Criar Receita').click({ force: true });
+        cy.assertToast('success', 'criada');
         cy.url().should('include', '/incomes');
 
         // Go to planning

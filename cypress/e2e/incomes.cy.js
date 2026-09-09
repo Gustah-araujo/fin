@@ -19,6 +19,7 @@ describe('Income CRUD', () => {
             cy.contains('Corrente').click();
             cy.get('#initial_balance').type('5000');
             cy.contains('Criar Conta').click({ force: true });
+            cy.assertToast('success', 'criada');
 
             cy.url().should('include', '/accounts');
         });
@@ -60,6 +61,7 @@ describe('Income CRUD', () => {
         cy.contains('[role="option"]', 'Sem Categoria').click();
 
         cy.contains('Criar Receita').click({ force: true });
+        cy.assertToast('success', 'criada');
 
         cy.url().should('include', '/incomes');
         cy.contains('Salário').should('be.visible');
@@ -72,6 +74,7 @@ describe('Income CRUD', () => {
             .closest('tr')
             .contains('Confirmar')
             .click({ force: true });
+        cy.assertToast('success', 'confirmada');
 
         cy.contains('Salário')
             .closest('tr')
@@ -82,6 +85,7 @@ describe('Income CRUD', () => {
             .closest('tr')
             .contains('Desmarcar')
             .click({ force: true });
+        cy.assertToast('success', 'desconfirmada');
 
         cy.contains('Salário')
             .closest('tr')
@@ -104,6 +108,7 @@ describe('Income CRUD', () => {
         cy.get('[data-slot="switch"]').click();
 
         cy.contains('Criar Receita').click({ force: true });
+        cy.assertToast('success', 'criada');
 
         cy.url().should('include', '/incomes');
         cy.contains('Freelance').should('be.visible');
@@ -120,6 +125,7 @@ describe('Income CRUD', () => {
 
         cy.get('#description').clear().type('Salário Mensal');
         cy.contains('Salvar').click({ force: true });
+        cy.assertToast('success', 'atualizada');
 
         cy.url().should('include', '/incomes');
         cy.contains('Salário Mensal').should('be.visible');

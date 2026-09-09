@@ -28,6 +28,7 @@ describe('Recurring Expenses E2E', () => {
             cy.contains('Corrente').click();
             cy.get('#initial_balance').type('5000');
             cy.contains('Criar Conta').click({ force: true });
+            cy.assertToast('success', 'criada');
 
             cy.url().should('include', '/accounts');
         });
@@ -62,6 +63,7 @@ describe('Recurring Expenses E2E', () => {
 
         // Submit
         cy.contains('Criar Despesa').click({ force: true });
+        cy.assertToast('success', 'criada');
 
         // Should redirect to transactions index with the new expense
         cy.url().should('include', '/transactions');
@@ -94,6 +96,7 @@ describe('Recurring Expenses E2E', () => {
 
         cy.get('[data-slot="switch"]').click();
         cy.contains('Criar Receita').click({ force: true });
+        cy.assertToast('success', 'criada');
         cy.url().should('include', '/incomes');
 
         // Navigate to recurrences page
