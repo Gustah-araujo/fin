@@ -365,17 +365,17 @@ function DeleteButton({
     income: IncomeItem;
     onDeleted?: () => void;
 }) {
-    const { delete: destroy, processing } = useForm({});
+    const { delete: destroy, setData, processing } = useForm({ scope: '' });
     const [open, setOpen] = useState(false);
 
     function handleDelete(scope: string) {
+        setData('scope', scope);
         destroy(
             route('incomes.destroy', {
                 workspace: workspaceUuid,
                 transaction: income.uuid,
             }),
             {
-                data: { scope },
                 preserveScroll: true,
                 onFinish: () => {
                     setOpen(false);

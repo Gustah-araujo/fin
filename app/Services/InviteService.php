@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Enums\InviteStatus;
 use App\Enums\WorkspaceRole;
+use App\Events\Workspace\InviteCreated;
 use App\Models\Invite;
 use App\Models\User;
 use App\Models\Workspace;
@@ -40,7 +41,7 @@ class InviteService
             return $existingInvite;
         }
 
-        return Invite::create([
+        $invite = Invite::create([
             'uuid' => Str::orderedUuid()->toString(),
             'workspace_id' => $workspace->id,
             'email' => $email,
@@ -48,6 +49,10 @@ class InviteService
             'inviter_id' => $inviter->id,
             'status' => InviteStatus::Pending,
         ]);
+
+        InviteCreated::dispatch($invite, $inviter);
+
+        return $invite;
     }
 
     public function accept(Invite $invite, User $user): void

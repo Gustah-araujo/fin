@@ -7,12 +7,16 @@ use App\Enums\WorkspaceRole;
 use App\Models\Invite;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Notifications\Workspace\NewInvite;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class InviteTest extends TestCase
 {
     public function test_admin_can_invite_existing_user(): void
     {
+        Notification::fake();
+
         $admin = User::factory()->create();
         $target = User::factory()->create(['email' => 'invited@example.com']);
         $workspace = Workspace::factory()->create();
@@ -31,6 +35,8 @@ class InviteTest extends TestCase
             'role' => WorkspaceRole::Editor->value,
             'status' => InviteStatus::Pending->value,
         ]);
+
+        Notification::assertSentTo($target, NewInvite::class);
     }
 
     public function test_non_existent_email_does_not_create_invite(): void
@@ -44,7 +50,7 @@ class InviteTest extends TestCase
             'role' => 'editor',
         ]);
 
-        $this->assertToastSuccess();
+        $this->assertToastError();
 
         $this->assertDatabaseMissing('invites', [
             'email' => 'nonexistent@example.com',

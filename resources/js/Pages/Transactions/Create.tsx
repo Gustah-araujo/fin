@@ -358,7 +358,7 @@ export default function Create({ accounts, categories, tags }: Props) {
                                             onCheckedChange={(checked) =>
                                                 setData(
                                                     'has_until_date',
-                                                    checked,
+                                                    checked === true,
                                                 )
                                             }
                                         />

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Enums\InviteStatus;
 use App\Enums\WorkspaceRole;
 use App\Http\Requests\UpdateMemberRoleRequest;
+use App\Http\Resources\InviteResource;
+use App\Http\Resources\MemberResource;
+use App\Http\Resources\WorkspaceResource;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\WorkspaceService;
@@ -21,44 +23,14 @@ class WorkspaceMemberController extends Controller
     {
         Gate::authorize('viewMembers', $workspace);
 
-        $members = $workspace->members()->withPivot('role', 'created_at')->get()
-            ->map(fn ($user) => [
-                'user' => [
-                    'uuid' => $user->uuid,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'avatar' => $user->avatar,
-                ],
-                'role' => $user->pivot->role,
-                'joined_at' => $user->pivot->created_at?->toISOString(),
-            ])->values()->toArray();
-
-        $invites = $workspace->invites()
-            ->where('status', 'pending')
-            ->with('inviter')
-            ->get()
-            ->map(fn ($invite) => [
-                'uuid' => $invite->uuid,
-                'email' => $invite->email,
-                'role' => $invite->role instanceof WorkspaceRole ? $invite->role->value : $invite->role,
-                'status' => $invite->status instanceof InviteStatus ? $invite->status->value : $invite->status,
-                'inviter' => [
-                    'uuid' => $invite->inviter->uuid,
-                    'name' => $invite->inviter->name,
-                ],
-                'workspace' => [
-                    'uuid' => $workspace->uuid,
-                    'name' => $workspace->name,
-                ],
-            ])->values()->toArray();
-
         return inertia('Workspace/Members', [
-            'members' => $members,
-            'invites' => $invites,
-            'workspace' => [
-                'uuid' => $workspace->uuid,
-                'name' => $workspace->name,
-            ],
+            'members' => MemberResource::collection(
+                $workspace->members()->withPivot('role', 'created_at')->get()
+            ),
+            'invites' => InviteResource::collection(
+                $workspace->invites()->with('inviter')->get()
+            ),
+            'workspace' => new WorkspaceResource($workspace),
         ]);
     }
 
