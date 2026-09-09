@@ -361,7 +361,9 @@ export default function PlanningIndex({
                 </div>
 
                 {/* Projection Table */}
-                {projection.every((row) => row.expenses === 0 && row.incomes === 0) ? (
+                {projection.every(
+                    (row) => row.expenses === 0 && row.incomes === 0,
+                ) ? (
                     <div className="flex flex-col items-center gap-4 py-12">
                         <p className="text-sm text-muted-foreground">
                             Nenhuma transação encontrada no período selecionado

@@ -1,6 +1,7 @@
 import { Link, useForm } from '@inertiajs/react';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import IconPicker from '@/Components/IconPicker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -127,18 +128,13 @@ export default function Edit({ category }: Props) {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="icon">Ícone</Label>
-                                <Input
-                                    id="icon"
+                                <Label>Ícone</Label>
+                                <IconPicker
                                     value={data.icon}
-                                    onChange={(e) =>
-                                        setData('icon', e.target.value)
+                                    onChange={(icon) =>
+                                        setData('icon', icon ?? '')
                                     }
-                                    placeholder="Ex: shopping-cart, home, car"
                                 />
-                                <p className="text-xs text-muted-foreground">
-                                    Nome do ícone Lucide (opcional)
-                                </p>
                                 {errors.icon && (
                                     <p className="text-sm text-destructive">
                                         {errors.icon}
