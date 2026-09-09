@@ -1,3 +1,5 @@
+const MAILPIT_API = `http://localhost:${Cypress.env('MAILPIT_PORT') || '8026'}/api/v1`;
+
 Cypress.Commands.add('register', (email, name = 'Test User', password = 'password123') => {
     cy.visit('/register');
     cy.get('#name').type(name);
@@ -10,12 +12,12 @@ Cypress.Commands.add('register', (email, name = 'Test User', password = 'passwor
 Cypress.Commands.add('getVerificationLink', (email) => {
     return cy
         .request(
-            `http://localhost:8026/api/v1/search?kind=to&query=${encodeURIComponent(email)}`
+            `${MAILPIT_API}/search?kind=to&query=${encodeURIComponent(email)}`
         )
         .then((resp) => {
             const msg = (resp.body.messages || [])[0];
             if (!msg) throw new Error(`No verification email found for ${email}`);
-            return cy.request(`http://localhost:8026/api/v1/message/${msg.ID}`);
+            return cy.request(`${MAILPIT_API}/message/${msg.ID}`);
         })
         .then((resp) => {
             const html = resp.body.HTML || resp.body.Text || '';
