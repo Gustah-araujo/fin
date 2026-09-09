@@ -1,68 +1,24 @@
-import {
-    type LucideIcon,
-    ShoppingCart,
-    Home,
-    Car,
-    Utensils,
-    Heart,
-    Briefcase,
-    Music,
-    Gamepad,
-    Folder,
-    Banknote,
-    GraduationCap,
-    Plane,
-    Gift,
-    Wifi,
-    Zap,
-    Coffee,
-    Book,
-    Camera,
-    ShoppingBag,
-    Stethoscope,
-    Film,
-} from 'lucide-react';
-
-const iconMap: Record<string, LucideIcon> = {
-    'shopping-cart': ShoppingCart,
-    home: Home,
-    car: Car,
-    utensils: Utensils,
-    heart: Heart,
-    briefcase: Briefcase,
-    music: Music,
-    gamepad: Gamepad,
-    folder: Folder,
-    banknote: Banknote,
-    'graduation-cap': GraduationCap,
-    plane: Plane,
-    gift: Gift,
-    wifi: Wifi,
-    zap: Zap,
-    coffee: Coffee,
-    book: Book,
-    camera: Camera,
-    'shopping-bag': ShoppingBag,
-    stethoscope: Stethoscope,
-    film: Film,
-};
+import { type LucideIcon } from 'lucide-react';
+import { ICON_MAP } from '@/lib/icon-catalog';
 
 interface DynamicIconProps {
     name: string | null;
     className?: string;
     size?: number;
+    style?: React.CSSProperties;
 }
 
 export default function DynamicIcon({
     name,
     className,
     size = 16,
+    style,
 }: DynamicIconProps) {
     if (!name) return null;
 
-    const IconComponent = iconMap[name];
+    const IconComponent: LucideIcon | undefined = ICON_MAP[name];
 
     if (!IconComponent) return null;
 
-    return <IconComponent className={className} size={size} />;
+    return <IconComponent className={className} size={size} style={style} />;
 }
