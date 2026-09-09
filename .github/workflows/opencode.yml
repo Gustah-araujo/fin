@@ -31,5 +31,18 @@ jobs:
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_GO_API_KEY }}
+          OPENCODE_CONFIG_CONTENT: |
+            {
+              "instructions": ["AGENTS.md"],
+              "permission": {
+                "*": "allow",
+                "read": {
+                  "*": "allow",
+                  "*.env": "allow",
+                  "*.env.*": "allow",
+                  "*.env.example": "allow"
+                }
+              }
+            }
         with:
           model: opencode-go/longcat-2.0
