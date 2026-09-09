@@ -57,7 +57,7 @@ Cypress.Commands.add('assertToast', (expectedType = 'success', expectedMessage =
         // Check the buffer first — catches toasts dispatched before listener attaches.
         // This fixes the race condition where Inertia SPA navigation fires the event
         // before Cypress can register its listener.
-        const buffer = (win as unknown as { __toastBuffer?: Array<{ type: string; message: string }> }).__toastBuffer || [];
+        const buffer = win.__toastBuffer || [];
         const alreadyDispatched = buffer.find(
             (t) => t.type === expectedType && (!expectedMessage || t.message.includes(expectedMessage)),
         );
