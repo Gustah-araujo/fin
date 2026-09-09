@@ -20,15 +20,15 @@ describe('IconPicker', () => {
     });
 
     it('opens popover when clicking the trigger', () => {
-        cy.get('[role="combobox"]').click();
+        cy.get('[data-testid="icon-picker-trigger"]').click();
         cy.get('input[placeholder="Buscar ícone..."]').should('be.visible');
     });
 
     it('selects an icon and shows its name below the trigger', () => {
-        cy.get('[role="combobox"]').click();
+        cy.get('[data-testid="icon-picker-trigger"]').click();
         cy.get('button[aria-label="Shopping Cart"]').click();
 
-        cy.get('[role="combobox"]').should(
+        cy.get('[data-testid="icon-picker-trigger"]').should(
             'have.attr',
             'aria-label',
             'Shopping Cart',
@@ -37,7 +37,7 @@ describe('IconPicker', () => {
     });
 
     it('filters icons with search', () => {
-        cy.get('[role="combobox"]').click();
+        cy.get('[data-testid="icon-picker-trigger"]').click();
         cy.get('input[placeholder="Buscar ícone..."]').type('wallet');
 
         cy.get('button[aria-label="Wallet"]').should('be.visible');
@@ -45,7 +45,7 @@ describe('IconPicker', () => {
     });
 
     it('shows empty state when no icons match search', () => {
-        cy.get('[role="combobox"]').click();
+        cy.get('[data-testid="icon-picker-trigger"]').click();
         cy.get('input[placeholder="Buscar ícone..."]').type('xyznonexistent');
 
         cy.contains('Nenhum ícone encontrado').should('be.visible');
@@ -56,7 +56,7 @@ describe('IconPicker', () => {
         cy.get('#type').click();
         cy.contains('[role="option"]', 'Despesa').click();
 
-        cy.get('[role="combobox"]').click();
+        cy.get('[data-testid="icon-picker-trigger"]').click();
         cy.get('button[aria-label="Shopping Cart"]').click();
         cy.contains('Shopping Cart').should('be.visible');
 
@@ -72,7 +72,7 @@ describe('IconPicker', () => {
         cy.get('#type').click();
         cy.contains('[role="option"]', 'Despesa').click();
 
-        cy.get('[role="combobox"]').click();
+        cy.get('[data-testid="icon-picker-trigger"]').click();
         cy.get('button[aria-label="Plane"]').click();
         cy.contains('Criar Categoria').click({ force: true });
         cy.assertToast('success', 'criada');
@@ -83,7 +83,7 @@ describe('IconPicker', () => {
             .contains('Editar')
             .click({ force: true });
 
-        cy.get('[role="combobox"]').should(
+        cy.get('[data-testid="icon-picker-trigger"]').should(
             'have.attr',
             'aria-label',
             'Plane',

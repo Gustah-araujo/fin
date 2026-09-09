@@ -65,6 +65,7 @@ export default function IconPicker({
                     <Button
                         variant="outline"
                         role="combobox"
+                        data-testid="icon-picker-trigger"
                         aria-expanded={isOpen}
                         aria-label={
                             value ? (selectedIcon?.name ?? value) : placeholder
