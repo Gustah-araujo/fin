@@ -49,6 +49,10 @@ All specification and planning docs live in `.specs/`. Load these as needed:
 - **Quality gate** — `composer quality` (Pint format check + PHPMD complexity on `app/`) and `npm run quality` (ESLint complexity + Prettier check). AI agents MUST run these before marking a task complete. Auto-fix via `composer format` and `npm run format` / `npm run lint:fix`.
 - **UI in pt-BR, codebase in English**
 
+## Pull Requests
+
+- **All PRs opened by AI agents MUST be created as DRAFT** — unless it is the final version fully ready to be merged. This ensures no PR is accidentally merged before human review.
+
 ## Routes
 
 All workspace-scoped routes use the prefix `/w/{workspace}` with UUID route model binding:
