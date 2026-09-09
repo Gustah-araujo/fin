@@ -9,6 +9,7 @@ use App\Enums\TransactionType;
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\Tag;
+use App\Rules\AfterOrEqualDateRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
 
@@ -32,7 +33,7 @@ class StoreIncomeRequest extends FormRequest
             'is_recurring' => ['sometimes', 'boolean'],
             'frequency' => ['required_if:is_recurring,true', new Enum(RecurrenceFrequency::class)],
             'frequency_day' => ['required_if:is_recurring,true', 'integer'],
-            'until_date' => ['nullable', 'date', 'after_or_equal:date'],
+            'until_date' => ['nullable', 'date', new AfterOrEqualDateRule('date')],
         ];
     }
 
@@ -171,7 +172,7 @@ class StoreIncomeRequest extends FormRequest
             'tags.*.exists' => 'Tag inválida.',
             'frequency.required_if' => 'A frequência é obrigatória para receitas recorrentes.',
             'frequency_day.required_if' => 'O dia da recorrência é obrigatório.',
-            'until_date.after_or_equal' => 'A data final deve ser maior ou igual à data inicial.',
+
         ];
     }
 }
