@@ -34,7 +34,7 @@ export default function MemberRow({
     canManage,
     isSelf,
 }: MemberRowProps) {
-    const { delete: destroy, put, processing } = useForm({});
+    const { delete: destroy, put, setData, processing } = useForm({ role: '' });
 
     const initials = member.user.name
         .split(' ')
@@ -82,40 +82,34 @@ export default function MemberRow({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                                onClick={() =>
+                                onClick={() => {
+                                    setData('role', 'admin');
                                     put(
                                         `/w/${workspaceUuid}/members/${member.user.uuid}/role`,
-                                        {
-                                            data: { role: 'admin' },
-                                        },
-                                    )
-                                }
+                                    );
+                                }}
                                 disabled={processing}
                             >
                                 Tornar Administrador
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                                onClick={() =>
+                                onClick={() => {
+                                    setData('role', 'editor');
                                     put(
                                         `/w/${workspaceUuid}/members/${member.user.uuid}/role`,
-                                        {
-                                            data: { role: 'editor' },
-                                        },
-                                    )
-                                }
+                                    );
+                                }}
                                 disabled={processing}
                             >
                                 Tornar Editor
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                                onClick={() =>
+                                onClick={() => {
+                                    setData('role', 'viewer');
                                     put(
                                         `/w/${workspaceUuid}/members/${member.user.uuid}/role`,
-                                        {
-                                            data: { role: 'viewer' },
-                                        },
-                                    )
-                                }
+                                    );
+                                }}
                                 disabled={processing}
                             >
                                 Tornar Visualizador

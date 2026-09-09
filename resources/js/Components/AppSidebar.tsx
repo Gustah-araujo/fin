@@ -21,6 +21,7 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import WorkspaceSwitcher from '@/Components/Workspace/WorkspaceSwitcher';
 
 interface NavItem {
     label: string;
@@ -235,16 +236,7 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
             <Separator className="bg-sidebar-border" />
 
             <div className="p-3">
-                {!collapsed && (
-                    <div className="rounded-lg bg-sidebar-accent/50 px-3 py-2">
-                        <p className="text-xs font-medium text-sidebar-foreground/60">
-                            Workspace
-                        </p>
-                        <p className="text-sm font-medium truncate">
-                            {props.workspace?.name ?? 'Workspace Pessoal'}
-                        </p>
-                    </div>
-                )}
+                {!collapsed && <WorkspaceSwitcher />}
                 <Button
                     variant="ghost"
                     size="icon"

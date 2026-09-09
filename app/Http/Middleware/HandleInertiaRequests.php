@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Http\Resources\WorkspaceResource;
+use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -26,11 +28,9 @@ class HandleInertiaRequests extends Middleware
                     'avatar' => $user->avatar,
                 ],
             ];
-            $shared['workspaces'] = $user->workspaces()->get()->map(fn ($w) => [
-                'uuid' => $w->uuid,
-                'name' => $w->name,
-                'description' => $w->description,
-            ])->values()->toArray();
+            $shared['workspaces'] = WorkspaceResource::collection(
+                $user->workspaces()->withPivot('role')->get()
+            );
 
             $shared['workspace'] = $this->resolveCurrentWorkspace($request, $user);
         } else {
@@ -48,20 +48,18 @@ class HandleInertiaRequests extends Middleware
         return $shared;
     }
 
-    private function resolveCurrentWorkspace(Request $request, $user): ?array
+    private function resolveCurrentWorkspace(Request $request, User $user): ?WorkspaceResource
     {
-        $workspace = $request->route()?->parameter('workspace');
+        $routeWorkspace = $request->route()?->parameter('workspace');
 
-        if (! $workspace instanceof Workspace) {
+        if (! $routeWorkspace instanceof Workspace) {
             return null;
         }
 
-        $member = $workspace->members()->where('user_id', $user->id)->first();
+        $workspace = $user->workspaces()
+            ->wherePivot('workspace_id', $routeWorkspace->id)
+            ->first();
 
-        return [
-            'uuid' => $workspace->uuid,
-            'name' => $workspace->name,
-            'role' => $member?->pivot?->role,
-        ];
+        return $workspace ? new WorkspaceResource($workspace) : null;
     }
 }

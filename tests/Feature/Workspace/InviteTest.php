@@ -44,7 +44,7 @@ class InviteTest extends TestCase
             'role' => 'editor',
         ]);
 
-        $this->assertToastSuccess();
+        $this->assertToastError();
 
         $this->assertDatabaseMissing('invites', [
             'email' => 'nonexistent@example.com',

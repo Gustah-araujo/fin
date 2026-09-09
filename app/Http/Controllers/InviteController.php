@@ -27,12 +27,12 @@ class InviteController extends Controller
         );
 
         if (! $invite) {
-            Toast::success('Convite enviado.');
+            Toast::error('Usuário não encontrado. O convite só pode ser enviado para usuários registrados.');
 
             return back();
         }
 
-        Toast::success('Convite enviado com sucesso.');
+        Toast::success('Convite enviado com sucesso. Um email de notificação foi enviado.');
 
         return back();
     }

@@ -64,9 +64,8 @@ class WorkspaceService
 
     public function changeRole(Workspace $workspace, User $user, WorkspaceRole $role): void
     {
-        if ($role === WorkspaceRole::Admin && $this->isLastAdmin($workspace, $user)) {
-            // Already admin, but if they were the last one changing themselves to non-admin, block it.
-            // This handles the case where the last admin tries to change their own role to non-admin.
+        if ($role !== WorkspaceRole::Admin && $this->isLastAdmin($workspace, $user)) {
+            throw new HttpException(422, 'Não é possível rebaixar o único administrador do workspace.');
         }
 
         $workspace->members()->updateExistingPivot($user->id, [

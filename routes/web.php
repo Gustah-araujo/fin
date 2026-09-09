@@ -91,6 +91,9 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
         Route::delete('members/{user}', [WorkspaceMemberController::class, 'destroy'])->name('workspace.members.destroy');
         Route::put('members/{user}/role', [WorkspaceMemberController::class, 'updateRole'])->name('workspace.members.role');
 
+        Route::get('settings', [WorkspaceController::class, 'settings'])
+            ->name('workspace.settings');
+
         Route::post('invites', [InviteController::class, 'store'])->name('workspace.invites.store');
 
         // JSON datatable endpoints (must be registered before their resource routes)

@@ -5,19 +5,26 @@ declare module '@inertiajs/core' {
                 uuid: string;
                 name: string;
                 email: string;
-                avatar: string | null;
+                avatar?: string;
             } | null;
         };
         workspaces: Array<{
             uuid: string;
             name: string;
-            description: string | null;
+            description?: string;
+            role?: string;
         }>;
         workspace: {
             uuid: string;
             name: string;
-            role: string | null;
+            role?: string;
         } | null;
         status: string | null;
+        flash?: {
+            success?: string;
+            error?: string;
+        };
     }
 }
+
+export {};

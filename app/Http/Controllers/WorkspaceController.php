@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Enums\WorkspaceRole;
 use App\Http\Requests\StoreWorkspaceRequest;
+use App\Http\Resources\InviteResource;
+use App\Http\Resources\MemberResource;
+use App\Models\Workspace;
 use App\Services\WorkspaceService;
 use App\Support\Toast;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Response;
 
 class WorkspaceController extends Controller
@@ -51,5 +56,23 @@ class WorkspaceController extends Controller
         Toast::success('Workspace ativado.');
 
         return redirect()->route('dashboard', ['workspace' => $workspace->uuid]);
+    }
+
+    public function settings(Workspace $workspace): Response
+    {
+        Gate::authorize('viewMembers', $workspace);
+
+        return inertia('Workspace/Settings', [
+            'members' => MemberResource::collection(
+                $workspace->members()->withPivot('role', 'created_at')->get()
+            ),
+            'invites' => InviteResource::collection(
+                $workspace->invites()->with('inviter')->get()
+            ),
+            'isAdmin' => $workspace->members()
+                ->where('user_id', auth()->id())
+                ->wherePivot('role', WorkspaceRole::Admin->value)
+                ->exists(),
+        ]);
     }
 }
