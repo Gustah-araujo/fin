@@ -1,0 +1,197 @@
+name: Quality Gate & Tests
+
+on:
+  pull_request:
+    branches:
+      - master
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gate:
+    name: "🔍 Quality Gate"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo, pdo_sqlite, bcmath
+          coverage: none
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Composer Dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Install NPM Dependencies
+        run: npm ci
+
+      - name: Run Composer Quality (Pint + PHPMD)
+        run: composer quality
+
+      - name: Run NPM Quality (ESLint + Prettier)
+        run: npm run quality
+
+  backend-tests:
+    name: "🧪 Backend Tests"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:randomKeyForTestingPurposes1234567890=
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /tmp/testing.sqlite
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo, pdo_sqlite, bcmath
+          coverage: none
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Composer Dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Install NPM Dependencies
+        run: npm ci
+
+      - name: Build Assets
+        run: npm run build
+
+      - name: Prepare Application Environment
+        run: |
+          cp .env.example .env
+          php artisan config:clear
+          touch /tmp/testing.sqlite
+
+      - name: Run PHPUnit Tests
+        run: php artisan test
+
+  e2e-tests:
+    name: "🖥️ E2E Tests (Cypress)"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: root_secret
+          MARIADB_DATABASE: fin_test
+          MARIADB_USER: fin
+          MARIADB_PASSWORD: fin_secret
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mariadb-admin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+      mailpit:
+        image: axllent/mailpit:latest
+        env:
+          MP_SMTP_AUTH_ACCEPT_ANY: "true"
+          MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+        ports:
+          - 1025:1025
+          - 8025:8025
+        options: >-
+          --health-cmd="wget --no-verbose --tries=1 --spider http://localhost:8025/api/v1/messages || exit 1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:randomKeyForTestingPurposes1234567890=
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: fin_test
+      DB_USERNAME: fin
+      DB_PASSWORD: fin_secret
+      MAIL_MAILER: smtp
+      MAIL_HOST: 127.0.0.1
+      MAIL_PORT: 1025
+      MAIL_FROM_ADDRESS: "test@fin.local"
+      MAIL_FROM_NAME: "Fin Test"
+      CYPRESS_BASE_URL: http://localhost:8000
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo, pdo_mysql, bcmath
+          coverage: none
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Composer Dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Install NPM Dependencies
+        run: npm ci
+
+      - name: Build Assets
+        run: npm run build
+
+      - name: Prepare Application Environment
+        run: |
+          cp .env.example .env
+          php artisan config:clear
+          php artisan migrate --force --seed
+
+      - name: Start Laravel Development Server
+        run: |
+          nohup php artisan serve --port=8000 > /tmp/laravel-serve.log 2>&1 &
+          disown
+          echo "Waiting for app to be ready..."
+          for i in $(seq 1 30); do
+            if wget --no-verbose --tries=1 --spider http://localhost:8000/login 2>/dev/null; then
+              echo "✅ Application is ready!"
+              exit 0
+            fi
+            echo "Attempt $i/30 — app not ready yet, retrying in 2s..."
+            sleep 2
+          done
+          echo "❌ Application failed to start"
+          echo "--- Server log ---"
+          cat /tmp/laravel-serve.log
+          exit 1
+
+      - name: Run Cypress E2E Tests
+        run: npx cypress run
