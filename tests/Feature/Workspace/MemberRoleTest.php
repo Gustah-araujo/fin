@@ -22,7 +22,7 @@ class MemberRoleTest extends TestCase
                 'role' => 'viewer',
             ]);
 
-        $response->assertSessionHas('status');
+        $this->assertToastSuccess();
 
         $this->assertDatabaseHas('workspace_user', [
             'workspace_id' => $workspace->id,

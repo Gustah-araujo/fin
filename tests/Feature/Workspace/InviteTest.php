@@ -23,7 +23,7 @@ class InviteTest extends TestCase
             'role' => 'editor',
         ]);
 
-        $response->assertSessionHas('status');
+        $this->assertToastSuccess();
 
         $this->assertDatabaseHas('invites', [
             'workspace_id' => $workspace->id,
@@ -44,7 +44,7 @@ class InviteTest extends TestCase
             'role' => 'editor',
         ]);
 
-        $response->assertSessionHas('status');
+        $this->assertToastSuccess();
 
         $this->assertDatabaseMissing('invites', [
             'email' => 'nonexistent@example.com',
@@ -96,7 +96,7 @@ class InviteTest extends TestCase
 
         $response = $this->actingAs($target)->post("/invites/{$invite->uuid}/decline");
 
-        $response->assertSessionHas('status');
+        $this->assertToastSuccess();
         $this->assertEquals(InviteStatus::Declined, $invite->fresh()->status);
     }
 }
