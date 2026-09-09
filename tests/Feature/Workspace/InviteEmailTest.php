@@ -58,7 +58,7 @@ class InviteEmailTest extends TestCase
             'role' => 'editor',
         ]);
 
-        Notification::assertSentTo($target, NewInvite::class, function ($notification) {
+        Notification::assertSentTo($target, NewInvite::class, function ($notification) use ($target) {
             $mail = $notification->toMail($target);
 
             return str_contains($mail->subject, 'Empresa XYZ');

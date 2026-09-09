@@ -4,17 +4,11 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\Events\Workspace\InviteCreated;
-use App\Listeners\Workspace\SendInviteEmail;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
 class EventServiceProvider extends ServiceProvider
 {
-    protected $listen = [
-        InviteCreated::class => [
-            SendInviteEmail::class,
-        ],
-    ];
+    protected $listen = [];
 
     public function boot(): void
     {
@@ -23,6 +17,6 @@ class EventServiceProvider extends ServiceProvider
 
     public function shouldDiscoverEvents(): bool
     {
-        return false;
+        return true;
     }
 }
