@@ -66,13 +66,13 @@ Cypress.Commands.add('assertToast', (expectedType = 'success', expectedMessage =
         }
 
         // Toast not yet dispatched — listen for it.
-        return new Cypress.Promise<void>((resolve, reject) => {
+        return new Cypress.Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
                 win.removeEventListener('toast', handler);
                 reject(new Error(`Toast of type "${expectedType}" not found within 5s`));
             }, 5000);
 
-            const handler = (event: CustomEvent<{ type: string; message: string }>) => {
+            const handler = (event) => {
                 const { type, message } = event.detail;
                 if (type === expectedType && (!expectedMessage || message.includes(expectedMessage))) {
                     clearTimeout(timeout);
