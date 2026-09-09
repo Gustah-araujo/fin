@@ -90,6 +90,20 @@ Today recurrences only generate income transactions. Users need to model recurri
 
 ---
 
+## Edge Cases
+
+- WHEN a recurring expense is created with `start_date > today` THEN no Transaction is created until the job runs on the due date.
+- WHEN a recurring expense's account is archived THEN the job skips generation and logs a warning.
+- WHEN a recurring expense is paused (`status = paused`) THEN the job skips generation for that recurrence.
+- WHEN a recurring expense reaches `until_date` THEN `next_date` becomes null and no further transactions are generated.
+- WHEN `frequency = Monthly` and `frequency_day` exceeds days in month THEN the last day of the month is used.
+- WHEN a user deletes a recurring expense with "Esta e parar futuras" THEN past transactions remain visible (historical integrity).
+- WHEN a user tries to change recurrence type after creation THEN system rejects (type is immutable per D-62).
+- WHEN a concurrent job run processes the same recurrence THEN optimistic lock prevents duplicate generation.
+- WHEN a user creates an expense recurrence with an income-only category THEN system rejects with "Esta categoria não aceita despesas."
+
+---
+
 ## Architectural Decisions
 
 | ID | Decision | Context |
