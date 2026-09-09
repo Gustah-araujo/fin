@@ -50,7 +50,6 @@ describe('Income CRUD', () => {
     it('creates an avulsa income', () => {
         cy.get('[data-testid="sidebar-incomes"]').click();
         cy.contains('Nova Receita').click();
-
         cy.get('#description').type('Salário');
         cy.get('#value').type('2000');
 
@@ -60,20 +59,10 @@ describe('Income CRUD', () => {
         cy.get('#category_id').click();
         cy.contains('[role="option"]', 'Sem Categoria').click();
 
-        cy.intercept('POST', '**/w/*/incomes').as('storeIncome');
+        cy.contains('Criar Receita').click({ force: true });
 
-        cy.contains('Criar Receita').click();
-
-        cy.wait('@storeIncome', { timeout: 10000 }).then((interception) => {
-            const status = interception.response?.statusCode;
-            cy.writeFile('/tmp/income-response-status.txt', String(status));
-            cy.writeFile('/tmp/income-response-body.txt', JSON.stringify(interception.response?.body));
-            cy.writeFile('/tmp/income-request-body.txt', JSON.stringify(interception.request?.body));
-        });
-
-        cy.get('body').then(($body) => {
-            cy.writeFile('/tmp/incomes-after-submit.html', $body.html());
-        });
+        cy.url().should('include', '/incomes');
+        cy.contains('Salário').should('be.visible');
     });
 
     it('confirms and unconfirms receipt', () => {
