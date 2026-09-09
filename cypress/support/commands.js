@@ -54,13 +54,25 @@ Cypress.Commands.add('loginViaSession', (sessionId) => {
 
 Cypress.Commands.add('assertToast', (expectedType = 'success', expectedMessage = null) => {
     cy.window().then((win) => {
-        return new Cypress.Promise((resolve, reject) => {
+        // Check the buffer first — catches toasts dispatched before listener attaches.
+        // This fixes the race condition where Inertia SPA navigation fires the event
+        // before Cypress can register its listener.
+        const buffer = (win as unknown as { __toastBuffer?: Array<{ type: string; message: string }> }).__toastBuffer || [];
+        const alreadyDispatched = buffer.find(
+            (t) => t.type === expectedType && (!expectedMessage || t.message.includes(expectedMessage)),
+        );
+        if (alreadyDispatched) {
+            return; // Toast was already dispatched — assertion passes immediately.
+        }
+
+        // Toast not yet dispatched — listen for it.
+        return new Cypress.Promise<void>((resolve, reject) => {
             const timeout = setTimeout(() => {
                 win.removeEventListener('toast', handler);
                 reject(new Error(`Toast of type "${expectedType}" not found within 5s`));
             }, 5000);
 
-            const handler = (event) => {
+            const handler = (event: CustomEvent<{ type: string; message: string }>) => {
                 const { type, message } = event.detail;
                 if (type === expectedType && (!expectedMessage || message.includes(expectedMessage))) {
                     clearTimeout(timeout);
