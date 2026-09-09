@@ -12,7 +12,7 @@
 | PostgreSQL service | MariaDB 11 in docker-compose | Use **MariaDB** for E2E |
 | Redis service | No Redis in docker-compose | **Omit Redis** |
 | `php artisan serve` + `npx cypress run` | Cypress runs via Docker compose (`network_mode: host`) | Run Cypress **directly** (`npx cypress run`) with `php artisan serve` |
-| — | PHPUnit uses **SQLite** (`/tmp/testing.sqlite`) | Backend tests need **no DB service** |
+| — | Project uses **MariaDB** in production | Backend tests use **MariaDB service** (matching real DB) |
 | — | Mailpit needed for registration E2E | Include **Mailpit service** for E2E job |
 
 ### Architecture: 3 Parallel Jobs
@@ -27,10 +27,10 @@
      │  Quality   │   │   Backend    │   │       E2E           │
      │   Gate     │   │    Tests     │   │    (Cypress)        │
      │            │   │              │   │                     │
-     │ composer   │   │ php artisan  │   │ MariaDB + Mailpit   │
-     │ quality    │   │ test         │   │ services            │
-     │ npm run    │   │ (SQLite)     │   │ php artisan serve   │
-     │ quality    │   │              │   │ npx cypress run     │
+      │ composer   │   │ php artisan  │   │ MariaDB + Mailpit   │
+      │ quality    │   │ test         │   │ services            │
+      │ npm run    │   │ (MariaDB)    │   │ php artisan serve   │
+      │ quality    │   │              │   │ npx cypress run     │
      └────────────┘   └──────────────┘   └─────────────────────┘
 ```
 
@@ -41,10 +41,10 @@
 - Steps: checkout → setup PHP → setup Node → composer install → npm ci → `composer quality` → `npm run quality`
 
 ### Job 2: Backend Tests
-- **Purpose:** PHPUnit feature tests against SQLite
-- **No services needed** (SQLite file-based)
+- **Purpose:** PHPUnit feature tests against MariaDB
+- **Services:** MariaDB 11 (matches production database)
 - **PHP 8.3**, **Node 22** (needed for build)
-- Steps: checkout → setup PHP → setup Node → composer install → npm ci → build → prepare env → `php artisan test`
+- Steps: checkout → setup PHP → setup Node → composer install → npm ci → build → prepare env (migrate) → `php artisan test`
 
 ### Job 3: E2E Tests (Cypress)
 - **Purpose:** Full user journey tests
@@ -70,5 +70,5 @@
 - Validate YAML syntax
 - Ensure all service env vars match docker-compose conventions
 - Confirm `composer quality` and `npm run quality` scripts exist and work
-- Confirm `php artisan test` runs against SQLite without external services
+- Confirm `php artisan test` runs against MariaDB service
 - Confirm Cypress can run with `npx cypress run` (not just via Docker)
