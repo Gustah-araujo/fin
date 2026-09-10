@@ -1,7 +1,7 @@
 describe('CSV Import', () => {
     let workspaceUuid;
 
-    before(() => {
+    beforeEach(() => {
         cy.loginViaSession('import-session');
 
         cy.visit('/workspace/create');
@@ -12,10 +12,6 @@ describe('CSV Import', () => {
         cy.url().then((url) => {
             workspaceUuid = url.match(/\/w\/([a-f0-9-]+)/)[1];
         });
-    });
-
-    beforeEach(() => {
-        cy.loginViaSession('import-session');
 
         cy.visit(`/w/${workspaceUuid}`);
     });
