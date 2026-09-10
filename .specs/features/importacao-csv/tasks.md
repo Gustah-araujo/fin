@@ -1,4 +1,4 @@
-# Importação CSV com IA — Tasks
+# Importação CSV com IA — Tasks (Processamento Assíncrono + Polling)
 
 **Spec**: `.specs/features/workspace-financeiro/spec.md` (P2: linhas 231–251)
 **Design**: `.specs/features/importacao-csv/design.md`
@@ -16,12 +16,12 @@ Foundation — Facade + Service para integração com LLM.
 T1 → T2 → T3
 ```
 
-### Phase 2: Import Service (Sequential)
+### Phase 2: Import Service + Async Infrastructure (Sequential)
 
-Core import logic — parsing, duplicate detection, persistence.
+Core import logic + async job infrastructure.
 
 ```
-T3 → T4 → T5
+T3 → T4 (service) → T4b (job + model) → T5
 ```
 
 ### Phase 3: Controller + Routes (Sequential)
@@ -34,7 +34,7 @@ T5 → T6 → T7 → T8
 
 ### Phase 4: Frontend (Sequential → Parallel)
 
-UI components — pages + interactive table.
+UI components — pages + interactive table + polling.
 
 ```
 T8 → T9 → T10
@@ -49,7 +49,7 @@ Integration verification.
 
 ```
 T11, T12 complete, then:
-  T13 → T14
+  T13 → T14 → T15
 ```
 
 ---
@@ -69,7 +69,7 @@ T11, T12 complete, then:
 - Skill: NONE
 
 **Done when:**
-- `config/ai.php` exposes: `deepseek_key`, `model`, `base_url`, `timeout`
+- `config/ai.php` exposes: `deepseek_key`, `model`, `base_url`, `timeout` (120s)
 - `AiService::parse(string $csvContent, string $type): array` sends prompt to DeepSeek API and returns structured transactions
 - Prompt includes: instruções de output JSON, tipo esperado (expense/income), conteúdo CSV
 - Response parsing: extrai JSON da resposta, valida estrutura, normaliza campos (description, value, date, type, category_name)
@@ -115,7 +115,7 @@ Expected: all tests still passing
 ### T3: "Sem Categoria" category auto-creation
 
 **What:** Ensure every workspace has a "Sem Categoria" system category (for import fallback)
-**Where:** `app/Observers/WorkspaceObserver.php` (novo) or `app/Providers/AppServiceProvider.php` (boot), `database/migrations/` (se necessário)
+**Where:** `app/Observers/WorkspaceObserver.php` (novo) ou `app/Providers/AppServiceProvider.php` (boot), `database/migrations/` (se necessário)
 **Depends on:** T2
 **Reuses:** D-31 pattern ("Pagamento de Cartão" auto-criada), `Category` model
 **Requirement:** AC-4 (UX — categoria fallback)
@@ -139,21 +139,23 @@ Expected: all workspace tests passing + new assertion
 
 ---
 
-### T4: ImportService with feature tests
+### T4: ImportService + ImportJob model/migration with feature tests
 
-**What:** Create `ImportService` with `parseCsv()` and `confirm()` + comprehensive feature tests
-**Where:** `app/Services/ImportService.php`, `tests/Feature/Import/ImportServiceTest.php`
+**What:** Create `ImportService` with `parseCsv()` and `confirm()`, plus `ImportJob` model, migration, and `ImportJobStatus` enum. Comprehensive feature tests.
+**Where:** `app/Services/ImportService.php`, `app/Models/ImportJob.php`, `app/Enums/ImportJobStatus.php`, `database/migrations/2026_09_10_000002_create_import_jobs_table.php`, `tests/Feature/Import/ImportServiceTest.php`
 **Depends on:** T3
 **Reuses:** `AiService` (via Facade), `TransactionService`, `Category` model, `Transaction` model
-**Requirement:** AC-3 (Duplicatas), AC-5 (Workspace)
+**Requirement:** AC-3 (Duplicatas), AC-5 (Workspace), AC-6 (Async), AC-7 (Resiliência)
 
 **Tools:**
 - MCP: NONE
 - Skill: NONE
 
 **Done when:**
-- `parseCsv(UploadedFile $file, string $type, Workspace $workspace): array`:
-  1. Lê conteúdo CSV
+
+**ImportService:**
+- `parseCsv(string $csvContent, string $type, Workspace $workspace): array`:
+  1. Recebe conteúdo CSV como string
   2. Chama `Ai::parse($content, $type)`
   3. Para cada transação: busca categoria por nome no workspace (match exato case-insensitive, depois parcial)
   4. Se não encontra: usa "Sem Categoria"
@@ -163,15 +165,77 @@ Expected: all workspace tests passing + new assertion
   1. Filtra apenas transações com `is_checked = true`
   2. Para cada uma: chama `TransactionService::create($workspace, $creator, $data)`
   3. Retorna quantidade criada
-- Tests cover: parse returns correct structure, duplicate detection flags matches, category matching works, "Sem Categoria" fallback, confirm persists only checked, confirm recalculates balance, confirm with empty selection returns 0
+
+**ImportJob model:**
+- Migration: `import_jobs` table com id (uuid), workspace_id, user_id, type, file_path, original_filename, status, result (json nullable), error_message, started_at, completed_at, timestamps
+- Enum: `ImportJobStatus` (Pending, Processing, Completed, Failed)
+- Model: com relationships (workspace, user), casts (status enum, result array, datetime), helper methods (isPending, isProcessing, isCompleted, isFailed, isFinished)
+
+**Tests cover:**
+- parseCsv returns correct structure
+- duplicate detection flags matches
+- category matching works
+- "Sem Categoria" fallback
+- confirm persists only checked
+- confirm recalculates balance
+- confirm with empty selection returns 0
+- ImportJob model: status transitions, helper methods, workspace relationship
 - Gate check passes: `phpunit --filter=ImportServiceTest`
-- Test count: ≥8 tests pass
+- Test count: ≥10 tests pass
 
 **Verify:**
 ```bash
 docker compose exec app php artisan test --filter=ImportServiceTest
 ```
-Expected: ≥8 tests, all passing
+Expected: ≥10 tests, all passing
+
+---
+
+### T4b: ProcessImportCsvJob with tests
+
+**What:** Create `ProcessImportCsvJob` that processes CSV in background and comprehensive tests
+**Where:** `app/Jobs/ProcessImportCsvJob.php`, add tests to `tests/Feature/Import/ImportServiceTest.php` or new `tests/Feature/Import/ProcessImportCsvJobTest.php`
+**Depends on:** T4
+**Reuses:** `ProcessRecurrencesJob` pattern (ShouldQueue, Queueable, try/catch, Log::error), `ImportService`, `Storage`
+**Requirement:** AC-6 (Async), AC-7 (Resiliência)
+
+**Tools:**
+- MCP: NONE
+- Skill: NONE
+
+**Done when:**
+
+**Job implementation:**
+- `ProcessImportCsvJob` implements `ShouldQueue` + `Queueable`
+- Constructor: recebe `importJobUuid` (string)
+- `$tries = 3`, `$timeout = 300` (5 minutos)
+- `handle()`:
+  1. Busca ImportJob por UUID
+  2. Atualiza status para Processing + started_at
+  3. Lê arquivo CSV do Storage (disk: local)
+  4. Chama `ImportService::parseCsv(content, type, workspace)`
+  5. Atualiza ImportJob: status=Completed, result=preview, completed_at=now
+  6. Em caso de erro: catch → Log::error → status=Failed, error_message=user-friendly, completed_at=now → re-throw
+- `failed()` method: garante status=Failed mesmo em crash
+- User-friendly error messages para timeout, JSON inválido, erros genéricos
+
+**Tests cover:**
+- Job updates ImportJob from pending → processing → completed on success
+- Job stores preview result in ImportJob on success
+- Job updates ImportJob to failed when AI throws exception
+- Job stores error_message on failure
+- Job calls ImportService::parseCsv with correct parameters
+- Job reads file from Storage with correct path
+- Job has correct retry/timeout configuration
+- Gate check passes: `phpunit --filter=ProcessImportCsvJobTest` (or test count includes job tests)
+
+**Verify:**
+```bash
+docker compose exec app php artisan test --filter=ProcessImportCsvJob
+```
+Expected: ≥6 tests, all passing
+
+*Nota: Como `QUEUE_CONNECTION=sync` nos testes, o job roda sincronamente ao ser despachado, permitindo teste direto sem mock de fila.*
 
 ---
 
@@ -179,7 +243,7 @@ Expected: ≥8 tests, all passing
 
 **What:** Create `UploadCsvRequest` and `ConfirmImportRequest` with validation rules
 **Where:** `app/Http/Requests/UploadCsvRequest.php`, `app/Http/Requests/ConfirmImportRequest.php`
-**Depends on:** T4
+**Depends on:** T4b
 **Reuses:** `StoreTransactionRequest` pattern, workspace validation via `withValidator`
 **Requirement:** AC-1 (Isolamento), AC-5 (Workspace)
 
@@ -205,45 +269,63 @@ Expected: all import tests passing
 
 ### T6: ImportControllerTest (TDD red)
 
-**What:** Write controller feature tests FIRST (TDD red phase)
+**What:** Write controller feature tests FIRST (TDD red phase) — including store + status + confirm
 **Where:** `tests/Feature/Import/ImportControllerTest.php`
 **Depends on:** T5
 **Reuses:** `IncomeController` test pattern (actingAs, authorize, inertia assertions, Toast assertions)
-**Requirement:** AC-1, AC-2, AC-3, AC-4, AC-5
+**Requirement:** AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7
 
 **Tools:**
 - MCP: NONE
 - Skill: NONE
 
 **Done when:**
-- Tests for `create` returning 200 + Inertia with accounts + categories + type
-- Tests for `store` accepting valid CSV file → returns JSON preview with transactions + summary
-- Tests for `store` rejecting invalid file (not CSV) → 422
-- Tests for `store` rejecting non-workspace account → 422
-- Tests for `store` with file > 10MB → 422
-- Tests for `confirm` persisting checked transactions → redirect + toast success
-- Tests for `confirm` with invalid category → 422
-- Tests for `confirm` with all unchecked → no transactions created
-- Tests for authorization: non-member → 403
-- Tests for type isolation: expense route creates only expenses
+
+**Tests for `store` (POST):**
+- Test: accepts valid CSV file → returns 201 with `{job_uuid, status: "pending"}`
+- Test: creates ImportJob record in database with correct workspace/user/type
+- Test: stores file in storage
+- Test: dispatches ProcessImportCsvJob
+- Test: rejects invalid file (not CSV) → 422
+- Test: rejects non-workspace account → 422
+- Test: rejects file > 10MB → 422
+
+**Tests for `status` (GET):**
+- Test: returns status=pending for new job
+- Test: returns status=processing while job runs
+- Test: returns status=result with preview when completed (queue=sync)
+- Test: returns error_message when failed
+- Test: rejects non-workspace member → 403
+- Test: rejects job from different workspace → 404
+
+**Tests for `confirm` (POST):**
+- Test: persists checked transactions → redirect + toast success
+- Test: rejects invalid category → 422
+- Test: with all unchecked → no transactions created
+- Test: type isolation: expense route creates only expenses
+
+**Tests for `create` (GET):**
+- Test: returns Inertia page with accounts + categories + type
+- Test: non-member → 403
+
 - Gate check shows tests FAIL (red phase — expected, controller doesn't exist yet)
-- Test count: ≥12 tests exist (all red)
+- Test count: ≥15 tests exist (all red)
 
 **Verify:**
 ```bash
 docker compose exec app php artisan test --filter=ImportControllerTest
 ```
-Expected: ≥12 tests, all FAIL (controller not yet created)
+Expected: ≥15 tests, all FAIL (controller not yet created)
 
 ---
 
-### T7: ImportController + ImportPreviewResource
+### T7: ImportController + Resources
 
-**What:** Implement controller and resource to make T6 tests green
-**Where:** `app/Http/Controllers/ImportController.php`, `app/Http/Resources/ImportPreviewResource.php`
+**What:** Implement controller, ImportPreviewResource, and ImportJobResource to make T6 tests green
+**Where:** `app/Http/Controllers/ImportController.php`, `app/Http/Resources/ImportPreviewResource.php`, `app/Http/Resources/ImportJobResource.php`
 **Depends on:** T6
 **Reuses:** `IncomeController` structure (authorize, inertia, props, Toast), `TransactionResource` pattern
-**Requirement:** AC-1, AC-2, AC-3, AC-4, AC-5
+**Requirement:** AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7
 
 **Tools:**
 - MCP: NONE
@@ -251,25 +333,36 @@ Expected: ≥12 tests, all FAIL (controller not yet created)
 
 **Done when:**
 - `create(Workspace $workspace)` returns Inertia with: type (from route), accounts, categories (filtered by type)
-- `store(UploadCsvRequest $request, ImportService $service)` calls `$service->parseCsv()` and returns JSON preview
-- `confirm(ConfirmImportRequest $request, ImportService $service)` calls `$service->confirm()` and redirects with Toast
-- Controller uses Policy authorization (`viewAny`/`create` on Transaction with workspace)
-- `ImportPreviewResource` formats: transactions array + summary
+- `store(UploadCsvRequest $request, Workspace $workspace)`:
+  1. Valida upload
+  2. Armazena arquivo em `imports/{uuid}/{filename}`
+  3. Cria ImportJob (status=pending)
+  4. Despacha ProcessImportCsvJob
+  5. Retorna `{job_uuid, status}` com HTTP 201
+- `status(Workspace $workspace, ImportJob $importJob)`:
+  1. Verifica autorização + pertencimento ao workspace
+  2. Retorna `{uuid, status, result?, error_message?}`
+- `confirm(ConfirmImportRequest $request, Workspace $workspace)`:
+  1. Chama `$service->confirm()`
+  2. Redirect com Toast de sucesso
+- Controller usa Policy authorization (`viewAny`/`create` on Transaction with workspace)
 - Type determined from route name (transactions.import.* → expense, incomes.import.* → income)
+- `ImportPreviewResource` formats: transactions array + summary
+- `ImportJobResource` formats: uuid, status, result, error_message
 - Gate check passes: `phpunit --filter=ImportControllerTest`
-- Test count: ≥12 tests pass (T6 tests now green)
+- Test count: ≥15 tests pass (T6 tests now green)
 
 **Verify:**
 ```bash
 docker compose exec app php artisan test --filter=ImportControllerTest
 ```
-Expected: ≥12 tests passing
+Expected: ≥15 tests passing
 
 ---
 
 ### T8: Routes + Import buttons on listing pages
 
-**What:** Register import routes and add import buttons to Transactions/Index and Incomes/Index
+**What:** Register import routes (8 total, incl. status) and add import buttons to Transactions/Index and Incomes/Index
 **Where:** `routes/web.php`, `resources/js/Pages/Transactions/Index.tsx`, `resources/js/Pages/Incomes/Index.tsx`
 **Depends on:** T7
 **Reuses:** Existing route patterns, existing page structure
@@ -280,29 +373,31 @@ Expected: ≥12 tests passing
 - Skill: NONE
 
 **Done when:**
-- Routes registered (6 rotas: transactions.import.create/store/confirm + incomes.import.create/store/confirm)
+- 8 routes registered:
+  - `transactions.import.create` (GET), `.store` (POST), `.status` (GET), `.confirm` (POST)
+  - `incomes.import.create` (GET), `.store` (POST), `.status` (GET), `.confirm` (POST)
 - All routes inside `auth` + `verified` + `prefix('w/{workspace}')` middleware group
-- `Transactions/Index.tsx` has "Importar Despesas" button next to "Nova Despesa" → links to `transactions.import.create`
-- `Incomes/Index.tsx` has "Importar Receitas" button next to "Nova Receita" → links to `incomes.import.create`
+- `Transactions/Index.tsx` has "Importar Despesas" button → links to `transactions.import.create`
+- `Incomes/Index.tsx` has "Importar Receitas" button → links to `incomes.import.create`
 - Buttons use `variant="outline"` (secondary to primary create button)
-- `route:list` shows all 6 import routes
+- `route:list` shows all 8 import routes
 - Gate check passes: `php artisan route:list | grep import`
 
 **Verify:**
 ```bash
 docker compose exec app php artisan route:list --name=import
 ```
-Expected: 6 routes listed with correct controller bindings
+Expected: 8 routes listed with correct controller bindings
 
 ---
 
 ### T9: TypeScript types
 
-**What:** Define import TypeScript interfaces
+**What:** Define import TypeScript interfaces (including async/polling types)
 **Where:** `resources/js/types/import.ts`
 **Depends on:** T8
 **Reuses:** Existing type patterns (`resources/js/types/`)
-**Requirement:** AC-4 (UX)
+**Requirement:** AC-4 (UX), AC-6 (Async)
 
 **Tools:**
 - MCP: NONE
@@ -310,9 +405,12 @@ Expected: 6 routes listed with correct controller bindings
 
 **Done when:**
 - `ImportType`: 'expense' | 'income'
+- `ImportJobStatus`: 'pending' | 'processing' | 'completed' | 'failed'
 - `ImportTransaction`: id, description, value, date, type, category_name, category_uuid, is_duplicate, duplicate_uuid, is_checked
 - `ImportSummary`: total, total_value, duplicates, checked
 - `ImportPreviewResponse`: type, transactions, summary
+- `ImportJobStartResponse`: job_uuid, status
+- `ImportJobStatusResponse`: uuid, status, result?, error_message?
 - `CsvUploadFormData`: file, account_id
 - All types exported
 - No TypeScript errors
@@ -326,31 +424,50 @@ Expected: "OK" (no import-related errors)
 
 ---
 
-### T10: CsvUploadForm component
+### T10: CsvUploadForm + ImportProcessing + useImportPolling hook
 
-**What:** Create upload form component (file input + account selection)
-**Where:** `resources/js/Components/Import/CsvUploadForm.tsx`
+**What:** Create upload form component, processing indicator component, and polling hook
+**Where:** `resources/js/Components/Import/CsvUploadForm.tsx`, `resources/js/Components/Import/ImportProcessing.tsx`, `resources/js/hooks/use-import-polling.ts`
 **Depends on:** T9
-**Reuses:** shadcn Button/Input/Label/Select, `useForm`, `useWorkspace`
-**Requirement:** AC-4 (UX)
+**Reuses:** shadcn Button/Input/Label/Select/Progress, `useForm`, `useWorkspace`, axios (datatable pattern)
+**Requirement:** AC-4 (UX), AC-6 (Async)
 
 **Tools:**
 - MCP: NONE
 - Skill: NONE
 
 **Done when:**
-- Props: `type`, `accounts`, `onPreview` (callback with preview data)
+
+**CsvUploadForm:**
+- Props: `type`, `accounts`, `onJobStarted` (callback com job_uuid)
 - File input accepts `.csv` (accept=".csv,text/csv")
 - Select de conta (obrigatório, lista accounts do workspace)
 - Botão "Processar" desabilitado sem arquivo selecionado
-- Loading state durante processamento
-- Erro de processamento exibido via toast (sonner)
+- POST para store → sucesso → chama `onJobStarted(job_uuid)`
+- Erro de validação exibido via toast (sonner)
 - Validação client-side: arquivo selecionado antes de enviar
+
+**ImportProcessing:**
+- Props: `status`, `errorMessage`, `onRetry`, `onCancel`
+- Spinner/animation durante pending/processing
+- Progress bar indeterminada
+- Mensagem: "Processando arquivo..." durante pending/processing
+- Estado de erro: mostra mensagem + botão "Tentar novamente"
+- Mensagens em pt-BR
+
+**useImportPolling hook:**
+- Params: `jobUuid`, `workspaceId`, `onCompleted`, `onError`, `intervalMs` (default 2000), `timeoutMs` (default 300000)
+- Returns: `{ status, result, error, isLoading }`
+- Polls GET status endpoint a cada `intervalMs`
+- Para polling quando status=completed/failed
+- Timeout após `timeoutMs` com mensagem apropriada
+- Cleanup de interval/timeout no unmount
+
 - Gate check passes: `npm run quality` (ESLint + Prettier clean)
 
 **Verify:**
 ```bash
-npm run lint -- --max-warnings 0 resources/js/Components/Import/CsvUploadForm.tsx
+npm run lint -- --max-warnings 0 resources/js/Components/Import/CsvUploadForm.tsx resources/js/Components/Import/ImportProcessing.tsx resources/js/hooks/use-import-polling.ts
 ```
 Expected: No errors
 
@@ -388,11 +505,11 @@ Expected: No errors
 
 ### T12: Imports/Index.tsx page [P]
 
-**What:** Main import page orchestrating upload → preview → confirm flow
+**What:** Main import page orchestrating upload → processing → preview → confirm flow
 **Where:** `resources/js/Pages/Imports/Index.tsx`
 **Depends on:** T9
-**Reuses:** AuthenticatedLayout, `CsvUploadForm`, `ImportPreviewTable`, `useWorkspace`, `useForm`, sonner
-**Requirement:** AC-1, AC-3, AC-4, AC-5
+**Reuses:** AuthenticatedLayout, `CsvUploadForm`, `ImportProcessing`, `ImportPreviewTable`, `useWorkspace`, `useForm`, `useImportPolling`, sonner
+**Requirement:** AC-1, AC-3, AC-4, AC-5, AC-6
 
 **Tools:**
 - MCP: NONE
@@ -400,8 +517,9 @@ Expected: No errors
 
 **Done when:**
 - Props: `type`, `accounts`, `categories` (from controller)
-- Estado: `stage` ('upload' | 'preview'), `previewData`
-- Stage 'upload': renderiza `CsvUploadForm` → onPreview → muda para 'preview'
+- Estado: `stage` ('upload' | 'processing' | 'preview'), `jobUuid`, `previewData`
+- Stage 'upload': renderiza `CsvUploadForm` → onJobStarted → muda para 'processing'
+- Stage 'processing': renderiza `ImportProcessing` com `useImportPolling` → onCompleted → muda para 'preview' / onError → mostra erro com retry
 - Stage 'preview': renderiza `ImportPreviewTable` → onConfirm → POST para confirm
 - Confirmação: toast sucesso → redirect para listagem (transactions.index ou incomes.index)
 - Cancelamento: volta para 'upload' (descarta preview)
@@ -444,22 +562,24 @@ Expected: ≥3 tests passing
 
 ### T14: Cypress E2E test
 
-**What:** End-to-end test covering critical import user journey
+**What:** End-to-end test covering critical import user journey (including async processing)
 **Where:** `cypress/e2e/import.cy.ts`
 **Depends on:** T13
 **Reuses:** Existing Cypress patterns (`cy.loginViaSession`, `cy.assertToast`, `cy.intercept`)
-**Requirement:** AC-1, AC-3, AC-4
+**Requirement:** AC-1, AC-3, AC-4, AC-6
 
 **Tools:**
 - MCP: NONE
 - Skill: NONE
 
 **Done when:**
-- Test: Full journey — login → access import page → upload CSV (fixture) → see preview → edit one field → confirm → redirect + toast → transactions in DB
-- Test: Duplicate detection — upload CSV with known duplicate → see flagged row pre-unchecked
+- Test: Full journey — login → access import page → upload CSV (fixture) → see processing indicator → wait for preview → edit one field → confirm → redirect + toast → transactions in DB
+- Test: Processing state visible — upload valid CSV → "Processando..." visible → eventually preview appears
+- Test: Duplicate detection — upload with duplicates → see flagged rows pre-unchecked
 - Test: Cancel — upload → cancel → no transactions created
 - Test: Error — upload invalid file → see error toast
 - Test: Type isolation — expense import creates only expenses
+- Test: Polling recovery — simulate slow processing → preview eventually appears
 - Gate check passes: `cypress run --spec cypress/e2e/import.cy.ts`
 
 **Verify:**
@@ -485,11 +605,12 @@ Expected: All scenarios pass
 **Done when:**
 - `composer quality` passes (Pint format check + PHPMD)
 - `npm run quality` passes (ESLint complexity + Prettier)
-- `phpunit --filter=Import` passes (≥25 tests)
+- `phpunit --filter=Import` passes (≥35 tests across all import test files)
 - `npm run build` passes
 - `cypress run --spec cypress/e2e/import.cy.ts` passes
 - spec.md traceability updated: IMPT-01 mapped to tasks
 - ROADMAP.md updated: IMPT-01 status → 🟢
+- STATE.md updated: decisões D-66, D-67, D-68, D-69, D-70 registradas
 
 **Verify:**
 ```bash
@@ -509,7 +630,7 @@ Phase 1 (Sequential):
   T1 ──→ T2 ──→ T3
 
 Phase 2 (Sequential):
-  T3 ──→ T4 ──→ T5
+  T3 ──→ T4 (ImportService + model/migration) ──→ T4b (ProcessImportCsvJob) ──→ T5
 
 Phase 3 (Sequential):
   T5 ──→ T6 ──→ T7 ──→ T8
@@ -534,13 +655,14 @@ Phase 5 (Sequential):
 | T1: Config + AiService + tests | 2 files + 1 test file | ⚠️ OK — cohesive (service + config + tests) |
 | T2: Ai Facade + registration | 2 small changes | ✅ Granular |
 | T3: "Sem Categoria" auto-creation | 1 observer + logic | ✅ Granular |
-| T4: ImportService + tests | 1 service + 1 test file | ⚠️ OK — cohesive (service + tests) |
+| T4: ImportService + ImportJob model + migration + tests | 4 files + 1 test file | ⚠️ OK — cohesive (service layer + infra) |
+| T4b: ProcessImportCsvJob + tests | 1 job file + tests | ✅ Granular |
 | T5: FormRequests | 2 files | ✅ Granular |
 | T6: Controller tests (red) | 1 test file | ✅ Granular |
-| T7: Controller + Resource | 2 related files | ⚠️ OK — cohesive (HTTP layer) |
+| T7: Controller + Resources | 3 related files | ⚠️ OK — cohesive (HTTP layer) |
 | T8: Routes + buttons | 3 small changes | ⚠️ OK — wiring task |
 | T9: TypeScript types | 1 file | ✅ Granular |
-| T10: CsvUploadForm | 1 component | ✅ Granular |
+| T10: CsvUploadForm + ImportProcessing + polling hook | 3 files | ⚠️ OK — cohesive (upload flow) |
 | T11: ImportPreviewTable | 1 component | ✅ Granular |
 | T12: Imports/Index page | 1 page | ✅ Granular |
 | T13: Smoke tests | 1 test file | ✅ Granular |
@@ -557,7 +679,8 @@ Phase 5 (Sequential):
 | T2 | T1 | T1 ──→ T2 | ✅ Match |
 | T3 | T2 | T2 ──→ T3 | ✅ Match |
 | T4 | T3 | T3 ──→ T4 | ✅ Match |
-| T5 | T4 | T4 ──→ T5 | ✅ Match |
+| T4b | T4 | T4 ──→ T4b | ✅ Match |
+| T5 | T4b | T4b ──→ T5 | ✅ Match |
 | T6 | T5 | T5 ──→ T6 | ✅ Match |
 | T7 | T6 | T6 ──→ T7 | ✅ Match |
 | T8 | T7 | T7 ──→ T8 | ✅ Match |
@@ -580,20 +703,21 @@ Phase 5 (Sequential):
 | T1: AiService | Service | Feature test (D-10) | Feature tests included | ✅ OK |
 | T2: Ai Facade | Facade | No test required | No tests | ✅ OK |
 | T3: Sem Categoria | Observer/Model | Feature test (D-10) | Tests included | ✅ OK |
-| T4: ImportService | Service | Feature test (D-10) | Feature tests included | ✅ OK |
+| T4: ImportService + ImportJob | Service/Model | Feature test (D-10) | Feature tests included | ✅ OK |
+| T4b: ProcessImportCsvJob | Job | Feature test (D-10) | Tests included | ✅ OK |
 | T5: FormRequests | Request | No test required | No tests | ✅ OK |
 | T6: ControllerTest | Test | Feature test (D-10) | Tests written (TDD red) | ✅ OK |
-| T7: Controller + Resource | Controller/Resource | Feature test (D-10) | Tests from T6 green | ✅ OK |
+| T7: Controller + Resources | Controller/Resource | Feature test (D-10) | Tests from T6 green | ✅ OK |
 | T8: Routes + Buttons | Routes/Component | No test required | No tests | ✅ OK |
 | T9: Types | Type definitions | No test required | No tests | ✅ OK |
-| T10: CsvUploadForm | React component | Cypress E2E (D-21) | E2E in T14 (deferred) | ⚠️ DEFERRED — acceptable |
+| T10: Components + Hook | React component/hook | Cypress E2E (D-21) | E2E in T14 (deferred) | ⚠️ DEFERRED — acceptable |
 | T11: ImportPreviewTable | React component | Cypress E2E (D-21) | E2E in T14 (deferred) | ⚠️ DEFERRED — acceptable |
 | T12: Imports/Index | React page | Cypress E2E (D-21) | E2E in T14 (deferred) | ⚠️ DEFERRED — acceptable |
 | T13: Smoke tests | Test | Smoke test (mandatory) | Smoke tests included | ✅ OK |
 | T14: Cypress | E2E test | Cypress E2E (D-21) | E2E tests included | ✅ OK |
 | T15: Quality gate | Verification | N/A | Verification only | ✅ OK |
 
-**Note on T10/T11/T12 test deferral:** Per project convention (D-10, D-21), React components are verified via Cypress E2E (T14), which covers the full journey including upload form, preview table, and confirmation flow. This matches existing pattern (e.g., Incomes/Index.tsx has no isolated React test — verified via Cypress).
+**Note on T10/T11/T12 test deferral:** Per project convention (D-10, D-21), React components are verified via Cypress E2E (T14), which covers the full journey including upload form, processing state, preview table, and confirmation flow.
 
 ---
 
@@ -604,7 +728,42 @@ Phase 5 (Sequential):
 | AC-1: Isolamento de tipos | T5, T6, T7, T8, T12 | Pending |
 | AC-2: Agnosticismo de LLM (Facade) | T1, T2, T7 | Pending |
 | AC-3: Detecção de duplicatas | T4, T6, T7, T11, T12 | Pending |
-| AC-4: UX (editar, desmarcar, confirmar, toasts) | T3, T6, T7, T10, T11, T12 | Pending |
+| AC-4: UX (loading, editar, desmarcar, confirmar, toasts) | T3, T6, T7, T10, T11, T12 | Pending |
 | AC-5: Contexto de workspace | T4, T5, T6, T7, T12, T13 | Pending |
+| AC-6: Processamento assíncrono (store + status + polling) | T4, T4b, T6, T7, T9, T10, T12 | Pending |
+| AC-7: Resiliência (retry + erros amigáveis) | T4, T4b, T6, T7 | Pending |
 
-**Coverage:** 5 mapped to tasks, 0 unmapped ✅
+**Coverage:** 7 mapped to tasks, 0 unmapped ✅
+
+---
+
+## Test Count Summary
+
+| Test File | Tests | Gate |
+|-----------|-------|------|
+| AiServiceTest | ≥5 | `phpunit --filter=AiServiceTest` |
+| ImportServiceTest (incl. ImportJob) | ≥10 | `phpunit --filter=ImportServiceTest` |
+| ProcessImportCsvJobTest | ≥6 | `phpunit --filter=ProcessImportCsvJob` |
+| ImportControllerTest | ≥15 | `phpunit --filter=ImportControllerTest` |
+| ImportSmokeTest | ≥3 | `phpunit --filter=ImportSmokeTest` |
+| **Total PHPUnit** | **≥39** | `phpunit --filter=Import` |
+| Cypress E2E | ≥6 scenarios | `cypress run --spec cypress/e2e/import.cy.ts` |
+
+---
+
+## Key Changes from Previous Plan (Síncrono → Assíncrono)
+
+| Aspecto | Antes (Síncrono) | Agora (Assíncrono + Polling) |
+|---------|-------------------|------------------------------|
+| Endpoint `store` | Processa CSV e retorna preview diretamente | Cria ImportJob, despacha Job, retorna `job_uuid` |
+| Processamento | No request HTTP (controller) | Em background (ProcessImportCsvJob) |
+| Aguardo do usuário | Requisição HTTP longa (risco timeout) | Resposta imediata + loading state na UI |
+| Frontend | Upload → espera → preview | Upload → loading → polling → preview |
+| Novos componentes | — | ImportJob model, ProcessImportCsvJob, ImportProcessing, useImportPolling |
+| Novos endpoints | — | GET /{type}/import/{job} (status/polling) |
+| Novas rotas | 6 rotas | 8 rotas (+2 status) |
+| Timeout config | PHP max_execution_time (30s) | Job timeout (300s) + polling timeout (300s) |
+| Retry | Sem | 3 tentativas automáticas |
+| Testes controller | ≥12 | ≥15 (+status endpoint tests) |
+| Testes job | — | ≥6 (ProcessImportCsvJob) |
+| Total testes | ≥25 | ≥39 |
