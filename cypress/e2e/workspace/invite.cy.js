@@ -12,16 +12,9 @@ describe('Workspace Invites', () => {
         cy.get('#password_confirmation').type('password123');
         cy.get('button[type="submit"]').click();
 
-        // Wait for email, then search Mailpit
-        cy.wait(1000);
-        cy.request(`${MAILPIT_API}/search?kind=to&query=${encodeURIComponent(adminEmail)}`).then((resp) => {
-            const msg = (resp.body.messages || [])[0];
-            if (!msg) throw new Error(`No message for ${adminEmail}`);
-            return cy.request(`${MAILPIT_API}/message/${msg.ID}`);
-        }).then((resp) => {
-            const html = resp.body.HTML || resp.body.Text || '';
-            const match = html.match(/href="([^"]*verify-email[^"]*)"/i);
-            cy.visit(match[1].replace(/&amp;/g, '&'));
+        // Retry until email arrives (fixes flakiness under CI load)
+        cy.waitForVerificationLink(adminEmail).then((verifyUrl) => {
+            cy.visit(verifyUrl);
         });
 
         cy.url().should('include', '/workspace');
