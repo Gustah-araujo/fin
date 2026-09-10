@@ -11,9 +11,8 @@ describe('CSV Import', () => {
         cy.url().should('match', /\/w\/([a-f0-9-]+)/);
         cy.url().then((url) => {
             workspaceUuid = url.match(/\/w\/([a-f0-9-]+)/)[1];
+            cy.visit(`/w/${workspaceUuid}`);
         });
-
-        cy.visit(`/w/${workspaceUuid}`);
     });
 
     it('renders the import page without crashing', () => {
