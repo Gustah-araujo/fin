@@ -8,6 +8,11 @@
 | D-63 | Single recurrence list with type filter + badge | 2026-09-03 | REEX-02 spec; unified management; avoids duplicating UI structure |
 | D-64 | Recurrence toggle on expense form mirrors income flow | 2026-09-03 | REEX-01 spec; consistent UX; avulsed or recurring in same form |
 | D-65 | `RecurrenceService` reads type from model/data, no hardcode | 2026-09-03 | REEX design; single source of truth; type determined at creation, propagated to instances |
+| D-66 | Facade `Ai` provider-agnostic (HTTP direto, sem SDK) | 2026-09-10 | IMPT-01 design; desacoplamento de LLM; trocar provedor sem impactar business logic |
+| D-67 | Processamento assíncrono via Job + polling no frontend (sem websockets) | 2026-09-10 | IMPT-01 design; CSV processado em background via `ProcessImportCsvJob`; frontend pooling 2s; evita timeout HTTP |
+| D-68 | Categoria "Sem Categoria" auto-criada por workspace (fallback) | 2026-09-10 | IMPT-01 design; categoria NOT NULL; consistente com D-31 |
+| D-69 | Duplicata: valor ±0.01 + data ±1 dia + descrição similar ≥80% | 2026-09-10 | IMPT-01 design; balanceamento precisão vs falsos positivos |
+| D-70 | `ImportJob` model para rastreamento de estado (pending/processing/completed/failed) | 2026-09-10 | IMPT-01 design; necessário para async + polling; permite retry e auditoria |
 | D-57 | Milestone order swapped: Planejamento (P2) before Inteligência (P3) | 2026-09-02 | User preference; PLAN-01 unblocks financial visibility before AI features |
 | D-58 | PlanningService gera transações projetadas de recorrências em memória (sem persistir) | 2026-09-02 | PLAN-01 design; evita poluir tabela com transações futuras que podem ser editadas/pausadas |
 | D-59 | Endpoint de detalhamento de mês via AJAX (JSON) ao invés de Inertia full reload | 2026-09-02 | PLAN-01 design; UX: modal abre sem recarregar página |
@@ -107,3 +112,4 @@ None yet.
 | 2026-09-02 | PLAN-01 | Tasks | 9 tasks (T1-T9), 5 phases, 2 parallel (T6+T7). TDD-first: T1 service+tests, T2 controller tests red, T3 controller green, T4 routes+sidebar, T5 types, T6 page+modal parallel, T8 Cypress, T9 quality gate. All 3 validation checks pass (granularity, diagram-definition, test co-location). |
 | 2026-09-02 | PLAN-01 | Execute | All 9 tasks via subagents. PlanningService (16 tests), PlanningController (9 tests), PlanningResource, routes+sidebar, types, Planning/Index.tsx (438 lines), MonthDetailModal.tsx (171 lines), planning.cy.js (7 E2E tests). 25 PHPUnit tests (107 assertions), composer quality + npm run quality + build green. PLAN-01→05 done, PLAN-06 deferred to P3. ROADMAP PLAN-01 → 🟢 |
 | 2026-09-03 | REEX-01 | Specify+Design | Recurring expenses spec (4 requirements: REEX-01 to REEX-04) + design. Decisions D-62 (type immutable), D-63 (single list + type filter), D-64 (toggle on expense form), D-65 (RecurrenceService reads type). 9 backend + 2 frontend files modified, 1 new test file, ~16 PHPUnit + 3 Cypress tests. Zero changes to PlanningService (already generic). |
+| 2026-09-10 | IMPT-01 | Specify+Design | CSV import com IA (7 ACs: AC-01 a AC-07). Processamento assíncrono via Job + polling no frontend (D-67). 5 decisões novas (D-66 a D-70). 17 tasks, 5 fases, 22 arquivos novos + migration + 4 modificados. ≥39 PHPUnit + 6 Cypress E2E. Spec, design, tasks escritos. Refatorado de síncrono para assíncrono. |
