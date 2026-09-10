@@ -759,64 +759,159 @@ Route::post('incomes/import/confirm', [ImportController::class, 'confirm'])
 
 ---
 
-## Testing Strategy
+## Test Catalog
+
+Catálogo completo de testes organizados por arquivo de teste, com mapeamento de critério de aceite (AC) e task responsável.
+
+---
 
 ### PHPUnit Feature Tests (TDD-first)
 
-**AiServiceTest** (mock HTTP):
-- Test: parse CSV content → returns structured transactions
-- Test: AI returns invalid JSON → throws exception
-- Test: AI API error → throws exception with message
-- Test: empty CSV → returns empty array
+#### AiServiceTest — `tests/Feature/Import/AiServiceTest.php` (≥5 tests) — T1
 
-**ImportServiceTest** (parseCsv chamado diretamente, sem job):
-- Test: parseCsv returns preview with correct structure
-- Test: duplicate detection flags matching transactions
-- Test: category matching finds existing category by name
-- Test: category fallback to "Sem Categoria" when not found
-- Test: confirm persists only checked transactions
-- Test: confirm recalculates account balance
-- Test: confirm with empty selection → returns 0
+| # | Test Method | AC | What It Verifies |
+|---|-------------|----|------------------|
+| 1 | `test_parse_csv_content_returns_structured_transactions` | AC-2 | CSV válido → array de transações com description, value, date, type, category_name |
+| 2 | `test_ai_returns_invalid_json_throws_exception` | AC-2 | IA retorna JSON malformado → lança exceção clara |
+| 3 | `test_ai_api_error_throws_exception_with_message` | AC-2 | API DeepSeek retorna erro HTTP → exceção com mensagem |
+| 4 | `test_empty_csv_returns_empty_array` | AC-2 | CSV vazio → retorna array sem erros |
+| 5 | `test_timeout_throws_exception` | AC-2 | Timeout na chamada HTTP → exceção de timeout |
 
-**ProcessImportCsvJobTest**:
-- Test: job updates ImportJob status from pending → processing → completed
-- Test: job stores result in ImportJob when AI succeeds
-- Test: job updates ImportJob status to failed when AI throws exception
-- Test: job retries on failure (3 tries)
-- test: job calls ImportService::parseCsv with correct params
+**Mock:** HTTP client mockado — sem chamadas reais à API.
 
-**ImportControllerTest** (TDD red → green):
-- Test: create returns Inertia page with accounts + categories + type
-- Test: store accepts valid CSV → returns {job_uuid, status=pending} (201)
-- Test: store creates ImportJob in database
-- Test: store dispatches ProcessImportCsvJob
-- Test: store rejects invalid file (not CSV) → 422
-- Test: store rejects non-workspace account → 422
-- Test: store rejects file > 10MB → 422
-- Test: status returns current status for processing job
-- Test: status returns result for completed job
-- Test: status returns error_message for failed job
-- Test: status rejects non-workspace member → 403
-- Test: status rejects job from different workspace → 404
-- Test: confirm persists transactions → redirect + toast success
-- Test: confirm rejects invalid category → 422
-- Test: confirm with all unchecked → no transactions created
-- Test: authorization: non-member → 403 on all endpoints
-- Test: type isolation: expense route creates only expenses
+---
 
-**ImportSmokeTest**:
-- Test: GET /transactions/import → 200 + Inertia component 'Imports/Index'
-- Test: GET /incomes/import → 200 + Inertia component 'Imports/Index'
-- Test: non-member → 403
+#### ImportServiceTest — `tests/Feature/Import/ImportServiceTest.php` (≥10 tests) — T4
 
-### Cypress E2E
+| # | Test Method | AC | What It Verifies |
+|---|-------------|----|------------------|
+| 1 | `test_parse_csv_returns_preview_with_correct_structure` | AC-3 | Retorno contém `transactions` array + `summary` com total, total_value, duplicates, checked |
+| 2 | `test_duplicate_detection_flags_matching_transactions` | AC-3 | Transação com valor ±0.01 + data ±1 dia + descrição ≥80% similar → `is_duplicate=true` |
+| 3 | `test_category_matching_finds_existing_by_name` | AC-4 | IA retorna "Alimentação" → match exato case-insensitive com categoria do workspace |
+| 4 | `test_category_matching_partial_name_fallback` | AC-4 | IA retorna "Mercado" → match parcial encontra "Alimentação" |
+| 5 | `test_category_fallback_to_sem_categoria_when_not_found` | AC-4 | Categoria inexistente → usa "Sem Categoria" (is_system=true) |
+| 6 | `test_confirm_persists_only_checked_transactions` | AC-4 | 5 transações, 3 checked → persiste apenas 3 via TransactionService |
+| 7 | `test_confirm_recalculates_account_balance` | AC-4 | Após confirm → saldo da conta atualizado corretamente |
+| 8 | `test_confirm_with_empty_selection_returns_zero` | AC-4 | Nenhuma transação checked → retorna 0, nada persistido |
+| 9 | `test_import_job_model_status_transitions` | AC-6 | Enum transitions: pending → processing → completed/failed |
+| 10 | `test_import_job_model_helper_methods` | AC-6 | `isPending()`, `isProcessing()`, `isCompleted()`, `isFailed()`, `isFinished()` |
+| 11 | `test_import_job_model_workspace_relationship` | AC-5 | `ImportJob::workspace()` retorna o workspace correto |
+| 12 | `test_import_job_model_user_relationship` | AC-5 | `ImportJob::user()` retorna o criador correto |
 
-- Test: Full journey — upload CSV → processing (aguardar) → preview → edit → confirm → redirect + toast → transactions in DB
-- Test: Duplicate detection — upload with duplicates → see flagged rows pre-unchecked
-- Test: Cancel — upload → cancel → no transactions created
-- Test: Error — upload invalid file → see error toast
-- Test: Processing state — upload valid CSV → see "Processando..." → wait → preview appears
-- Test: Type isolation — expense import creates only expenses
+**Mock:** `Ai::parse()` mockado — sem chamadas reais.
+
+---
+
+#### ProcessImportCsvJobTest — `tests/Feature/Import/ProcessImportCsvJobTest.php` (≥6 tests) — T4b
+
+| # | Test Method | AC | What It Verifies |
+|---|-------------|----|------------------|
+| 1 | `test_job_updates_status_pending_to_processing_to_completed` | AC-6 | Após dispatch: ImportJob.status segue o fluxo completo |
+| 2 | `test_job_stores_preview_result_in_import_job_on_success` | AC-6 | `ImportJob.result` contém o preview JSON após completed |
+| 3 | `test_job_updates_status_to_failed_when_ai_throws_exception` | AC-7 | `Ai::parse()` lança exceção → status=failed |
+| 4 | `test_job_stores_user_friendly_error_message_on_failure` | AC-7 | `ImportJob.error_message` contém mensagem legível (não stack trace) |
+| 5 | `test_job_calls_import_service_parse_csv_with_correct_params` | AC-6 | `ImportService::parseCsv()` recebe (content, type, workspace) corretos |
+| 6 | `test_job_reads_file_from_storage_with_correct_path` | AC-6 | `Storage::disk('local')->get()` chamado com `ImportJob->file_path` |
+| 7 | `test_job_has_correct_retry_and_timeout_configuration` | AC-7 | `$tries=3`, `$timeout=300` |
+| 8 | `test_job_failed_method_marks_import_job_as_failed_on_crash` | AC-7 | Crash total → `failed()` method garante status=failed |
+
+**Nota:** `QUEUE_CONNECTION=sync` nos testes → job roda sincronamente ao ser despachado.
+
+---
+
+#### ImportControllerTest — `tests/Feature/Import/ImportControllerTest.php` (≥15 tests) — T6/T7
+
+**Endpoint: `create` (GET)**
+
+| # | Test Method | AC | What It Verifies |
+|---|-------------|----|------------------|
+| 1 | `test_create_returns_inertia_page_with_accounts_categories_and_type` | AC-1 | Response 200 + componente 'Imports/Index' + props type, accounts, categories |
+| 2 | `test_create_requires_authentication` | AC-5 | Guest → redirect para login |
+| 3 | `test_create_rejects_non_workspace_member_with_403` | AC-5 | Usuário sem acesso ao workspace → 403 |
+
+**Endpoint: `store` (POST)**
+
+| # | Test Method | AC | What It Verifies |
+|---|-------------|----|------------------|
+| 4 | `test_store_accepts_valid_csv_returns_job_uuid_with_201` | AC-6 | Upload CSV válido → 201 + `{job_uuid, status: "pending"}` |
+| 5 | `test_store_creates_import_job_record_in_database` | AC-6 | ImportJob criado com workspace_id, user_id, type corretos |
+| 6 | `test_store_stores_file_in_storage` | AC-6 | Arquivo salvo em `imports/{uuid}/{filename}` |
+| 7 | `test_store_dispatches_process_import_csv_job` | AC-6 | `ProcessImportCsvJob::dispatch()` chamado com job_uuid |
+| 8 | `test_store_rejects_invalid_file_type_with_422` | AC-1 | Upload de .pdf → 422 com mensagem de validação |
+| 9 | `test_store_rejects_non_workspace_account_with_422` | AC-5 | account_id de outro workspace → 422 |
+| 10 | `test_store_rejects_file_greater_than_10mb_with_422` | AC-1 | Arquivo > 10MB → 422 |
+
+**Endpoint: `status` (GET)**
+
+| # | Test Method | AC | What It Verifies |
+|---|-------------|----|------------------|
+| 11 | `test_status_returns_pending_for_new_job` | AC-6 | Job recém-criado → `{status: "pending"}` |
+| 12 | `test_status_returns_processing_while_job_runs` | AC-6 | Job em execução → `{status: "processing"}` |
+| 13 | `test_status_returns_completed_with_preview_result` | AC-6 | Job completed → `{status: "completed", result: {...}}` |
+| 14 | `test_status_returns_failed_with_error_message` | AC-7 | Job failed → `{status: "failed", error_message: "..."}` |
+| 15 | `test_status_rejects_non_workspace_member_with_403` | AC-5 | Membro de outro workspace → 403 |
+| 16 | `test_status_rejects_job_from_different_workspace_with_404` | AC-5 | Job UUID de outro workspace → 404 |
+
+**Endpoint: `confirm` (POST)**
+
+| # | Test Method | AC | What It Verifies |
+|---|-------------|----|------------------|
+| 17 | `test_confirm_persists_checked_transactions_with_redirect_and_toast` | AC-4 | Confirm válido → redirect + toast sucesso + transações no DB |
+| 18 | `test_confirm_rejects_invalid_category_with_422` | AC-5 | category_id inexistente → 422 |
+| 19 | `test_confirm_with_all_unchecked_creates_no_transactions` | AC-4 | Todas `is_checked=false` → 0 transações no DB |
+| 20 | `test_confirm_type_isolation_expense_creates_only_expenses` | AC-1 | Rota expense → transações type=Expense apenas |
+
+---
+
+#### ImportSmokeTest — `tests/Feature/Import/ImportSmokeTest.php` (≥3 tests) — T13
+
+| # | Test Method | AC | What It Verifies |
+|---|-------------|----|------------------|
+| 1 | `test_get_transactions_import_returns_200_with_inertia_component` | AC-1 | GET /w/{workspace}/transactions/import → 200 + 'Imports/Index' |
+| 2 | `test_get_incomes_import_returns_200_with_inertia_component` | AC-1 | GET /w/{workspace}/incomes/import → 200 + 'Imports/Index' |
+| 3 | `test_non_member_access_returns_403` | AC-5 | Usuário sem acesso → 403 em ambos endpoints |
+
+---
+
+### Cypress E2E — `cypress/e2e/import.cy.ts` (≥7 scenarios) — T14
+
+| # | Scenario | ACs Covered | What It Verifies |
+|---|----------|-------------|------------------|
+| 1 | `Full journey: upload → processing → preview → edit → confirm → redirect + toast` | AC-1, AC-3, AC-4, AC-6 | Fluxo completo com fixture CSV real; transações aparecem no DB |
+| 2 | `Processing state visible: upload → "Processando..." → preview appears` | AC-4, AC-6 | Indicador de loading aparece e desaparece quando preview carrega |
+| 3 | `Duplicate detection: upload with duplicates → flagged rows pre-unchecked` | AC-3 | Linhas duplicata com highlight vermelho + badge + checkbox desmarcada |
+| 4 | `Cancel: upload → cancel → no transactions created` | AC-4 | Botão cancelar descarta preview; 0 transações no DB |
+| 5 | `Error: upload invalid file → error toast visible` | AC-4 | Arquivo .txt inválido → toast de erro com mensagem amigável |
+| 6 | `Type isolation: expense import creates only expenses` | AC-1 | Importar via rota de despesa → todas transações type=Expense |
+| 7 | `Polling recovery: slow processing → preview eventually appears` | AC-6 | Simula job lento → polling continua até completed |
+
+---
+
+### Test Summary
+
+| Test File | Layer | Tests | ACs | Task |
+|-----------|-------|-------|-----|------|
+| `AiServiceTest` | Service | ≥5 | AC-2 | T1 |
+| `ImportServiceTest` | Service + Model | ≥12 | AC-3, AC-4, AC-5, AC-6 | T4 |
+| `ProcessImportCsvJobTest` | Job | ≥8 | AC-6, AC-7 | T4b |
+| `ImportControllerTest` | Controller | ≥20 | AC-1, AC-4, AC-5, AC-6, AC-7 | T6/T7 |
+| `ImportSmokeTest` | Smoke | ≥3 | AC-1, AC-5 | T13 |
+| **Total PHPUnit** | | **≥48** | **AC-1 a AC-7** | |
+| `import.cy.ts` | E2E | ≥7 | AC-1, AC-3, AC-4, AC-6 | T14 |
+
+---
+
+### AC Coverage Matrix
+
+| AC | PHPUnit Tests | E2E | Status |
+|----|---------------|-----|--------|
+| AC-1: Isolamento de tipos | Controller #1, #8, #10, #20; Smoke #1, #2 | #6 | ✅ Covered |
+| AC-2: Agnosticismo de LLM | AiServiceTest #1-5 | — | ✅ Covered |
+| AC-3: Detecção de duplicatas | ImportService #2 | #3 | ✅ Covered |
+| AC-4: UX (loading, editar, confirmar, toasts) | ImportService #3-#8; Controller #17, #19 | #1, #2, #4, #5 | ✅ Covered |
+| AC-5: Contexto de workspace | ImportService #11, #12; Controller #3, #9, #15, #16, #18; Smoke #3 | — | ✅ Covered |
+| AC-6: Processamento assíncrono | ImportService #9, #10; Job #1-#7; Controller #4-#7, #11-#14 | #1, #2, #7 | ✅ Covered |
+| AC-7: Resiliência (retry + erros) | Job #3, #4, #7, #8; Controller #14 | — | ✅ Covered |
 
 ---
 

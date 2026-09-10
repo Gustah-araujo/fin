@@ -605,7 +605,7 @@ Expected: All scenarios pass
 **Done when:**
 - `composer quality` passes (Pint format check + PHPMD)
 - `npm run quality` passes (ESLint complexity + Prettier)
-- `phpunit --filter=Import` passes (≥35 tests across all import test files)
+- `phpunit --filter=Import` passes (≥48 tests across all import test files)
 - `npm run build` passes
 - `cypress run --spec cypress/e2e/import.cy.ts` passes
 - spec.md traceability updated: IMPT-01 mapped to tasks
@@ -742,12 +742,12 @@ Phase 5 (Sequential):
 | Test File | Tests | Gate |
 |-----------|-------|------|
 | AiServiceTest | ≥5 | `phpunit --filter=AiServiceTest` |
-| ImportServiceTest (incl. ImportJob) | ≥10 | `phpunit --filter=ImportServiceTest` |
-| ProcessImportCsvJobTest | ≥6 | `phpunit --filter=ProcessImportCsvJob` |
-| ImportControllerTest | ≥15 | `phpunit --filter=ImportControllerTest` |
+| ImportServiceTest (incl. ImportJob) | ≥12 | `phpunit --filter=ImportServiceTest` |
+| ProcessImportCsvJobTest | ≥8 | `phpunit --filter=ProcessImportCsvJob` |
+| ImportControllerTest | ≥20 | `phpunit --filter=ImportControllerTest` |
 | ImportSmokeTest | ≥3 | `phpunit --filter=ImportSmokeTest` |
-| **Total PHPUnit** | **≥39** | `phpunit --filter=Import` |
-| Cypress E2E | ≥6 scenarios | `cypress run --spec cypress/e2e/import.cy.ts` |
+| **Total PHPUnit** | **≥48** | `phpunit --filter=Import` |
+| Cypress E2E | ≥7 scenarios | `cypress run --spec cypress/e2e/import.cy.ts` |
 
 ---
 
@@ -764,6 +764,6 @@ Phase 5 (Sequential):
 | Novas rotas | 6 rotas | 8 rotas (+2 status) |
 | Timeout config | PHP max_execution_time (30s) | Job timeout (300s) + polling timeout (300s) |
 | Retry | Sem | 3 tentativas automáticas |
-| Testes controller | ≥12 | ≥15 (+status endpoint tests) |
-| Testes job | — | ≥6 (ProcessImportCsvJob) |
-| Total testes | ≥25 | ≥39 |
+| Testes controller | ≥12 | ≥20 (+status endpoint tests) |
+| Testes job | — | ≥8 (ProcessImportCsvJob) |
+| Total testes | ≥25 | ≥48 |
