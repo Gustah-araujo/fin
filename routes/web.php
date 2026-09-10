@@ -14,6 +14,7 @@ use App\Http\Controllers\CardExpenseController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CreditCardBillController;
 use App\Http\Controllers\CreditCardController;
+use App\Http\Controllers\ImportController;
 use App\Http\Controllers\IncomeController;
 use App\Http\Controllers\InviteController;
 use App\Http\Controllers\PlanningController;
@@ -100,6 +101,21 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
         Route::get('transactions/datatable', [TransactionController::class, 'datatable'])->name('transactions.datatable');
         Route::get('incomes/datatable', [IncomeController::class, 'datatable'])->name('incomes.datatable');
         Route::get('recurrences/datatable', [RecurrenceController::class, 'datatable'])->name('recurrences.datatable');
+
+        // Import routes (must be registered before their resource routes)
+        Route::get('transactions/import', [ImportController::class, 'create'])
+            ->name('transactions.import.create');
+        Route::post('transactions/import', [ImportController::class, 'store'])
+            ->name('transactions.import.store');
+        Route::post('transactions/import/confirm', [ImportController::class, 'confirm'])
+            ->name('transactions.import.confirm');
+
+        Route::get('incomes/import', [ImportController::class, 'create'])
+            ->name('incomes.import.create');
+        Route::post('incomes/import', [ImportController::class, 'store'])
+            ->name('incomes.import.store');
+        Route::post('incomes/import/confirm', [ImportController::class, 'confirm'])
+            ->name('incomes.import.confirm');
 
         Route::resource('accounts', AccountController::class);
         Route::resource('categories', CategoryController::class);
