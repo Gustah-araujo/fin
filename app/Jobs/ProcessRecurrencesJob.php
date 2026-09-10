@@ -18,28 +18,15 @@ class ProcessRecurrencesJob implements ShouldQueue
 
     public function handle(RecurrenceService $service): void
     {
-        $recurrences = Recurrence::with('account')
-            ->whereNull('deleted_at')
+        $recurrences = Recurrence::whereNull('deleted_at')
             ->where('status', RecurrenceStatus::Active)
-            ->whereNotNull('next_date')
-            ->whereDate('next_date', '<=', today())
-            ->where(function ($q) {
-                $q->whereNull('until_date')
-                    ->orWhereColumn('next_date', '<=', 'until_date');
-            })
             ->get();
 
         foreach ($recurrences as $recurrence) {
             try {
-                $service->skipConsumedPeriods($recurrence);
-
-                if ($recurrence->next_date === null || $recurrence->next_date->gt(today())) {
-                    continue;
-                }
-
-                $service->generateNextInstance($recurrence, advanceNextDate: true);
+                $service->generateBufferInstances($recurrence);
             } catch (Throwable $e) {
-                Log::error("ProcessRecurrencesJob recurrence {$recurrence->uuid}: ".$e->getMessage());
+                Log::error("Buffer maintenance failed for {$recurrence->uuid}: ".$e->getMessage());
             }
         }
     }

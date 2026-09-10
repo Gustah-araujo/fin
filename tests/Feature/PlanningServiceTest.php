@@ -143,37 +143,6 @@ class PlanningServiceTest extends TestCase
         $this->assertEqualsWithDelta(1000.00, $oct['expenses'], 0.01);
     }
 
-    public function test_get_projection_with_active_recurrences(): void
-    {
-        $start = Carbon::create(2026, 9, 1);
-        $end = Carbon::create(2026, 12, 31);
-
-        // Active monthly recurrence: next_date = 2026-09-15, frequency_day = 15
-        Recurrence::factory()->create([
-            'workspace_id' => $this->workspace->id,
-            'account_id' => $this->account->id,
-            'category_id' => $this->incomeCategory->id,
-            'type' => TransactionType::Income,
-            'description' => 'Freelance',
-            'value' => 2000.00,
-            'frequency' => 'monthly',
-            'frequency_day' => 15,
-            'start_date' => '2026-09-15',
-            'next_date' => '2026-09-15',
-            'status' => RecurrenceStatus::Active,
-            'created_by' => $this->user->id,
-        ]);
-
-        $result = $this->service->getProjection($this->workspace, $start, $end);
-
-        // Should have 4 months: Sep, Oct, Nov, Dec
-        $this->assertCount(4, $result);
-
-        foreach ($result as $month) {
-            $this->assertEqualsWithDelta(2000.00, $month['incomes'], 0.01);
-        }
-    }
-
     public function test_get_projection_excludes_paused_recurrences(): void
     {
         $start = Carbon::create(2026, 9, 1);
@@ -201,43 +170,6 @@ class PlanningServiceTest extends TestCase
         foreach ($result as $month) {
             $this->assertEqualsWithDelta(0.00, $month['incomes'], 0.01);
         }
-    }
-
-    public function test_get_projection_respects_until_date(): void
-    {
-        $start = Carbon::create(2026, 9, 1);
-        $end = Carbon::create(2026, 12, 31);
-
-        // Active recurrence that ends in October
-        Recurrence::factory()->create([
-            'workspace_id' => $this->workspace->id,
-            'account_id' => $this->account->id,
-            'category_id' => $this->incomeCategory->id,
-            'type' => TransactionType::Income,
-            'description' => 'Consultoria',
-            'value' => 3000.00,
-            'frequency' => 'monthly',
-            'frequency_day' => 10,
-            'start_date' => '2026-09-10',
-            'next_date' => '2026-09-10',
-            'until_date' => '2026-10-31',
-            'status' => RecurrenceStatus::Active,
-            'created_by' => $this->user->id,
-        ]);
-
-        $result = $this->service->getProjection($this->workspace, $start, $end);
-
-        $sept = collect($result)->firstWhere('month', '2026-09');
-        $this->assertEqualsWithDelta(3000.00, $sept['incomes'], 0.01);
-
-        $oct = collect($result)->firstWhere('month', '2026-10');
-        $this->assertEqualsWithDelta(3000.00, $oct['incomes'], 0.01);
-
-        $nov = collect($result)->firstWhere('month', '2026-11');
-        $this->assertEqualsWithDelta(0.00, $nov['incomes'], 0.01);
-
-        $dec = collect($result)->firstWhere('month', '2026-12');
-        $this->assertEqualsWithDelta(0.00, $dec['incomes'], 0.01);
     }
 
     public function test_get_projection_empty_month_returns_zero(): void
@@ -281,64 +213,41 @@ class PlanningServiceTest extends TestCase
         $this->assertEqualsWithDelta(500.00, $sept['expenses'], 0.01);
     }
 
-    public function test_get_projection_mixed_avulsas_and_recurrences(): void
+    public function test_planning_reads_only_from_transactions_table(): void
     {
         $start = Carbon::create(2026, 9, 1);
-        $end = Carbon::create(2026, 11, 30);
+        $end = Carbon::create(2026, 9, 30);
 
-        // Avulsa expense
+        // Real transaction rows in range must appear in the projection
         Transaction::factory()->create([
             'workspace_id' => $this->workspace->id,
             'account_id' => $this->account->id,
             'category_id' => $this->expenseCategory->id,
             'type' => TransactionType::Expense,
-            'description' => 'Supermercado',
-            'value' => 800.00,
-            'date' => '2026-09-20',
+            'description' => 'Aluguel',
+            'value' => 1500.00,
+            'date' => '2026-09-05',
             'created_by' => $this->user->id,
         ]);
 
-        // Recurrence income
+        Transaction::factory()->income()->create([
+            'workspace_id' => $this->workspace->id,
+            'account_id' => $this->account->id,
+            'category_id' => $this->incomeCategory->id,
+            'description' => 'Salário',
+            'value' => 5000.00,
+            'date' => '2026-09-10',
+            'created_by' => $this->user->id,
+        ]);
+
+        // A recurrence rule alone (no transaction rows) must NOT contribute
         Recurrence::factory()->create([
             'workspace_id' => $this->workspace->id,
             'account_id' => $this->account->id,
             'category_id' => $this->incomeCategory->id,
             'type' => TransactionType::Income,
-            'description' => 'Salário',
-            'value' => 6000.00,
-            'frequency' => 'monthly',
-            'frequency_day' => 5,
-            'start_date' => '2026-09-05',
-            'next_date' => '2026-09-05',
-            'status' => RecurrenceStatus::Active,
-            'created_by' => $this->user->id,
-        ]);
-
-        $result = $this->service->getProjection($this->workspace, $start, $end);
-
-        $sept = collect($result)->firstWhere('month', '2026-09');
-        $this->assertEqualsWithDelta(800.00, $sept['expenses'], 0.01);
-        $this->assertEqualsWithDelta(6000.00, $sept['incomes'], 0.01);
-        $this->assertEqualsWithDelta(5200.00, $sept['balance'], 0.01);
-
-        $oct = collect($result)->firstWhere('month', '2026-10');
-        $this->assertEqualsWithDelta(0.00, $oct['expenses'], 0.01);
-        $this->assertEqualsWithDelta(6000.00, $oct['incomes'], 0.01);
-    }
-
-    public function test_get_projection_expense_recurrence_projects_as_expense(): void
-    {
-        $start = Carbon::create(2026, 9, 1);
-        $end = Carbon::create(2026, 12, 31);
-
-        // Active monthly expense recurrence: Netflix R$50/month
-        Recurrence::factory()->expense()->create([
-            'workspace_id' => $this->workspace->id,
-            'account_id' => $this->account->id,
-            'category_id' => $this->expenseCategory->id,
-            'type' => TransactionType::Expense,
-            'description' => 'Netflix',
-            'value' => 50.00,
+            'description' => 'Freelance Fantasma',
+            'value' => 9999.00,
             'frequency' => 'monthly',
             'frequency_day' => 15,
             'start_date' => '2026-09-15',
@@ -349,29 +258,23 @@ class PlanningServiceTest extends TestCase
 
         $result = $this->service->getProjection($this->workspace, $start, $end);
 
-        // 4 months: Sep–Dec, each with R$50 expense
-        $this->assertCount(4, $result);
-
-        foreach ($result as $month) {
-            $this->assertEqualsWithDelta(50.00, $month['expenses'], 0.01);
-            $this->assertEqualsWithDelta(0.00, $month['incomes'], 0.01);
-            $this->assertEqualsWithDelta(-50.00, $month['balance'], 0.01);
-        }
+        $this->assertCount(1, $result);
+        $this->assertEqualsWithDelta(1500.00, $result[0]['expenses'], 0.01);
+        $this->assertEqualsWithDelta(5000.00, $result[0]['incomes'], 0.01);
     }
 
-    public function test_get_projection_mixed_income_and_expense_recurrences(): void
+    public function test_planning_does_not_duplicate_recurrence_values(): void
     {
         $start = Carbon::create(2026, 9, 1);
-        $end = Carbon::create(2026, 11, 30);
+        $end = Carbon::create(2026, 9, 30);
 
-        // Income recurrence: Salário R$6000
-        Recurrence::factory()->create([
+        $recurrence = Recurrence::factory()->create([
             'workspace_id' => $this->workspace->id,
             'account_id' => $this->account->id,
             'category_id' => $this->incomeCategory->id,
             'type' => TransactionType::Income,
             'description' => 'Salário',
-            'value' => 6000.00,
+            'value' => 1000.00,
             'frequency' => 'monthly',
             'frequency_day' => 5,
             'start_date' => '2026-09-05',
@@ -380,47 +283,23 @@ class PlanningServiceTest extends TestCase
             'created_by' => $this->user->id,
         ]);
 
-        // Expense recurrence: Netflix R$50
-        Recurrence::factory()->expense()->create([
+        // 3 real buffer instances linked to the recurrence
+        Transaction::factory()->income()->count(3)->create([
             'workspace_id' => $this->workspace->id,
             'account_id' => $this->account->id,
-            'category_id' => $this->expenseCategory->id,
-            'type' => TransactionType::Expense,
-            'description' => 'Netflix',
-            'value' => 50.00,
-            'frequency' => 'monthly',
-            'frequency_day' => 10,
-            'start_date' => '2026-09-10',
-            'next_date' => '2026-09-10',
-            'status' => RecurrenceStatus::Active,
+            'category_id' => $this->incomeCategory->id,
             'created_by' => $this->user->id,
-        ]);
-
-        // Expense recurrence: Academia R$200
-        Recurrence::factory()->expense()->create([
-            'workspace_id' => $this->workspace->id,
-            'account_id' => $this->account->id,
-            'category_id' => $this->expenseCategory->id,
-            'type' => TransactionType::Expense,
-            'description' => 'Academia',
-            'value' => 200.00,
-            'frequency' => 'monthly',
-            'frequency_day' => 1,
-            'start_date' => '2026-09-01',
-            'next_date' => '2026-09-01',
-            'status' => RecurrenceStatus::Active,
-            'created_by' => $this->user->id,
+            'recurrence_id' => $recurrence->id,
+            'description' => 'Salário',
+            'value' => 1000.00,
+            'date' => '2026-09-05',
         ]);
 
         $result = $this->service->getProjection($this->workspace, $start, $end);
 
-        $this->assertCount(3, $result);
-
-        foreach ($result as $month) {
-            $this->assertEqualsWithDelta(6000.00, $month['incomes'], 0.01);
-            $this->assertEqualsWithDelta(250.00, $month['expenses'], 0.01); // 50 + 200
-            $this->assertEqualsWithDelta(5750.00, $month['balance'], 0.01); // 6000 - 250
-        }
+        // Exactly 3 x 1000.00 — no extra contribution from the recurrence rule
+        $this->assertCount(1, $result);
+        $this->assertEqualsWithDelta(3000.00, $result[0]['incomes'], 0.01);
     }
 
     public function test_get_projection_only_returns_months_in_range(): void
@@ -484,32 +363,6 @@ class PlanningServiceTest extends TestCase
         $this->assertCount(1, $result['incomes']);
         $this->assertEquals('Aluguel', $result['expenses'][0]['description']);
         $this->assertEquals('Salário', $result['incomes'][0]['description']);
-    }
-
-    public function test_get_month_detail_includes_projected_recurrences(): void
-    {
-        $month = Carbon::create(2026, 9, 15);
-
-        Recurrence::factory()->create([
-            'workspace_id' => $this->workspace->id,
-            'account_id' => $this->account->id,
-            'category_id' => $this->incomeCategory->id,
-            'type' => TransactionType::Income,
-            'description' => 'Freelance',
-            'value' => 2000.00,
-            'frequency' => 'monthly',
-            'frequency_day' => 15,
-            'start_date' => '2026-09-15',
-            'next_date' => '2026-09-15',
-            'status' => RecurrenceStatus::Active,
-            'created_by' => $this->user->id,
-        ]);
-
-        $result = $this->service->getMonthDetail($this->workspace, $month);
-
-        $this->assertCount(1, $result['incomes']);
-        $this->assertEquals('Freelance', $result['incomes'][0]['description']);
-        $this->assertEqualsWithDelta(2000.00, $result['incomes'][0]['value'], 0.01);
     }
 
     public function test_get_month_detail_excludes_paused_recurrences(): void

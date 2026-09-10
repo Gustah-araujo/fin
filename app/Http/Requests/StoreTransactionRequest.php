@@ -34,6 +34,7 @@ class StoreTransactionRequest extends FormRequest
             'frequency' => ['required_if:is_recurring,true', new Enum(RecurrenceFrequency::class)],
             'frequency_day' => ['required_if:is_recurring,true', 'integer'],
             'until_date' => ['nullable', 'date', new AfterOrEqualDateRule('date')],
+            'buffer_ahead' => ['sometimes', 'integer', 'min:1', 'max:50'],
         ];
     }
 

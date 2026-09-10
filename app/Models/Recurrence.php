@@ -35,6 +35,7 @@ class Recurrence extends Model
         'until_date',
         'next_date',
         'status',
+        'buffer_ahead',
         'created_by',
     ];
 
@@ -48,6 +49,7 @@ class Recurrence extends Model
             'start_date' => 'date',
             'until_date' => 'date',
             'next_date' => 'date',
+            'buffer_ahead' => 'integer',
         ];
     }
 

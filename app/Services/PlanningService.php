@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Enums\RecurrenceFrequency;
-use App\Enums\RecurrenceStatus;
 use App\Enums\TransactionType;
-use App\Models\Recurrence;
 use App\Models\Transaction;
 use App\Models\Workspace;
 use Carbon\Carbon;
@@ -22,21 +19,13 @@ class PlanningService
      */
     public function getProjection(Workspace $workspace, Carbon $dateStart, Carbon $dateEnd): array
     {
-        // 1. Real transactions in range (avulsas + installments + materialized recurrences)
-        $realTransactions = Transaction::where('workspace_id', $workspace->id)
+        $transactions = Transaction::where('workspace_id', $workspace->id)
             ->whereIn('type', [TransactionType::Expense, TransactionType::Income])
             ->whereNull('deleted_at')
             ->whereBetween('date', [$dateStart->toDateString(), $dateEnd->toDateString()])
             ->get();
 
-        // 2. Active recurrences — project occurrences in memory
-        $projectedTransactions = $this->projectActiveRecurrences($workspace, $dateStart, $dateEnd);
-
-        // 3. Merge and group by month
-        $allTransactions = $realTransactions->concat($projectedTransactions);
-
-        // 4. Generate all months in range and fill with sums
-        return $this->summarizeByMonth($allTransactions, $dateStart, $dateEnd);
+        return $this->summarizeByMonth($transactions, $dateStart, $dateEnd);
     }
 
     /**
@@ -49,27 +38,20 @@ class PlanningService
         $monthStart = $month->copy()->startOfMonth();
         $monthEnd = $month->copy()->endOfMonth();
 
-        // 1. Real transactions for the month
-        $realTransactions = Transaction::where('workspace_id', $workspace->id)
+        $transactions = Transaction::where('workspace_id', $workspace->id)
             ->whereIn('type', [TransactionType::Expense, TransactionType::Income])
             ->whereNull('deleted_at')
             ->whereBetween('date', [$monthStart->toDateString(), $monthEnd->toDateString()])
             ->get();
 
-        // 2. Projected recurrence transactions for the month
-        $projectedTransactions = $this->projectActiveRecurrences($workspace, $monthStart, $monthEnd);
-
-        // 3. Merge and format
-        $allTransactions = $realTransactions->concat($projectedTransactions);
-
-        $expenses = $allTransactions
+        $expenses = $transactions
             ->where('type', TransactionType::Expense)
             ->sortBy('date')
             ->values()
             ->map(fn (Transaction $t) => $this->formatTransactionDetail($t))
             ->toArray();
 
-        $incomes = $allTransactions
+        $incomes = $transactions
             ->where('type', TransactionType::Income)
             ->sortBy('date')
             ->values()
@@ -83,64 +65,6 @@ class PlanningService
     }
 
     // ── Private helpers ──────────────────────────────────────────────
-
-    /**
-     * Generate projected transaction objects for active recurrences in the given range.
-     * Returns Collection of pseudo-Transaction models (not persisted).
-     */
-    private function projectActiveRecurrences(Workspace $workspace, Carbon $dateStart, Carbon $dateEnd): Collection
-    {
-        $recurrences = Recurrence::where('workspace_id', $workspace->id)
-            ->where('status', RecurrenceStatus::Active)
-            ->whereNotNull('next_date')
-            ->whereNull('deleted_at')
-            ->get();
-
-        $projected = collect();
-
-        foreach ($recurrences as $recurrence) {
-            $frequency = $recurrence->frequency instanceof RecurrenceFrequency
-                ? $recurrence->frequency
-                : RecurrenceFrequency::from($recurrence->frequency);
-
-            $date = $recurrence->next_date->copy();
-
-            while ($date->lte($dateEnd)) {
-                // Skip if before range start
-                if ($date->gte($dateStart)) {
-                    // Respect until_date
-                    if ($recurrence->until_date && $date->gt($recurrence->until_date)) {
-                        break;
-                    }
-
-                    $projected->push(new Transaction([
-                        'workspace_id' => $workspace->id,
-                        'account_id' => $recurrence->account_id,
-                        'category_id' => $recurrence->category_id,
-                        'type' => $recurrence->type,
-                        'description' => $recurrence->description,
-                        'value' => $recurrence->value,
-                        'date' => $date->toDateString(),
-                        'paid_at' => null,
-                        'recurrence_id' => $recurrence->id,
-                    ]));
-                }
-
-                // Advance to next occurrence
-                $date = match ($frequency) {
-                    RecurrenceFrequency::Weekly => $date->copy()->addWeek(),
-                    RecurrenceFrequency::Monthly => (function () use ($date, $recurrence) {
-                        $next = $date->copy()->addMonthNoOverflow();
-                        $next->day = min($recurrence->frequency_day, $next->daysInMonth);
-
-                        return $next;
-                    })(),
-                };
-            }
-        }
-
-        return $projected;
-    }
 
     /**
      * Generate all months in the date range and sum transactions by type per month.

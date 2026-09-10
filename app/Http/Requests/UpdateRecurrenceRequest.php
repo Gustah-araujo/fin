@@ -32,6 +32,8 @@ class UpdateRecurrenceRequest extends FormRequest
             'until_date' => ['nullable', 'date'],
             'tags' => ['sometimes', 'array'],
             'tags.*' => ['string', 'exists:tags,uuid'],
+            'buffer_ahead' => ['sometimes', 'integer', 'min:1', 'max:50'],
+            'propagate_to_future' => ['sometimes', 'boolean'],
         ];
     }
 

@@ -469,10 +469,18 @@ class TransactionCreationTest extends TestCase
             'type' => 'expense',
         ]);
 
-        // No transaction created yet (future-dated recurrence)
-        $this->assertDatabaseMissing('transactions', [
+        // Buffer instances are generated immediately (default buffer_ahead = 12)
+        $recurrence = Recurrence::where('workspace_id', $workspace->id)
+            ->where('description', 'Empréstimo pai')
+            ->first();
+
+        $this->assertNotNull($recurrence);
+        $this->assertEquals(12, Transaction::where('recurrence_id', $recurrence->id)->count());
+
+        $this->assertDatabaseHas('transactions', [
             'workspace_id' => $workspace->id,
             'description' => 'Empréstimo pai',
+            'recurrence_id' => $recurrence->id,
         ]);
     }
 
