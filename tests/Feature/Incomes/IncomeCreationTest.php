@@ -7,6 +7,7 @@ namespace Tests\Feature\Incomes;
 use App\Models\Recurrence;
 use App\Models\Tag;
 use App\Models\Transaction;
+use Carbon\Carbon;
 
 class IncomeCreationTest extends IncomeTestCase
 {
@@ -74,9 +75,15 @@ class IncomeCreationTest extends IncomeTestCase
         $recurrence = Recurrence::where('description', 'Salário')->first();
 
         $this->assertNotNull($recurrence);
-        $this->assertEquals($futureDate, $recurrence->next_date->format('Y-m-d'));
 
-        $this->assertEquals(0, Transaction::where('workspace_id', $this->workspace->id)->count());
+        // Buffer instances are generated immediately (default buffer_ahead = 12)
+        $this->assertEquals(12, Transaction::where('workspace_id', $this->workspace->id)
+            ->where('recurrence_id', $recurrence->id)
+            ->count());
+
+        // next_date is advanced past the generated buffer
+        $this->assertNotNull($recurrence->next_date);
+        $this->assertTrue($recurrence->next_date->gt(Carbon::parse($futureDate)));
     }
 
     public function test_income_stores_tags_correctly(): void

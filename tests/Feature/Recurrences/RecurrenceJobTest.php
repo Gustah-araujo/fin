@@ -93,37 +93,20 @@ class RecurrenceJobTest extends TestCase
             'next_date' => $today->toDateString(),
             'start_date' => $today->copy()->subMonth()->toDateString(),
             'status' => RecurrenceStatus::Active,
+            'buffer_ahead' => 3,
         ]);
-
-        $originalNextDate = $recurrence->next_date->toDateString();
 
         $service = app(RecurrenceService::class);
 
-        // First run — generates the transaction and advances next_date
+        // First run — fills the buffer with 3 future instances
         (new ProcessRecurrencesJob)->handle($service);
 
-        // Verify one transaction was created
-        $this->assertEquals(1, Transaction::where('recurrence_id', $recurrence->id)->count());
+        $this->assertEquals(3, Transaction::where('recurrence_id', $recurrence->id)->count());
 
-        // Next_date should have advanced past the original
-        $recurrence->refresh();
-        $this->assertNotNull($recurrence->next_date);
-        $this->assertTrue(
-            $recurrence->next_date->gt(Carbon::parse($originalNextDate)),
-            'next_date should have advanced past original date',
-        );
-
-        $nextDateAfterFirstRun = $recurrence->next_date->toDateString();
-
-        // Second run — since next_date > today, no transaction should be generated
+        // Second run — buffer already full, no duplicates
         (new ProcessRecurrencesJob)->handle($service);
 
-        // Still only one transaction (no duplicate)
-        $this->assertEquals(1, Transaction::where('recurrence_id', $recurrence->id)->count());
-
-        // next_date should remain unchanged after second run
-        $recurrence->refresh();
-        $this->assertEquals($nextDateAfterFirstRun, $recurrence->next_date->toDateString());
+        $this->assertEquals(3, Transaction::where('recurrence_id', $recurrence->id)->count());
     }
 
     public function test_process_recurrences_job_skips_paused_recurrences(): void
@@ -148,9 +131,9 @@ class RecurrenceJobTest extends TestCase
         $this->assertEquals(0, Transaction::count());
     }
 
-    public function test_process_recurrences_job_skips_recurrences_with_future_next_date(): void
+    public function test_process_recurrences_job_fills_buffer_for_future_recurrence(): void
     {
-        Recurrence::factory()->create([
+        $recurrence = Recurrence::factory()->create([
             'workspace_id' => $this->workspace->id,
             'account_id' => $this->account->id,
             'category_id' => $this->category->id,
@@ -161,11 +144,13 @@ class RecurrenceJobTest extends TestCase
             'next_date' => Carbon::tomorrow()->toDateString(),
             'start_date' => Carbon::today()->subMonth()->toDateString(),
             'status' => RecurrenceStatus::Active,
+            'buffer_ahead' => 3,
         ]);
 
         (new ProcessRecurrencesJob)->handle(app(RecurrenceService::class));
 
-        $this->assertEquals(0, Transaction::count());
+        // The buffer job maintains future instances regardless of next_date
+        $this->assertEquals(3, Transaction::where('recurrence_id', $recurrence->id)->count());
     }
 
     // ─── ApplyRecurrenceScopeChangeJob ────────────────────────────────

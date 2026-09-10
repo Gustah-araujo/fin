@@ -69,6 +69,7 @@ export default function Create({ accounts, categories, tags }: Props) {
         frequency_day: 1,
         until_date: '',
         has_until_date: false,
+        buffer_ahead: 12,
     });
 
     function handleSubmit(e: React.FormEvent) {
@@ -87,6 +88,7 @@ export default function Create({ accounts, categories, tags }: Props) {
         if (data.is_recurring) {
             payload.frequency = data.frequency;
             payload.frequency_day = data.frequency_day;
+            payload.buffer_ahead = data.buffer_ahead;
             if (data.has_until_date) {
                 payload.until_date = data.until_date;
             }
@@ -390,6 +392,31 @@ export default function Create({ accounts, categories, tags }: Props) {
                                             )}
                                         </div>
                                     )}
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="buffer_ahead">
+                                            Quantidade de Buffer
+                                        </Label>
+                                        <Input
+                                            id="buffer_ahead"
+                                            type="number"
+                                            min="1"
+                                            max="50"
+                                            value={data.buffer_ahead}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'buffer_ahead',
+                                                    Number(e.target.value),
+                                                )
+                                            }
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            O sistema cria essas
+                                            receitas/despesas automaticamente
+                                            para você poder usar em
+                                            planejamentos e relatórios futuros.
+                                        </p>
+                                    </div>
                                 </div>
                             )}
 

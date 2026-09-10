@@ -96,14 +96,28 @@ class RecurrenceController extends Controller
         ]);
     }
 
-    public function update(UpdateRecurrenceRequest $request, Workspace $workspace, Recurrence $recurrence, RecurrenceService $recurrenceService): RedirectResponse
-    {
+    public function update(
+        UpdateRecurrenceRequest $request,
+        Workspace $workspace,
+        Recurrence $recurrence,
+        RecurrenceService $recurrenceService
+    ): RedirectResponse {
         abort_if($recurrence->workspace_id !== $workspace->id, 404);
 
         $this->authorize('update', [$recurrence, $workspace]);
 
-        $recurrenceService->updateRule($recurrence, $request->validated());
-        Toast::success('Recorrência atualizada com sucesso.');
+        $data = $request->validated();
+        $propagate = $data['propagate_to_future'] ?? false;
+        unset($data['propagate_to_future']);
+
+        $recurrenceService->updateRule($recurrence, $data);
+
+        if ($propagate) {
+            $recurrenceService->propagateToFuture($recurrence, $data);
+            Toast::success('Recorrência e instâncias futuras atualizadas.');
+        } else {
+            Toast::success('Recorrência atualizada com sucesso.');
+        }
 
         return redirect()->route('recurrences.index', $workspace);
     }

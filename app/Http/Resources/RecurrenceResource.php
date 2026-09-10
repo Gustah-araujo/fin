@@ -24,6 +24,7 @@ class RecurrenceResource extends JsonResource
             'next_date' => $this->next_date?->toDateString(),
             'type' => $this->type->value,
             'status' => $this->status->value,
+            'buffer_ahead' => (int) $this->buffer_ahead,
             'account' => new AccountResource($this->whenLoaded('account')),
             'category' => new CategoryResource($this->whenLoaded('category')),
             'tags' => TagResource::collection($this->whenLoaded('tags')),

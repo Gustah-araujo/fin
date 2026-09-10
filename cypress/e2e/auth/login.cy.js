@@ -26,21 +26,8 @@ describe('Login', () => {
         cy.url().should('include', '/verify-email');
         cy.contains('Verifique seu email').should('be.visible');
 
-        // Get verification link from Mailpit
-        cy.request(`${MAILPIT_API}/messages`).then((resp) => {
-            const messages = resp.body.messages;
-            const latestMsg = messages.find((m) =>
-                m.To.some((t) => t.Address === email)
-            );
-            expect(latestMsg, 'verification email found').to.exist;
-            return cy.request(`${MAILPIT_API}/message/${latestMsg.ID}`);
-        }).then((resp) => {
-            const html = resp.body.HTML || resp.body.Text || '';
-            const match = html.match(/href="([^"]*verify-email[^"]*)"/i);
-            expect(match, 'verification link found').to.not.be.null;
-            return match[1].replace(/&amp;/g, '&');
-        }).then((verifyUrl) => {
-            // Click verification link
+        // Get verification link from Mailpit (retries until email arrives)
+        cy.waitForVerificationLink(email).then((verifyUrl) => {
             cy.visit(verifyUrl);
         });
 

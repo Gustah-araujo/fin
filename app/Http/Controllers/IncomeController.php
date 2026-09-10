@@ -19,7 +19,6 @@ use App\Services\Datatable\Filter;
 use App\Services\RecurrenceService;
 use App\Services\TransactionService;
 use App\Support\Toast;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -95,12 +94,8 @@ class IncomeController extends Controller
 
         if ($request->boolean('is_recurring')) {
             $data['start_date'] = $data['date'];
-
-            if (Carbon::parse($data['date'])->lte(Carbon::today())) {
-                $recurrenceService->createWithFirstInstance($workspace, $data, $request->user());
-            } else {
-                $recurrenceService->create($workspace, $data, $request->user());
-            }
+            $data['type'] = TransactionType::Income->value;
+            $recurrenceService->createWithBuffer($workspace, $data, $request->user());
 
             Toast::success('Recorrência criada com sucesso.');
 

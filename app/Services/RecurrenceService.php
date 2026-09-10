@@ -158,6 +158,153 @@ class RecurrenceService
     }
 
     /**
+     * Create a recurrence and generate its buffer of real instances.
+     *
+     * Generates every retroactive occurrence before today plus $bufferAhead
+     * future occurrences as real Transaction rows. Replaces create() and
+     * createWithFirstInstance().
+     */
+    public function createWithBuffer(Workspace $workspace, array $data, User $user): Recurrence
+    {
+        return DB::transaction(function () use ($workspace, $data, $user) {
+            $accountId = $this->resolveAccountId($workspace, $data['account_id']);
+            $categoryId = $this->resolveCategoryId($workspace, $data['category_id']);
+
+            $startDate = Carbon::parse($data['start_date']);
+            $frequency = RecurrenceFrequency::from($data['frequency']);
+            $frequencyDay = (int) $data['frequency_day'];
+            $bufferAhead = (int) ($data['buffer_ahead'] ?? 12);
+            $untilDate = isset($data['until_date']) && $data['until_date']
+                ? Carbon::parse($data['until_date'])
+                : null;
+
+            $type = $data['type'] ?? TransactionType::Income;
+            $typeValue = $type instanceof TransactionType ? $type->value : (string) $type;
+
+            $dates = $this->computeBufferDates($startDate, $frequency, $frequencyDay, $bufferAhead, $untilDate);
+
+            $recurrence = Recurrence::create([
+                'uuid' => Str::orderedUuid()->toString(),
+                'workspace_id' => $workspace->id,
+                'account_id' => $accountId,
+                'category_id' => $categoryId,
+                'type' => $type,
+                'description' => $data['description'],
+                'value' => $data['value'],
+                'frequency' => $data['frequency'],
+                'frequency_day' => $frequencyDay,
+                'start_date' => $startDate,
+                'until_date' => $untilDate,
+                'next_date' => $this->nextDateAfterBuffer($dates, $frequency, $frequencyDay, $untilDate),
+                'status' => RecurrenceStatus::Active,
+                'buffer_ahead' => $bufferAhead,
+                'created_by' => $user->id,
+            ]);
+
+            $this->insertBufferTransactions($recurrence, $typeValue, $dates);
+
+            if (! empty($data['tags'])) {
+                $this->syncTags($recurrence, $workspace, $data['tags']);
+                $this->syncTagsToInstances($recurrence, $workspace, $data['tags']);
+            }
+
+            return $recurrence;
+        });
+    }
+
+    /**
+     * Count the recurrence's future instances (date >= today), excluding soft-deleted ones.
+     */
+    public function countFutureInstances(Recurrence $recurrence): int
+    {
+        return Transaction::where('recurrence_id', $recurrence->id)
+            ->whereNull('deleted_at')
+            ->whereDate('date', '>=', today())
+            ->count();
+    }
+
+    /**
+     * Replenish the recurrence's buffer of future instances up to buffer_ahead.
+     */
+    public function generateBufferInstances(Recurrence $recurrence): void
+    {
+        $needed = (int) $recurrence->buffer_ahead - $this->countFutureInstances($recurrence);
+
+        if ($needed <= 0) {
+            return;
+        }
+
+        $frequency = $recurrence->frequency instanceof RecurrenceFrequency
+            ? $recurrence->frequency
+            : RecurrenceFrequency::from($recurrence->frequency);
+
+        $frequencyDay = $recurrence->frequency_day;
+
+        $latestDate = Transaction::where('recurrence_id', $recurrence->id)
+            ->whereNull('deleted_at')
+            ->whereDate('date', '>=', today())
+            ->max('date');
+
+        $startDate = $latestDate
+            ? Carbon::parse($latestDate)->addDay()
+            : Carbon::today();
+
+        $date = $this->nextOccurrenceOnOrAfter($startDate, $frequency, $frequencyDay);
+
+        $tagIds = $recurrence->tags()->pluck('tags.id')->toArray();
+
+        for ($i = 0; $i < $needed; $i++) {
+            if ($recurrence->until_date && $date->gt($recurrence->until_date)) {
+                break;
+            }
+
+            $transaction = Transaction::create([
+                'uuid' => Str::orderedUuid()->toString(),
+                'workspace_id' => $recurrence->workspace_id,
+                'account_id' => $recurrence->account_id,
+                'category_id' => $recurrence->category_id,
+                'type' => $recurrence->type->value,
+                'description' => $recurrence->description,
+                'value' => $recurrence->value,
+                'date' => $date->toDateString(),
+                'paid_at' => null,
+                'recurrence_id' => $recurrence->id,
+                'created_by' => $recurrence->created_by,
+            ]);
+
+            $transaction->tags()->sync($tagIds);
+
+            $date = $this->nextOccurrenceAfter($date, $frequency, $frequencyDay);
+        }
+
+        $this->updateNextDateFromToday($recurrence, $frequency, $frequencyDay);
+    }
+
+    /**
+     * Propagate rule field changes to all future instances of the recurrence.
+     */
+    public function propagateToFuture(Recurrence $recurrence, array $data): void
+    {
+        DB::transaction(function () use ($recurrence, $data) {
+            $data = $this->resolveForeignKeyIds($recurrence, $data);
+
+            $futureTransactions = Transaction::where('recurrence_id', $recurrence->id)
+                ->whereNull('deleted_at')
+                ->whereDate('date', '>=', today())
+                ->get();
+
+            foreach ($futureTransactions as $transaction) {
+                $this->applySharedFields($transaction, $data);
+                $transaction->save();
+
+                if (! empty($data['tags'])) {
+                    $this->syncTags($transaction, $recurrence->workspace, $data['tags']);
+                }
+            }
+        });
+    }
+
+    /**
      * Generate a transaction for the current period of a recurrence.
      * Idempotent: blocked if a transaction already exists for the period.
      */
@@ -654,7 +801,7 @@ class RecurrenceService
 
     private function applyEditableFields(Recurrence $recurrence, array $data): void
     {
-        foreach (['description', 'value', 'account_id', 'category_id', 'until_date'] as $field) {
+        foreach (['description', 'value', 'account_id', 'category_id', 'until_date', 'buffer_ahead'] as $field) {
             if (! isset($data[$field])) {
                 continue;
             }
@@ -839,6 +986,135 @@ class RecurrenceService
             ->where('workspace_id', $workspace->id)
             ->firstOrFail()
             ->id;
+    }
+
+    /**
+     * Build the list of dates to generate for a new recurrence: every
+     * retroactive occurrence before today plus $bufferAhead future occurrences.
+     *
+     * @return array<int, Carbon>
+     */
+    private function computeBufferDates(Carbon $startDate, RecurrenceFrequency $frequency, int $frequencyDay, int $bufferAhead, ?Carbon $untilDate): array
+    {
+        $today = Carbon::today();
+        $dates = [];
+        $iterations = 0;
+        $maxIterations = 1000;
+
+        $date = $startDate->copy();
+
+        if ($startDate->lte($today)) {
+            // Retroactive instances: every occurrence strictly before today.
+            while ($date->lt($today) && $iterations++ < $maxIterations) {
+                if ($this->exceedsUntilDate($date, $untilDate)) {
+                    return $dates;
+                }
+
+                $dates[] = $date->copy();
+                $date = $this->nextOccurrenceAfter($date, $frequency, $frequencyDay);
+            }
+        }
+
+        // Buffer instances: $bufferAhead occurrences starting at the first date >= today.
+        for ($i = 0; $i < $bufferAhead && $iterations++ < $maxIterations; $i++) {
+            if ($this->exceedsUntilDate($date, $untilDate)) {
+                break;
+            }
+
+            $dates[] = $date->copy();
+            $date = $this->nextOccurrenceAfter($date, $frequency, $frequencyDay);
+        }
+
+        return $dates;
+    }
+
+    /**
+     * Determine whether a date falls after the recurrence's until_date.
+     */
+    private function exceedsUntilDate(Carbon $date, ?Carbon $untilDate): bool
+    {
+        return $untilDate !== null && $date->gt($untilDate);
+    }
+
+    /**
+     * Compute the next_date that follows the last generated buffer instance.
+     *
+     * @param  array<int, Carbon>  $dates
+     */
+    private function nextDateAfterBuffer(array $dates, RecurrenceFrequency $frequency, int $frequencyDay, ?Carbon $untilDate): ?Carbon
+    {
+        if (empty($dates)) {
+            return null;
+        }
+
+        $candidate = $this->nextOccurrenceAfter($dates[array_key_last($dates)], $frequency, $frequencyDay);
+
+        if ($untilDate && $candidate->gt($untilDate)) {
+            return null;
+        }
+
+        return $candidate;
+    }
+
+    /**
+     * Bulk insert the buffer transactions for a freshly created recurrence.
+     *
+     * @param  array<int, Carbon>  $dates
+     */
+    private function insertBufferTransactions(Recurrence $recurrence, string $type, array $dates): void
+    {
+        if (empty($dates)) {
+            return;
+        }
+
+        $now = now();
+        $rows = [];
+
+        foreach ($dates as $date) {
+            $rows[] = [
+                'uuid' => Str::orderedUuid()->toString(),
+                'workspace_id' => $recurrence->workspace_id,
+                'account_id' => $recurrence->account_id,
+                'category_id' => $recurrence->category_id,
+                'type' => $type,
+                'description' => $recurrence->description,
+                'value' => $recurrence->value,
+                'date' => $date->toDateString(),
+                'paid_at' => null,
+                'recurrence_id' => $recurrence->id,
+                'created_by' => $recurrence->created_by,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        Transaction::insert($rows);
+    }
+
+    /**
+     * Sync the given tags to every instance of the recurrence.
+     */
+    private function syncTagsToInstances(Recurrence $recurrence, Workspace $workspace, array $tagUuids): void
+    {
+        $transactions = Transaction::where('recurrence_id', $recurrence->id)->get();
+
+        foreach ($transactions as $transaction) {
+            $this->syncTags($transaction, $workspace, $tagUuids);
+        }
+    }
+
+    /**
+     * Recompute next_date from today respecting frequency and until_date.
+     */
+    private function updateNextDateFromToday(Recurrence $recurrence, RecurrenceFrequency $frequency, int $frequencyDay): void
+    {
+        $nextDate = $this->nextOccurrenceOnOrAfter(Carbon::today(), $frequency, $frequencyDay);
+
+        $recurrence->next_date = ($recurrence->until_date && $nextDate->gt($recurrence->until_date))
+            ? null
+            : $nextDate;
+
+        $recurrence->save();
     }
 
     /**

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Select,
     SelectContent,
@@ -44,6 +45,7 @@ interface RecurrenceItem {
     until_date: string | null;
     next_date: string | null;
     status: string;
+    buffer_ahead: number;
     account: AccountItem | null;
     category: CategoryItem | null;
     tags: TagItem[];
@@ -86,6 +88,8 @@ export default function Edit({
         start_date: recurrence.start_date,
         until_date: recurrence.until_date ?? '',
         tags: recurrence.tags.map((t) => t.uuid),
+        buffer_ahead: recurrence.buffer_ahead,
+        propagate_to_future: false,
     });
 
     function handleSubmit(e: React.FormEvent) {
@@ -347,6 +351,50 @@ export default function Edit({
                                         {errors.until_date}
                                     </p>
                                 )}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="buffer_ahead">
+                                    Quantidade de Buffer
+                                </Label>
+                                <Input
+                                    id="buffer_ahead"
+                                    type="number"
+                                    min="1"
+                                    max="50"
+                                    value={data.buffer_ahead}
+                                    onChange={(e) =>
+                                        setData(
+                                            'buffer_ahead',
+                                            Number(e.target.value),
+                                        )
+                                    }
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    O sistema cria essas receitas/despesas
+                                    automaticamente para você poder usar em
+                                    planejamentos e relatórios futuros.
+                                </p>
+                            </div>
+
+                            <div className="flex items-center gap-2 rounded-lg border p-3">
+                                <Checkbox
+                                    id="propagate_to_future"
+                                    checked={data.propagate_to_future}
+                                    onCheckedChange={(checked) =>
+                                        setData(
+                                            'propagate_to_future',
+                                            checked === true,
+                                        )
+                                    }
+                                />
+                                <Label
+                                    htmlFor="propagate_to_future"
+                                    className="text-sm"
+                                >
+                                    Aplicar estas alterações para todas as
+                                    instâncias futuras já cadastradas
+                                </Label>
                             </div>
 
                             {tags.length > 0 && (

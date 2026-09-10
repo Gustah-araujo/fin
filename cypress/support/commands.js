@@ -1,107 +1,193 @@
 const MAILPIT_API = `http://localhost:${Cypress.env('MAILPIT_PORT') || '8026'}/api/v1`;
 
-Cypress.Commands.add('register', (email, name = 'Test User', password = 'password123') => {
-    cy.visit('/register');
-    cy.get('#name').type(name);
-    cy.get('#email').type(email);
-    cy.get('#password').type(password);
-    cy.get('#password_confirmation').type(password);
-    cy.get('button[type="submit"]').click();
-});
+Cypress.Commands.add(
+    'register',
+    (email, name = 'Test User', password = 'password123') => {
+        cy.visit('/register');
+        cy.get('#name').type(name);
+        cy.get('#email').type(email);
+        cy.get('#password').type(password);
+        cy.get('#password_confirmation').type(password);
+        cy.get('button[type="submit"]').click();
+    },
+);
 
 Cypress.Commands.add('getVerificationLink', (email) => {
     return cy
         .request(
-            `${MAILPIT_API}/search?kind=to&query=${encodeURIComponent(email)}`
+            `${MAILPIT_API}/search?kind=to&query=${encodeURIComponent(email)}`,
         )
         .then((resp) => {
             const msg = (resp.body.messages || [])[0];
-            if (!msg) throw new Error(`No verification email found for ${email}`);
+            if (!msg)
+                throw new Error(`No verification email found for ${email}`);
             return cy.request(`${MAILPIT_API}/message/${msg.ID}`);
         })
         .then((resp) => {
             const html = resp.body.HTML || resp.body.Text || '';
             const match = html.match(/href="([^"]*verify-email[^"]*)"/i);
-            if (!match) throw new Error('Verification link not found in email body');
+            if (!match)
+                throw new Error('Verification link not found in email body');
             return match[1].replace(/&amp;/g, '&');
         });
 });
 
-Cypress.Commands.add('loginViaSession', (sessionId) => {
-    cy.session(sessionId, () => {
-        const email = `e2e-${Date.now()}@fin.test`;
+/**
+ * Poll Mailpit until the verification email arrives, then return the link.
+ *
+ * Uses recursive cy.then() chaining (not Cypress.Promise) so retries stay
+ * inside Cypress's command queue. Each cy.request() uses failOnStatusCode: false
+ * so HTTP errors become retry conditions rather than fatal failures.
+ *
+ * Fixes flakiness caused by Mailpit being slow under CI load.
+ */
+Cypress.Commands.add('waitForVerificationLink', (email, timeoutMs = 30000) => {
+    const start = Date.now();
 
-        cy.visit('/register');
-        cy.get('#name').type('E2E Test User');
-        cy.get('#email').type(email);
-        cy.get('#password').type('password123');
-        cy.get('#password_confirmation').type('password123');
-        cy.get('button[type="submit"]').click();
+    const extractLink = (html) => {
+        const match = html.match(/href="([^"]*verify-email[^"]*)"/i);
+        return match ? match[1].replace(/&amp;/g, '&') : null;
+    };
 
-        cy.wait(1000);
-
-        cy.getVerificationLink(email).then((verifyUrl) => {
-            cy.visit(verifyUrl);
-        });
-        cy.url().should('match', /\/workspace/);
-    }, {
-        validate() {
-            cy.visit('/workspace/create');
-            cy.url().should('not.include', '/login');
-        }
-    });
-});
-
-Cypress.Commands.add('assertToast', (expectedType = 'success', expectedMessage = null) => {
-    cy.window().then((win) => {
-        // Check the buffer first — catches toasts dispatched before listener attaches.
-        // This fixes the race condition where Inertia SPA navigation fires the event
-        // before Cypress can register its listener.
-        const buffer = win.__toastBuffer || [];
-        const alreadyDispatched = buffer.find(
-            (t) => t.type === expectedType && (!expectedMessage || t.message.includes(expectedMessage)),
-        );
-        if (alreadyDispatched) {
-            return; // Toast was already dispatched — assertion passes immediately.
+    const attempt = () => {
+        if (Date.now() - start > timeoutMs) {
+            throw new Error(
+                `Verification email for ${email} not received within ${timeoutMs}ms`,
+            );
         }
 
-        // Toast not yet dispatched — listen for it.
-        return new Cypress.Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                win.removeEventListener('toast', handler);
-                reject(new Error(`Toast of type "${expectedType}" not found within 5s`));
-            }, 5000);
+        return cy
+            .request({
+                url: `${MAILPIT_API}/search?kind=to&query=${encodeURIComponent(email)}`,
+                failOnStatusCode: false,
+                timeout: 10000,
+            })
+            .then((searchResp) => {
+                const msg =
+                    searchResp.status === 200 &&
+                    (searchResp.body.messages || [])[0];
 
-            const handler = (event) => {
-                const { type, message } = event.detail;
-                if (type === expectedType && (!expectedMessage || message.includes(expectedMessage))) {
-                    clearTimeout(timeout);
-                    win.removeEventListener('toast', handler);
-                    resolve();
+                if (!msg) {
+                    return cy.wait(1000).then(() => attempt());
                 }
-            };
-            win.addEventListener('toast', handler);
-        });
-    });
+
+                return cy
+                    .request({
+                        url: `${MAILPIT_API}/message/${msg.ID}`,
+                        failOnStatusCode: false,
+                        timeout: 10000,
+                    })
+                    .then((msgResp) => {
+                        if (msgResp.status !== 200) {
+                            return cy.wait(1000).then(() => attempt());
+                        }
+
+                        const html =
+                            msgResp.body.HTML || msgResp.body.Text || '';
+                        const link = extractLink(html);
+
+                        if (!link) {
+                            return cy.wait(1000).then(() => attempt());
+                        }
+
+                        return link;
+                    });
+            });
+    };
+
+    return attempt();
 });
 
-Cypress.Commands.add('registerAndCreateWorkspace', (workspaceName = 'E2E Workspace') => {
-    const email = `e2e-${Date.now()}@example.com`;
+Cypress.Commands.add('loginViaSession', (sessionId) => {
+    cy.session(
+        sessionId,
+        () => {
+            const email = `e2e-${Date.now()}@fin.test`;
 
-    cy.register(email);
+            cy.visit('/register');
+            cy.get('#name').type('E2E Test User');
+            cy.get('#email').type(email);
+            cy.get('#password').type('password123');
+            cy.get('#password_confirmation').type('password123');
+            cy.get('button[type="submit"]').click();
 
-    cy.wait(1000);
-
-    return cy.getVerificationLink(email).then((verifyUrl) => {
-        cy.visit(verifyUrl);
-        cy.url().should('include', '/workspace');
-        cy.get('#name').type(workspaceName);
-        cy.get('button[type="submit"]').click();
-        cy.url().should('match', /\/w\/([a-f0-9-]+)/);
-
-        return cy.url().then((url) => {
-            const uuid = url.match(/\/w\/([a-f0-9-]+)/)[1];
-            return uuid;
-        });
-    });
+            cy.waitForVerificationLink(email).then((verifyUrl) => {
+                cy.visit(verifyUrl);
+            });
+            cy.url().should('match', /\/workspace/);
+        },
+        {
+            validate() {
+                cy.visit('/workspace/create');
+                cy.url().should('not.include', '/login');
+            },
+        },
+    );
 });
+
+Cypress.Commands.add(
+    'assertToast',
+    (expectedType = 'success', expectedMessage = null) => {
+        cy.window().then((win) => {
+            // Check the buffer first — catches toasts dispatched before listener attaches.
+            // This fixes the race condition where Inertia SPA navigation fires the event
+            // before Cypress can register its listener.
+            const buffer = win.__toastBuffer || [];
+            const alreadyDispatched = buffer.find(
+                (t) =>
+                    t.type === expectedType &&
+                    (!expectedMessage || t.message.includes(expectedMessage)),
+            );
+            if (alreadyDispatched) {
+                return; // Toast was already dispatched — assertion passes immediately.
+            }
+
+            // Toast not yet dispatched — listen for it.
+            return new Cypress.Promise((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    win.removeEventListener('toast', handler);
+                    reject(
+                        new Error(
+                            `Toast of type "${expectedType}" not found within 5s`,
+                        ),
+                    );
+                }, 5000);
+
+                const handler = (event) => {
+                    const { type, message } = event.detail;
+                    if (
+                        type === expectedType &&
+                        (!expectedMessage || message.includes(expectedMessage))
+                    ) {
+                        clearTimeout(timeout);
+                        win.removeEventListener('toast', handler);
+                        resolve();
+                    }
+                };
+                win.addEventListener('toast', handler);
+            });
+        });
+    },
+);
+
+Cypress.Commands.add(
+    'registerAndCreateWorkspace',
+    (workspaceName = 'E2E Workspace') => {
+        const email = `e2e-${Date.now()}@example.com`;
+
+        cy.register(email);
+
+        return cy.waitForVerificationLink(email).then((verifyUrl) => {
+            cy.visit(verifyUrl);
+            cy.url().should('include', '/workspace');
+            cy.get('#name').type(workspaceName);
+            cy.get('button[type="submit"]').click();
+            cy.url().should('match', /\/w\/([a-f0-9-]+)/);
+
+            return cy.url().then((url) => {
+                const uuid = url.match(/\/w\/([a-f0-9-]+)/)[1];
+                return uuid;
+            });
+        });
+    },
+);
