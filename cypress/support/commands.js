@@ -33,22 +33,59 @@ Cypress.Commands.add('getVerificationLink', (email) => {
 });
 
 /**
- * Retry getVerificationLink until the email arrives or timeout is reached.
+ * Poll Mailpit until the verification email arrives, then return the link.
+ *
+ * Cypress chainables do not support `.catch()` (see Cypress docs: "You cannot
+ * add a `.catch` error handler to a failed command"), so the retry logic is
+ * inlined: a missing email is a retry condition rather than a thrown error.
  * Fixes flakiness caused by Mailpit delivery being slower than 1s under CI load.
  */
 Cypress.Commands.add('waitForVerificationLink', (email, timeoutMs = 15000) => {
     const start = Date.now();
-    const attempt = () => {
-        return cy.getVerificationLink(email).catch((err) => {
-            if (Date.now() - start > timeoutMs) {
-                throw new Error(
-                    `Verification email for ${email} not received within ${timeoutMs}ms`,
-                );
-            }
-            cy.wait(500);
-            return attempt();
-        });
+
+    const extractLink = (html) => {
+        const match = html.match(/href="([^"]*verify-email[^"]*)"/i);
+        return match ? match[1].replace(/&amp;/g, '&') : null;
     };
+
+    const attempt = () => {
+        return cy
+            .request(
+                `${MAILPIT_API}/search?kind=to&query=${encodeURIComponent(email)}`,
+            )
+            .then((resp) => {
+                const msg = (resp.body.messages || [])[0];
+
+                if (!msg) {
+                    if (Date.now() - start > timeoutMs) {
+                        throw new Error(
+                            `Verification email for ${email} not received within ${timeoutMs}ms`,
+                        );
+                    }
+                    return cy.wait(500).then(() => attempt());
+                }
+
+                return cy
+                    .request(`${MAILPIT_API}/message/${msg.ID}`)
+                    .then((msgResp) => {
+                        const html =
+                            msgResp.body.HTML || msgResp.body.Text || '';
+                        const link = extractLink(html);
+
+                        if (!link) {
+                            if (Date.now() - start > timeoutMs) {
+                                throw new Error(
+                                    'Verification link not found in email body',
+                                );
+                            }
+                            return cy.wait(500).then(() => attempt());
+                        }
+
+                        return link;
+                    });
+            });
+    };
+
     return attempt();
 });
 
