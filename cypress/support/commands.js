@@ -35,17 +35,13 @@ Cypress.Commands.add('getVerificationLink', (email) => {
 /**
  * Poll Mailpit until the verification email arrives, then return the link.
  *
- * Retries on ALL failure modes:
- *   - Network errors (Mailpit container unavailable, connection refused)
- *   - HTTP errors (500/503 under CI load)
- *   - Email not yet delivered
- *   - Link not yet parseable from email body
+ * Uses recursive cy.then() chaining (not Cypress.Promise) so retries stay
+ * inside Cypress's command queue. Each cy.request() uses failOnStatusCode: false
+ * so HTTP errors become retry conditions rather than fatal failures.
  *
- * Uses Cypress.Promise so we can safely catch request failures and retry,
- * which is NOT possible with .catch() directly on a Cypress chainable.
- * Fixes flakiness caused by Mailpit being slow or transiently unavailable under CI load.
+ * Fixes flakiness caused by Mailpit being slow under CI load.
  */
-Cypress.Commands.add('waitForVerificationLink', (email, timeoutMs = 15000) => {
+Cypress.Commands.add('waitForVerificationLink', (email, timeoutMs = 30000) => {
     const start = Date.now();
 
     const extractLink = (html) => {
@@ -53,69 +49,53 @@ Cypress.Commands.add('waitForVerificationLink', (email, timeoutMs = 15000) => {
         return match ? match[1].replace(/&amp;/g, '&') : null;
     };
 
-    const retry = (resolve, reject) => {
+    const attempt = () => {
         if (Date.now() - start > timeoutMs) {
-            return reject(
-                new Error(
-                    `Verification email for ${email} not received within ${timeoutMs}ms`,
-                ),
+            throw new Error(
+                `Verification email for ${email} not received within ${timeoutMs}ms`,
             );
         }
-        attempt()
-            .then(resolve)
-            .catch(() => setTimeout(() => retry(resolve, reject), 300));
-    };
 
-    const attempt = () => {
-        return new Cypress.Promise((resolve, reject) => {
-            cy.request({
+        return cy
+            .request({
                 url: `${MAILPIT_API}/search?kind=to&query=${encodeURIComponent(email)}`,
                 failOnStatusCode: false,
-                timeout: 5000,
+                timeout: 10000,
             })
-                .then((resp) => {
-                    const msg =
-                        resp.status === 200 && (resp.body.messages || [])[0];
+            .then((searchResp) => {
+                const msg =
+                    searchResp.status === 200 &&
+                    (searchResp.body.messages || [])[0];
 
-                    if (!msg) {
-                        return reject(new Error('No email yet'));
-                    }
+                if (!msg) {
+                    return cy.wait(1000).then(() => attempt());
+                }
 
-                    cy.request({
+                return cy
+                    .request({
                         url: `${MAILPIT_API}/message/${msg.ID}`,
                         failOnStatusCode: false,
-                        timeout: 5000,
+                        timeout: 10000,
                     })
-                        .then((msgResp) => {
-                            if (msgResp.status !== 200) {
-                                return reject(
-                                    new Error('Failed to fetch email body'),
-                                );
-                            }
+                    .then((msgResp) => {
+                        if (msgResp.status !== 200) {
+                            return cy.wait(1000).then(() => attempt());
+                        }
 
-                            const html =
-                                msgResp.body.HTML || msgResp.body.Text || '';
-                            const link = extractLink(html);
+                        const html =
+                            msgResp.body.HTML || msgResp.body.Text || '';
+                        const link = extractLink(html);
 
-                            if (!link) {
-                                return reject(
-                                    new Error('No link in email body'),
-                                );
-                            }
+                        if (!link) {
+                            return cy.wait(1000).then(() => attempt());
+                        }
 
-                            resolve(link);
-                        })
-                        .catch(() =>
-                            reject(new Error('Message request failed')),
-                        );
-                })
-                .catch(() => reject(new Error('Search request failed')));
-        });
+                        return link;
+                    });
+            });
     };
 
-    return new Cypress.Promise((resolve, reject) => {
-        retry(resolve, reject);
-    });
+    return attempt();
 });
 
 Cypress.Commands.add('loginViaSession', (sessionId) => {
