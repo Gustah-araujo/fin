@@ -316,15 +316,26 @@ export default function Index({ accounts, categories }: Props) {
                             </div>
                         ) : null}
                     </div>
-                    <Button asChild>
-                        <Link
-                            href={route('incomes.create', {
-                                workspace: workspace.uuid,
-                            })}
-                        >
-                            Nova Receita
-                        </Link>
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" asChild>
+                            <Link
+                                href={route('incomes.import.create', {
+                                    workspace: workspace.uuid,
+                                })}
+                            >
+                                Importar Receitas
+                            </Link>
+                        </Button>
+                        <Button asChild>
+                            <Link
+                                href={route('incomes.create', {
+                                    workspace: workspace.uuid,
+                                })}
+                            >
+                                Nova Receita
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
 
                 <DataTable
