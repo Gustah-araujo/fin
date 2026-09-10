@@ -93,6 +93,54 @@ Accounts, Cards, Categories e Tags continuam com seus card grids atuais.
 
 **AC:** nenhuma mudança nessas 4 telas.
 
+## Edge Cases
+
+- WHEN a workspace has no records THEN the DataTable SHALL show an empty state with a CTA.
+- WHEN a user types in a text filter THEN the search SHALL be debounced (300ms) to avoid excessive requests.
+- WHEN a user selects a FK filter (category/account) THEN the filter SHALL resolve via `whereHas` (UUID), never by comparing UUID against a bigint column.
+- WHEN multiple filters are active THEN they SHALL be combined with AND logic.
+- WHEN the JSON endpoint returns an error THEN the DataTable SHALL display an error message, not crash.
+- WHEN a user sorts by a non-whitelisted column THEN the backend SHALL ignore the sort parameter.
+- WHEN the per-page count exceeds the maximum (e.g., 100) THEN the backend SHALL clamp to the allowed maximum.
+
+---
+
+## Requirement Traceability
+
+| ID       | Requirement | Phase | Status |
+|----------|-------------|-------|--------|
+| DTBL-01  | DataTable reutilizável | Done | ✅ |
+| DTBL-02  | Carregamento lazy via JSON | Done | ✅ |
+| DTBL-03  | Filtro por coluna (thead) | Done | ✅ |
+| DTBL-04  | Tipos de filtro (text/number/date/select) | Done | ✅ |
+| DTBL-05  | Colunas FK usem select com label | Done | ✅ |
+| DTBL-06  | Ordenação server-side | Done | ✅ |
+| DTBL-07  | Paginação server-side | Done | ✅ |
+| DTBL-08  | Serviço backend centralizado | Done | ✅ |
+| DTBL-09  | Contrato JSON padronizado | Done | ✅ |
+| DTBL-10  | Endpoints JSON dedicados | Done | ✅ |
+| DTBL-11  | Migração das listas tabulares | Done | ✅ |
+| DTBL-12  | Correção de filtro FK (uuid vs int) | Done | ✅ |
+| DTBL-13  | Card grids permanecem | Done | ✅ |
+
+**Coverage:** 13 requirements, 13 mapped, 0 unmapped
+
+---
+
+## Success Criteria
+
+- [ ] DataTable component is reusable across Transactions, Incomes, Recurrences, and Members
+- [ ] First render loads shell only; data arrives asynchronously via JSON
+- [ ] All 4 filter types (text, number, date, select) work correctly
+- [ ] FK filters resolve via UUID without exposing IDs to the user
+- [ ] Sorting and pagination are handled server-side
+- [ ] All datatable endpoints return the standardized `{data, meta}` JSON contract
+- [ ] No inline filter/pagination logic in controllers (centralized in DatatableService)
+- [ ] Card grids (Accounts, Cards, Categories, Tags) remain unchanged
+- [ ] Quality gates green: `composer quality` + `npm run quality`
+
+---
+
 ## Não-funcionais
 
 - UI em pt-BR, código em inglês.

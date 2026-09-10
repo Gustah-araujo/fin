@@ -189,3 +189,30 @@ BREVO_SENDER_NAME="Fin"
 - Webhook handling for delivery tracking (future feature)
 - Brevo contact list sync (future feature)
 - Admin UI for mailer configuration (env-only by design)
+
+---
+
+## Requirement Traceability
+
+| ID       | Requirement | Phase | Status |
+|----------|-------------|-------|--------|
+| BRVO-01  | Install `symfony/brevo-mailer` package | Done | ✅ |
+| BRVO-02  | Configure Brevo mailer in `config/mail.php` | Done | ✅ |
+| BRVO-03  | Add Brevo credentials to `config/services.php` | Done | ✅ |
+| BRVO-04  | Add environment variables to `.env.example` | Done | ✅ |
+| BRVO-05  | Feature test — Brevo mailer configuration | Done | ✅ |
+| BRVO-06  | Feature test — Toggle between mailers | Done | ✅ |
+
+**Coverage:** 6 requirements, 6 mapped, 0 unmapped
+
+---
+
+## Success Criteria
+
+- [ ] `symfony/brevo-mailer` installed and compatible with PHP 8.3+
+- [ ] Brevo mailer configurable purely via `.env` (zero code changes to switch)
+- [ ] `MAIL_MAILER=brevo` activates Brevo as the default transport
+- [ ] Existing `Mail::to()->send()` calls work unchanged with Brevo
+- [ ] `MAIL_MAILER=log` still works (backward compatibility)
+- [ ] Feature tests verify both configuration and toggle behavior
+- [ ] Quality gates green: `composer quality` + full PHPUnit suite

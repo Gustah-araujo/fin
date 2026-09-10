@@ -46,6 +46,7 @@ All specification and planning docs live in `.specs/`. Load these as needed:
 - **Domain-based folders** for Pages/Components; shared hooks in `hooks/`, shared utils in `lib/`
 - **shadcn/ui primitives** in `Components/ui/` — never modify manually, install via `npx shadcn-ui@latest add`
 - **Feature tests only** (PHPUnit) — no unit tests; Cypress for E2E
+- **Smoke tests mandatory** — one PHPUnit smoke test per GET route (assertOk + assertInertia) and one Cypress smoke test per main page (renders without crash); catches "white screen" regressions that feature tests miss
 - **Quality gate** — `composer quality` (Pint format check + PHPMD complexity on `app/`) and `npm run quality` (ESLint complexity + Prettier check). AI agents MUST run these before marking a task complete. Auto-fix via `composer format` and `npm run format` / `npm run lint:fix`.
 - **UI in pt-BR, codebase in English**
 

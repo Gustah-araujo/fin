@@ -95,8 +95,6 @@ Usuários que usam cartão de crédito precisam cadastrar seus cartões no Fin p
 
 **Status values:** Pending → In Design → In Tasks → Implementing → Verified
 
-**Coverage:** 9 total, 0 mapped to tasks, 9 unmapped ⚠️
-
 ---
 
 ## Success Criteria

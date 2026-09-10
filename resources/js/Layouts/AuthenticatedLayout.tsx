@@ -12,6 +12,34 @@ interface Props {
 const COLLAPSED_WIDTH = '68px';
 const EXPANDED_WIDTH = '240px';
 
+interface ToastBufferItem {
+    type: string;
+    message: string;
+    timestamp: number;
+}
+
+function dispatchToast(type: string, message: string): void {
+    const detail = { type, message };
+    window.dispatchEvent(new CustomEvent('toast', { detail }));
+
+    // Buffer toasts to survive Inertia SPA navigations — fixes race condition
+    // where Cypress assertToast attaches its listener after the event fires.
+    if (
+        !(window as unknown as { __toastBuffer?: ToastBufferItem[] })
+            .__toastBuffer
+    ) {
+        (
+            window as unknown as { __toastBuffer: ToastBufferItem[] }
+        ).__toastBuffer = [];
+    }
+    (
+        window as unknown as { __toastBuffer: ToastBufferItem[] }
+    ).__toastBuffer.push({
+        ...detail,
+        timestamp: Date.now(),
+    });
+}
+
 export default function AuthenticatedLayout({ children }: Props) {
     const { flash } = usePage().props;
     const [collapsed, setCollapsed] = useState(false);
@@ -25,19 +53,11 @@ export default function AuthenticatedLayout({ children }: Props) {
     useEffect(() => {
         if (flash?.success) {
             toast.success(flash.success);
-            window.dispatchEvent(
-                new CustomEvent('toast', {
-                    detail: { type: 'success', message: flash.success },
-                }),
-            );
+            dispatchToast('success', flash.success);
         }
         if (flash?.error) {
             toast.error(flash.error);
-            window.dispatchEvent(
-                new CustomEvent('toast', {
-                    detail: { type: 'error', message: flash.error },
-                }),
-            );
+            dispatchToast('error', flash.error);
         }
     }, [flash?.success, flash?.error]);
 

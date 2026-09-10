@@ -389,6 +389,79 @@ class AccountTest extends TestCase
 }
 ```
 
+### Smoke Tests (One Per Route) — MANDATORY
+
+Every GET route must have exactly one smoke test that verifies it returns a valid HTTP response. This catches "white screen" regressions that feature tests might miss (e.g., ApiResource bugs where `whenLoaded` returns `MissingValue`).
+
+**PHPUnit:** One test method per GET route, asserting `assertOk()` or `assertInertia()`.
+
+```php
+class WorkspaceSmokeTest extends TestCase
+{
+    public function test_settings_page_returns_ok(): void
+    {
+        $user = User::factory()->create();
+        $workspace = Workspace::factory()->create();
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
+
+        $response = $this->actingAs($user)
+            ->get(route('workspace.settings', $workspace));
+
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page->component('Workspace/Settings'));
+    }
+}
+```
+
+**Cypress E2E:** Each E2E file should include a minimal smoke test at the top that verifies the page renders without console errors.
+
+```javascript
+describe('Workspace Settings smoke', () => {
+  it('renders without crashing', () => {
+    // login, create workspace, navigate to settings
+    cy.visit(`/w/${workspaceUuid}/settings`)
+    cy.contains('Membros').should('be.visible')
+  })
+})
+```
+
+**Organization:**
+- PHPUnit: Group smoke tests per domain (e.g., `tests/Feature/Workspace/WorkspaceSmokeTest.php`)
+- Cypress: First test in each `e2e/<domain>/` file
+
+**What they verify:**
+- Route returns HTTP 200 (PHPUnit) / Page renders without console errors (Cypress)
+- Component renders (via `assertInertia` or `cy.contains`)
+- Does NOT verify business logic — that's what feature tests are for
+
+**Why both layers matter:**
+1. Feature tests verify specific scenarios with specific data
+2. Smoke tests verify that a route works at all with minimal setup
+3. Together they catch both logic errors AND structural errors (like missing ApiResource fields)
+
+### ApiResource Structure Tests
+
+When a feature involves ApiResources, tests must verify the **shape** of the response (keys + types), not just the count. This catches bugs where `whenLoaded` returns `MissingValue` for non-eager-loaded relations.
+
+```php
+public function test_member_resource_returns_correct_structure(): void
+{
+    $admin = User::factory()->create();
+    $workspace = Workspace::factory()->create();
+    $workspace->members()->attach($admin, ['role' => WorkspaceRole::Admin->value]);
+
+    $response = $this->actingAs($admin)
+        ->get(route('workspace.settings', $workspace));
+
+    $response->assertInertia(fn ($page) => $page
+        ->has('members', 1)
+        ->where('members.0.user.uuid', $admin->uuid)
+        ->where('members.0.user.name', $admin->name)
+        ->where('members.0.role', 'admin')
+    );
+}
+```
+
 ## What NOT To Do
 
 - ❌ No inline validation in controllers — use FormRequests

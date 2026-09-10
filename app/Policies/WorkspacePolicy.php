@@ -39,7 +39,9 @@ class WorkspacePolicy
 
     public function viewMembers(User $user, Workspace $workspace): bool
     {
-        return $workspace->members()->where('user_id', $user->id)->exists();
+        $role = $this->getUserRole($user, $workspace);
+
+        return $role === WorkspaceRole::Admin || $role === WorkspaceRole::Editor;
     }
 
     private function getUserRole(User $user, Workspace $workspace): ?WorkspaceRole

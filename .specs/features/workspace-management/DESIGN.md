@@ -617,7 +617,115 @@ class WorkspaceSettingsTest extends TestCase
 }
 ```
 
-### 7.2 Testes Existentes a Atualizar
+### 7.2 Smoke Tests (Obrigatórios)
+
+#### `tests/Feature/Workspace/WorkspaceSmokeTest.php` (NOVO)
+
+Um teste por rota GET, garantindo HTTP 200 e renderização do componente Inertia. Estes testes pegam regressões de "tela branca" que feature tests não pegam (ex: bugs de ApiResource onde `whenLoaded` retorna `MissingValue`).
+
+```php
+class WorkspaceSmokeTest extends TestCase
+{
+    public function test_settings_page_returns_ok(): void
+    {
+        $user = User::factory()->create();
+        $workspace = Workspace::factory()->create();
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
+
+        $response = $this->actingAs($user)
+            ->get(route('workspace.settings', $workspace));
+
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page->component('Workspace/Settings'));
+    }
+
+    public function test_members_index_returns_ok(): void
+    {
+        $user = User::factory()->create();
+        $workspace = Workspace::factory()->create();
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
+
+        $response = $this->actingAs($user)
+            ->get(route('workspace.members.index', $workspace));
+
+        $response->assertOk();
+    }
+}
+```
+
+#### Cypress E2E Smoke Tests
+
+Cada arquivo E2E deve incluir um teste mínimo no topo que verifica se a página renderiza sem erros de console:
+
+```javascript
+describe('Workspace Settings smoke', () => {
+  it('renders without crashing', () => {
+    // login, create workspace, navigate to settings
+    cy.visit(`/w/${workspaceUuid}/settings`)
+    cy.contains('Membros').should('be.visible')
+  })
+})
+```
+
+### 7.3 Testes de Estrutura de ApiResource (Obrigatórios)
+
+Quando uma feature envolve ApiResources, os testes devem verificar a **forma** da resposta (keys + tipos), não apenas a quantidade. Isso pega bugs onde `whenLoaded` retorna `MissingValue` para relações não eager-loaded.
+
+#### `tests/Feature/Workspace/WorkspaceSettingsTest.php` (REFORÇAR)
+
+Adicionar assertions de estrutura:
+
+```php
+public function test_settings_page_returns_members_with_correct_resource_structure(): void
+{
+    $admin = User::factory()->create();
+    $member = User::factory()->create();
+    $workspace = Workspace::factory()->create();
+    $workspace->members()->attach($admin, ['role' => WorkspaceRole::Admin->value]);
+    $workspace->members()->attach($member, ['role' => WorkspaceRole::Editor->value]);
+
+    $response = $this->actingAs($admin)
+        ->get(route('workspace.settings', $workspace));
+
+    $response->assertInertia(fn ($page) => $page
+        ->has('members', 2)
+        ->where('members.0.user.uuid', $admin->uuid)
+        ->where('members.0.user.name', $admin->name)
+        ->where('members.0.user.email', $admin->email)
+        ->where('members.0.role', 'admin')
+        ->where('members.1.user.uuid', $member->uuid)
+        ->where('members.1.role', 'editor')
+    );
+}
+
+public function test_settings_page_returns_invites_with_correct_resource_structure(): void
+{
+    $admin = User::factory()->create();
+    $workspace = Workspace::factory()->create();
+    $workspace->members()->attach($admin, ['role' => WorkspaceRole::Admin->value]);
+
+    $invite = Invite::factory()->create([
+        'workspace_id' => $workspace->id,
+        'email' => 'pending@example.com',
+        'inviter_id' => $admin->id,
+        'status' => InviteStatus::Pending,
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->get(route('workspace.settings', $workspace));
+
+    $response->assertInertia(fn ($page) => $page
+        ->has('invites', 1)
+        ->where('invites.0.uuid', $invite->uuid)
+        ->where('invites.0.email', 'pending@example.com')
+        ->where('invites.0.role', 'editor')
+        ->where('invites.0.inviter.uuid', $admin->uuid)
+        ->where('invites.0.inviter.name', $admin->name)
+    );
+}
+```
+
+### 7.4 Testes Existentes a Atualizar
 
 #### `tests/Feature/Workspace/InviteTest.php`
 
@@ -629,7 +737,7 @@ public function test_admin_can_invite_existing_user(): void
     Notification::fake();
     // ... existing code ...
 
-    Notification::assertSentTo($target, NewInviteNotification::class);
+    Notification::assertSentTo($target, NewInvite::class);
 }
 ```
 
@@ -690,7 +798,8 @@ resources/js/
 ```
 tests/Feature/Workspace/
 ├── InviteEmailTest.php                # Testes de notificação por email
-├── WorkspaceSettingsTest.php          # Testes da página de settings
+├── WorkspaceSettingsTest.php          # Testes da página de settings (inclui estrutura de Resource)
+├── WorkspaceSmokeTest.php             # 1 teste GET por rota — smoke tests obrigatórios
 └── InviteTest.php                     # Modificado — adiciona assertions de email
 ```
 
