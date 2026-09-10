@@ -202,6 +202,7 @@ jobs:
       - name: Prepare Application Environment
         run: |
           cp .env.example .env
+          sed -i 's/^APP_ENV=.*/APP_ENV=testing/' .env
           php artisan config:clear
           php artisan migrate --force --seed
 

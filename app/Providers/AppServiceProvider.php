@@ -27,7 +27,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Recurrence::class, RecurrencePolicy::class);
 
         $this->app->singleton('ai', function () {
-            if (app()->environment('testing') || empty(config('ai.deepseek_key'))) {
+            if (app()->environment('testing')) {
                 return new FakeAiService;
             }
 
