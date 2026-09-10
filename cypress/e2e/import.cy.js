@@ -38,9 +38,11 @@ describe('CSV Import', () => {
 
         cy.get('table').should('be.visible');
         cy.get('table tbody tr').should('have.length', 3);
-        cy.contains('Supermercado XYZ').should('be.visible');
-        cy.contains('Farmácia ABC').should('be.visible');
-        cy.contains('Uber Viagem').should('be.visible');
+
+        // Descriptions are in <input> elements, not text content
+        cy.get('table tbody tr').eq(0).find('input').first().should('have.value', 'Supermercado XYZ');
+        cy.get('table tbody tr').eq(1).find('input').first().should('have.value', 'Farmácia ABC');
+        cy.get('table tbody tr').eq(2).find('input').first().should('have.value', 'Uber Viagem');
 
         cy.contains('3 de 3 selecionadas').should('be.visible');
 
@@ -78,9 +80,11 @@ describe('CSV Import', () => {
 
         cy.contains('Revise os dados antes de confirmar a importação').should('be.visible');
 
+        // shadcn Input renders without type attribute when type is undefined
         cy.get('table tbody tr')
             .first()
-            .find('input[type="text"]')
+            .find('input')
+            .first()
             .clear()
             .type('Mercado Editado');
 
@@ -100,7 +104,8 @@ describe('CSV Import', () => {
 
         cy.contains('Revise os dados antes de confirmar a importação').should('be.visible');
 
-        cy.get('table tbody tr').first().find('input[type="checkbox"]').uncheck();
+        // shadcn Checkbox renders as <button role="checkbox">
+        cy.get('table tbody tr').first().find('[role="checkbox"]').click();
 
         cy.contains('2 de 3 selecionadas').should('be.visible');
 
@@ -120,7 +125,8 @@ describe('CSV Import', () => {
 
         cy.contains('Revise os dados antes de confirmar a importação').should('be.visible');
 
-        cy.contains('button', 'Cancelar').click();
+        // Cancel renders as <a> (Button asChild + Link)
+        cy.contains('a', 'Cancelar').click();
 
         cy.url().should('include', '/transactions');
         cy.should('not.include', '/import');
@@ -132,10 +138,14 @@ describe('CSV Import', () => {
         cy.get('[data-testid="sidebar-transactions"]').click();
         cy.contains('Importar Despesas').click();
 
+        // Use a PNG binary content so PHP finfo detects image/png (not text/plain)
         cy.get('#file').selectFile({
-            contents: Cypress.Buffer.from('not a csv'),
-            fileName: 'test.xlsx',
-            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            contents: Cypress.Buffer.from(
+                'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+                'base64',
+            ),
+            fileName: 'test.png',
+            mimeType: 'image/png',
         }, { force: true });
 
         cy.contains('button', 'Importar').click({ force: true });
@@ -166,10 +176,11 @@ describe('CSV Import', () => {
 
         cy.get('table tbody tr').contains('Possível duplicata').should('exist');
 
+        // shadcn Checkbox renders as <button role="checkbox"> with aria-checked
         cy.get('table tbody tr')
             .filter(':contains("Possível duplicata")')
-            .find('input[type="checkbox"]')
-            .should('not.be.checked');
+            .find('[role="checkbox"]')
+            .should('have.attr', 'aria-checked', 'false');
 
         cy.contains('0 de 3 selecionadas').should('be.visible');
     });
