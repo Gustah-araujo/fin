@@ -48,7 +48,7 @@ Currently, the expenses listing page shows all expense records in a flat datatab
 **Acceptance Criteria:**
 - On initial load (no `month` query param), the page defaults to the current month
 - The datatable shows only transactions where `date` falls within the selected month
-- The month selector displays the month name + year in pt-BR (e.g., "Setembro de 2026")
+- The month selector displays the month/year in Brazilian format (e.g., "09/2026")
 
 ### DEBT-02.2 — Navigate Between Months
 
@@ -86,7 +86,7 @@ Currently, the expenses listing page shows all expense records in a flat datatab
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                                                                         │
-│  [ < ]  Setembro de 2026  [ > ]      [ Importar Despesas ] [ Nova Despesa ]
+│  [ < ]  09/2026  [ > ]               [ Importar Despesas ] [ Nova Despesa ]
 │                                                                         │
 │  ┌───────────────────────────────────────────────────────────────────┐  │
 │  │ Data ▼     │ Descrição           │ Categoria   │ Valor    │ Ações │  │
@@ -111,7 +111,7 @@ Currently, the expenses listing page shows all expense records in a flat datatab
 
 A reusable component that renders:
 - A "previous" button (ChevronLeft icon)
-- The current month label in pt-BR (e.g., "Setembro de 2026")
+- The current month label in Brazilian format (e.g., "09/2026")
 - A "next" button (ChevronRight icon)
 
 **Props:**
@@ -123,7 +123,7 @@ interface MonthPickerProps {
 ```
 
 **Behavior:**
-- `formatMonthLabel('2026-09')` → "Setembro de 2026" (pt-BR locale)
+- `formatMonthLabel('2026-09')` → "09/2026" (Brazilian MM/YYYY format)
 - Previous: subtract 1 month (handle January → December of prior year)
 - Next: add 1 month (handle December → January of next year)
 
@@ -145,7 +145,7 @@ Changes:
 
 ```typescript
 function getCurrentMonth(): string;           // → "2026-09"
-function formatMonthLabel(month: string): string; // → "Setembro de 2026"
+function formatMonthLabel(month: string): string; // → "09/2026"
 function navigateMonth(month: string, delta: number): string; // delta = ±1
 ```
 

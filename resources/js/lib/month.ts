@@ -17,14 +17,8 @@ export function parseMonth(month: string): { year: number; month: number } {
 
 export function formatMonthLabel(month: string): string {
     const { year, month: monthNumber } = parseMonth(month);
-    const date = new Date(year, monthNumber - 1, 1);
 
-    const label = date.toLocaleDateString('pt-BR', {
-        month: 'long',
-        year: 'numeric',
-    });
-
-    return label.charAt(0).toUpperCase() + label.slice(1);
+    return `${String(monthNumber).padStart(2, '0')}/${year}`;
 }
 
 export function navigateMonth(month: string, delta: number): string {

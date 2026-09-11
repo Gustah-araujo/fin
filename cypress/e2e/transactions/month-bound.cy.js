@@ -1,19 +1,14 @@
 // The MonthPicker label span rendered by Components/MonthPicker/MonthPicker.tsx.
-const MONTH_LABEL = 'span.min-w-\\[160px\\]';
+const MONTH_LABEL = 'span.min-w-\\[80px\\]';
 
 /**
- * Format a YYYY-MM string into the pt-BR month label used by the MonthPicker
- * (e.g. "Setembro de 2026"). Mirrors lib/month.ts formatMonthLabel().
+ * Format a YYYY-MM string into the MM/YYYY label used by the MonthPicker
+ * (e.g. "09/2026"). Mirrors lib/month.ts formatMonthLabel().
  */
 function formatMonthLabel(monthStr) {
     const [year, month] = monthStr.split('-').map(Number);
-    const date = new Date(year, month - 1, 1);
-    const label = date.toLocaleDateString('pt-BR', {
-        month: 'long',
-        year: 'numeric',
-    });
 
-    return label.charAt(0).toUpperCase() + label.slice(1);
+    return `${String(month).padStart(2, '0')}/${year}`;
 }
 
 /**
@@ -77,12 +72,7 @@ describe('Transactions Month-Bound', () => {
 
     it('shows current month by default', () => {
         const now = new Date();
-        const monthLabel = now.toLocaleDateString('pt-BR', {
-            month: 'long',
-            year: 'numeric',
-        });
-        const expected =
-            monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+        const expected = `${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
 
         cy.get(MONTH_LABEL).should('contain', expected);
     });

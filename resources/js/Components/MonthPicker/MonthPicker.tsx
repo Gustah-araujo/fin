@@ -17,7 +17,7 @@ export default function MonthPicker({ month, onChange }: MonthPickerProps) {
             >
                 <ChevronLeft />
             </Button>
-            <span className="text-sm font-medium min-w-[160px] text-center">
+            <span className="text-sm font-medium min-w-[80px] text-center">
                 {formatMonthLabel(month)}
             </span>
             <Button
