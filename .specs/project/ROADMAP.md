@@ -13,7 +13,7 @@
 | Cartões de Crédito   | CARD-01  | 🟢     |
 | Despesas de Cartão   | CCXP-01  | 🟢     |
 | Receitas             | INCM-01  | 🟢     |
-| DataTable State      | DTBL-02  | 🟡     |
+| DataTable State      | DTBL-02  | 🟢     |
 
 ## Milestone 2: Planejamento (P2)
 

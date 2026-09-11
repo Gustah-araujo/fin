@@ -67,12 +67,12 @@ Endpoint dedicado para limpar o estado persistido de uma tabela específica (`DE
 
 | ID       | Requirement | Phase | Status |
 |----------|-------------|-------|--------|
-| DTBL-02  | Persistência na sessão | Todo | ⬜ |
-| DTBL-03  | Hidratação no carregamento | Todo | ⬜ |
-| DTBL-04  | Prioridade Request > Sessão | Todo | ⬜ |
-| DTBL-05  | Limpar Filtros | Todo | ⬜ |
-| DTBL-06  | Feedback visual (badges) | Todo | ⬜ |
-| DTBL-07  | Endpoint de limpeza | Todo | ⬜ |
+| DTBL-02  | Persistência na sessão | Todo | ✅ |
+| DTBL-03  | Hidratação no carregamento | Todo | ✅ |
+| DTBL-04  | Prioridade Request > Sessão | Todo | ✅ |
+| DTBL-05  | Limpar Filtros | Todo | ✅ |
+| DTBL-06  | Feedback visual (badges) | Todo | ✅ |
+| DTBL-07  | Endpoint de limpeza | Todo | ✅ |
 
 **Coverage:** 7 requirements, 7 mapped, 0 unmapped
 
@@ -80,15 +80,15 @@ Endpoint dedicado para limpar o estado persistido de uma tabela específica (`DE
 
 ## Success Criteria
 
-- [ ] Filtros e ordenação persistem ao navegar e voltar à tabela
-- [ ] Estado é isolado por tabela (transactions ≠ incomes ≠ recurrences)
-- [ ] Query params na URL sobrescrevem a sessão e salvam o novo estado
-- [ ] Botão "Limpar Filtros" reseta visual + sessão
-- [ ] Badges de filtros ativos são exibidos e removíveis individualmente
-- [ ] Endpoint de limpeza funciona e é autorizado
-- [ ] Testes backend (PHPUnit) cobrem todos os cenários de prioridade
-- [ ] Testes E2E (Cypress) cobrem persistência, sobrescrita, e reset
-- [ ] Quality gates green: `composer quality` + `npm run quality`
+- [x] Filtros e ordenação persistem ao navegar e voltar à tabela
+- [x] Estado é isolado por tabela (transactions ≠ incomes ≠ recurrences)
+- [x] Query params na URL sobrescrevem a sessão e salvam o novo estado
+- [x] Botão "Limpar Filtros" reseta visual + sessão
+- [x] Badges de filtros ativos são exibidos e removíveis individualmente
+- [x] Endpoint de limpeza funciona e é autorizado
+- [x] Testes backend (PHPUnit) cobrem todos os cenários de prioridade
+- [x] Testes E2E (Cypress) cobrem persistência, sobrescrita, e reset
+- [x] Quality gates green: `composer quality` + `npm run quality`
 
 ---
 
