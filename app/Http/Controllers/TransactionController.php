@@ -43,8 +43,16 @@ class TransactionController extends Controller
         $this->authorize('viewAny', [Transaction::class, $workspace]);
 
         $query = $workspace->transactions()
-            ->where('type', TransactionType::Expense)
-            ->with(['account', 'category', 'tags']);
+            ->where('type', TransactionType::Expense);
+
+        $month = $request->input('month');
+        if (is_string($month) && preg_match('/^\d{4}-\d{2}$/', $month)) {
+            [$year, $monthNum] = explode('-', $month);
+            $query->whereYear('date', (int) $year)
+                ->whereMonth('date', (int) $monthNum);
+        }
+
+        $query->with(['account', 'category', 'tags']);
 
         return app(DatatableService::class)->paginate($query, $request, $this->datatableConfig());
     }

@@ -1,4 +1,4 @@
-import { Link, useForm } from '@inertiajs/react';
+import { Link, router, useForm, usePage } from '@inertiajs/react';
 import { useCallback, useState } from 'react';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { DataTable } from '@/Components/DataTable/DataTable';
+import { MonthPicker } from '@/Components/MonthPicker';
 import { formatCurrency } from '@/lib/format-currency';
+import { getCurrentMonth } from '@/lib/month';
 import type { DataTableColumn, SelectOption } from '@/types/datatable';
 
 interface TagItem {
@@ -57,7 +59,23 @@ function getTagStyle(color: string): string {
 
 export default function Index({ accounts, categories }: Props) {
     const workspace = useWorkspace();
+    const page = usePage();
+    const urlParams = new URLSearchParams(page.url.split('?')[1] ?? '');
+    const [month, setMonth] = useState(
+        () => urlParams.get('month') ?? getCurrentMonth(),
+    );
     const [reloadTrigger, setReloadTrigger] = useState(0);
+
+    function handleMonthChange(newMonth: string) {
+        setMonth(newMonth);
+        router.visit(
+            route('transactions.index', {
+                workspace: workspace.uuid,
+                month: newMonth,
+            }),
+            { preserveState: true, preserveScroll: false, replace: true },
+        );
+    }
 
     const bumpReload = useCallback(() => {
         setReloadTrigger((n) => n + 1);
@@ -170,13 +188,14 @@ export default function Index({ accounts, categories }: Props) {
         <AuthenticatedLayout>
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                    <div>
+                    <div className="flex items-center gap-4">
                         <h1 className="text-2xl font-semibold tracking-tight">
                             Despesas
                         </h1>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            Gerencie suas despesas
-                        </p>
+                        <MonthPicker
+                            month={month}
+                            onChange={handleMonthChange}
+                        />
                     </div>
                     <div className="flex items-center gap-2">
                         <Button variant="outline" asChild>
@@ -203,8 +222,10 @@ export default function Index({ accounts, categories }: Props) {
                 <Card>
                     <CardContent className="pt-6">
                         <DataTable
+                            key={month}
                             endpoint={route('transactions.datatable', {
                                 workspace: workspace.uuid,
+                                month,
                             })}
                             columns={columns}
                             reloadTrigger={reloadTrigger}
