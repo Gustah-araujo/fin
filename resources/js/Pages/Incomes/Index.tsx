@@ -12,9 +12,10 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import DataTable from '@/Components/DataTable/DataTable';
+import type { ActiveFilter } from '@/Components/DataTable/ActiveFilters';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { formatCurrency } from '@/lib/format-currency';
-import type { DataTableColumn } from '@/types/datatable';
+import type { DataTableColumn, TableState } from '@/types/datatable';
 
 interface TagItem {
     uuid: string;
@@ -54,6 +55,7 @@ interface Props {
     accounts: AccountItem[];
     categories: CategoryItem[];
     tags: TagItem[];
+    initialState: TableState;
 }
 
 const STATUS_OPTIONS = [
@@ -74,10 +76,85 @@ function getTagStyle(color: string): string {
     return `background-color: ${color}20; color: ${color}; border-color: ${color}40`;
 }
 
-export default function Index({ accounts, categories }: Props) {
+export default function Index({ accounts, categories, initialState }: Props) {
     const workspace = useWorkspace();
     const pageUrl = usePage().url;
     const [reloadTrigger, setReloadTrigger] = useState(0);
+    const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
+    const clearState = useForm();
+
+    function handleClearFilters(): void {
+        clearState.delete(
+            route('datatable.state.destroy', {
+                workspace: workspace.uuid,
+                entity: 'incomes',
+            }),
+            {
+                onSuccess: () => {
+                    router.reload();
+                },
+            },
+        );
+    }
+
+    function syncActiveFilters(filters: Record<string, string>): void {
+        const result: ActiveFilter[] = [];
+
+        for (const [key, value] of Object.entries(filters)) {
+            if (value === '') continue;
+
+            let label = '';
+
+            switch (key) {
+                case 'account': {
+                    const account = accounts.find((a) => a.uuid === value);
+                    label = `Conta: ${account?.name ?? value}`;
+                    break;
+                }
+                case 'category': {
+                    const category = categories.find((c) => c.uuid === value);
+                    label = `Categoria: ${category?.name ?? value}`;
+                    break;
+                }
+                case 'status': {
+                    label = `Status: ${
+                        value === 'paid' ? 'Recebida' : 'Não recebida'
+                    }`;
+                    break;
+                }
+                case 'origin': {
+                    label = `Origem: ${
+                        value === 'recurring' ? 'Recorrente' : 'Avulsa'
+                    }`;
+                    break;
+                }
+                case 'description': {
+                    label = `Descrição: ${value}`;
+                    break;
+                }
+                case 'value': {
+                    label = `Valor: ${value}`;
+                    break;
+                }
+                case 'date': {
+                    label = `Data: ${value}`;
+                    break;
+                }
+                case 'recurrence': {
+                    label = `Recorrência: ${value}`;
+                    break;
+                }
+                default: {
+                    label = `${key}: ${value}`;
+                    break;
+                }
+            }
+
+            result.push({ key, label, value });
+        }
+
+        setActiveFilters(result);
+    }
 
     const bumpReload = useCallback(() => {
         setReloadTrigger((n) => n + 1);
@@ -344,7 +421,16 @@ export default function Index({ accounts, categories }: Props) {
                     })}
                     columns={columns}
                     initialFilters={initialFilters}
+                    initialState={initialState}
                     reloadTrigger={reloadTrigger}
+                    onStateChange={(state) => {
+                        syncActiveFilters(state.filters);
+                    }}
+                    activeFilters={activeFilters}
+                    onRemoveFilter={() => {
+                        // Handled internally by DataTable
+                    }}
+                    onClearAll={handleClearFilters}
                     emptyState={
                         <div className="flex flex-col items-center gap-4 py-12">
                             <p className="text-sm text-muted-foreground">

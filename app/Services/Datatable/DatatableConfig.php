@@ -104,6 +104,14 @@ final class DatatableConfig
     /**
      * @return string[]
      */
+    public function filterKeys(): array
+    {
+        return array_keys($this->filters);
+    }
+
+    /**
+     * @return string[]
+     */
     public function sortableColumns(): array
     {
         return $this->sortable;

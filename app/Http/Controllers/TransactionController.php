@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\TransactionType;
+use App\Http\Controllers\Concerns\PersistsTableState;
 use App\Http\Requests\StoreTransactionRequest;
 use App\Http\Requests\UpdateTransactionRequest;
 use App\Http\Resources\AccountResource;
@@ -16,6 +17,7 @@ use App\Models\Workspace;
 use App\Services\Datatable\DatatableConfig;
 use App\Services\Datatable\DatatableService;
 use App\Services\Datatable\Filter;
+use App\Services\Datatable\TableStateService;
 use App\Services\RecurrenceService;
 use App\Services\TransactionService;
 use App\Support\Toast;
@@ -27,20 +29,35 @@ use Inertia\Response;
 
 class TransactionController extends Controller
 {
+    use PersistsTableState;
+
     public function index(Workspace $workspace): Response
     {
         $this->authorize('viewAny', [Transaction::class, $workspace]);
+
+        $state = app(TableStateService::class)->restore(
+            request(), 'transactions'
+        );
 
         return inertia('Transactions/Index', [
             'accounts' => AccountResource::collection($workspace->accounts()->orderBy('name')->get()),
             'categories' => CategoryResource::collection($workspace->categories()->orderBy('name')->get()),
             'tags' => TagResource::collection($workspace->tags()->orderBy('name')->get()),
+            'initialState' => $state,
         ]);
     }
 
     public function datatable(Workspace $workspace, Request $request): JsonResponse
     {
         $this->authorize('viewAny', [Transaction::class, $workspace]);
+
+        $state = $this->resolveTableState($request, 'transactions', $this->datatableConfig());
+
+        $request->merge([
+            'sort' => $state['sort'],
+            'direction' => $state['direction'],
+            ...$state['filters'],
+        ]);
 
         $query = $workspace->transactions()
             ->where('type', TransactionType::Expense);

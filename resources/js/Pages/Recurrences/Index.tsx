@@ -1,12 +1,13 @@
-import { Link, router } from '@inertiajs/react';
+import { Link, router, useForm } from '@inertiajs/react';
 import { useCallback, useMemo, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import DataTable from '@/Components/DataTable/DataTable';
+import type { ActiveFilter } from '@/Components/DataTable/ActiveFilters';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { formatCurrency } from '@/lib/format-currency';
-import type { DataTableColumn } from '@/types/datatable';
+import type { DataTableColumn, TableState } from '@/types/datatable';
 
 interface AccountItem {
     uuid: string;
@@ -36,6 +37,7 @@ interface RecurrenceItem {
 interface Props {
     accounts: AccountItem[];
     categories: CategoryItem[];
+    initialState: TableState;
 }
 
 const STATUS_OPTIONS = [
@@ -78,13 +80,89 @@ function formatDate(dateStr: string): string {
     return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR');
 }
 
-export default function Index({ accounts, categories }: Props) {
+export default function Index({ accounts, categories, initialState }: Props) {
     const workspace = useWorkspace();
     const [reloadTrigger, setReloadTrigger] = useState(0);
+    const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
+    const clearState = useForm();
 
     const bumpReload = useCallback(() => {
         setReloadTrigger((n) => n + 1);
     }, []);
+
+    function handleClearFilters(): void {
+        clearState.delete(
+            route('datatable.state.destroy', {
+                workspace: workspace.uuid,
+                entity: 'recurrences',
+            }),
+            {
+                onSuccess: () => {
+                    router.reload();
+                },
+            },
+        );
+    }
+
+    function syncActiveFilters(filters: Record<string, string>): void {
+        const result: ActiveFilter[] = [];
+
+        for (const [key, value] of Object.entries(filters)) {
+            if (value === '') continue;
+
+            let label = '';
+
+            switch (key) {
+                case 'account': {
+                    const account = accounts.find((a) => a.uuid === value);
+                    label = `Conta: ${account?.name ?? value}`;
+                    break;
+                }
+                case 'category': {
+                    const category = categories.find((c) => c.uuid === value);
+                    label = `Categoria: ${category?.name ?? value}`;
+                    break;
+                }
+                case 'status': {
+                    const statusLabels: Record<string, string> = {
+                        active: 'Ativa',
+                        paused: 'Pausada',
+                        exhausted: 'Esgotada',
+                    };
+                    label = `Status: ${statusLabels[value] ?? value}`;
+                    break;
+                }
+                case 'type': {
+                    const typeLabels: Record<string, string> = {
+                        income: 'Receita',
+                        expense: 'Despesa',
+                    };
+                    label = `Tipo: ${typeLabels[value] ?? value}`;
+                    break;
+                }
+                case 'description': {
+                    label = `Descrição: ${value}`;
+                    break;
+                }
+                case 'value': {
+                    label = `Valor: ${value}`;
+                    break;
+                }
+                case 'next_date': {
+                    label = `Próxima data: ${value}`;
+                    break;
+                }
+                default: {
+                    label = `${key}: ${value}`;
+                    break;
+                }
+            }
+
+            result.push({ key, label, value });
+        }
+
+        setActiveFilters(result);
+    }
 
     const accountOptions = useMemo(
         () =>
@@ -322,6 +400,17 @@ export default function Index({ accounts, categories }: Props) {
                         workspace: workspace.uuid,
                     })}
                     columns={columns}
+                    initialState={initialState}
+                    onStateChange={(state) => {
+                        syncActiveFilters(state.filters);
+                    }}
+                    activeFilters={activeFilters}
+                    onRemoveFilter={(key) => {
+                        setActiveFilters((prev) =>
+                            prev.filter((filter) => filter.key !== key),
+                        );
+                    }}
+                    onClearAll={handleClearFilters}
                     reloadTrigger={reloadTrigger}
                     emptyState={
                         <div className="flex flex-col items-center gap-4 py-12">

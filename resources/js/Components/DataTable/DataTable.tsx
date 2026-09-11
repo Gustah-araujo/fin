@@ -9,7 +9,12 @@ import {
 } from '@/components/ui/table';
 
 import { useDataTable } from '@/hooks/use-data-table';
-import type { DataTableColumn } from '@/types/datatable';
+import type {
+    DataTableColumn,
+    DataTableParams,
+    TableState,
+} from '@/types/datatable';
+import ActiveFilters, { type ActiveFilter } from './ActiveFilters';
 import DataTableColumnHeader from './DataTableColumnHeader';
 import DataTableFilterRow from './DataTableFilterRow';
 import DataTablePagination from './DataTablePagination';
@@ -20,6 +25,12 @@ interface DataTableProps<T> {
     initialFilters?: Record<string, string>;
     emptyState: ReactNode;
     reloadTrigger?: number;
+    initialState?: TableState;
+    onStateChange?: (state: DataTableParams) => void;
+    activeFilters?: ActiveFilter[];
+    onRemoveFilter?: (key: string) => void;
+    onClearAll?: () => void;
+    onFiltersChange?: (filters: Record<string, string>) => void;
 }
 
 const SKELETON_ROWS = [0, 1, 2, 3, 4];
@@ -30,6 +41,12 @@ export function DataTable<T extends { uuid: string }>({
     initialFilters,
     emptyState,
     reloadTrigger,
+    initialState,
+    onStateChange,
+    activeFilters,
+    onRemoveFilter,
+    onClearAll,
+    onFiltersChange,
 }: DataTableProps<T>): ReactElement {
     const {
         rows,
@@ -40,8 +57,17 @@ export function DataTable<T extends { uuid: string }>({
         setPage,
         setSort,
         setFilter,
+        clearFilters,
         reload,
-    } = useDataTable<T>(endpoint, { filters: initialFilters });
+    } = useDataTable<T>(
+        endpoint,
+        initialState ?? {
+            filters: initialFilters ?? {},
+            sort: null,
+            direction: 'asc',
+        },
+        onStateChange,
+    );
 
     useEffect(() => {
         if (reloadTrigger !== undefined && reloadTrigger > 0) {
@@ -49,13 +75,36 @@ export function DataTable<T extends { uuid: string }>({
         }
     }, [reloadTrigger, reload]);
 
+    // Notify parent when filters change
+    useEffect(() => {
+        onFiltersChange?.(params.filters);
+    }, [params.filters, onFiltersChange]);
+
     const hasAnyFilter = useMemo(
         () => columns.some((column) => column.filter !== undefined),
         [columns],
     );
 
+    function handleRemoveFilter(key: string): void {
+        setFilter(key, '');
+        onRemoveFilter?.(key);
+    }
+
+    function handleClearAll(): void {
+        clearFilters();
+        onClearAll?.();
+    }
+
     return (
         <div className="space-y-4">
+            {activeFilters && activeFilters.length > 0 && (
+                <ActiveFilters
+                    filters={activeFilters}
+                    onRemoveFilter={handleRemoveFilter}
+                    onClearAll={handleClearAll}
+                />
+            )}
+
             {error && (
                 <div className="rounded-md border border-destructive px-4 py-3 text-sm text-destructive">
                     {error}

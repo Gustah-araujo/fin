@@ -45,3 +45,9 @@ export interface DataTableParams {
     direction: SortDirection;
     filters: Record<string, string>; // includes _min/_max/_from/_to suffixes
 }
+
+export interface TableState {
+    filters: Record<string, string>;
+    sort: string | null;
+    direction: SortDirection;
+}
