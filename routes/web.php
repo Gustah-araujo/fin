@@ -14,6 +14,7 @@ use App\Http\Controllers\CardExpenseController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CreditCardBillController;
 use App\Http\Controllers\CreditCardController;
+use App\Http\Controllers\DatatableStateController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\IncomeController;
 use App\Http\Controllers\InviteController;
@@ -101,6 +102,10 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
         Route::get('transactions/datatable', [TransactionController::class, 'datatable'])->name('transactions.datatable');
         Route::get('incomes/datatable', [IncomeController::class, 'datatable'])->name('incomes.datatable');
         Route::get('recurrences/datatable', [RecurrenceController::class, 'datatable'])->name('recurrences.datatable');
+
+        // Datatable state management
+        Route::delete('datatable/{entity}/state', [DatatableStateController::class, 'destroy'])
+            ->name('datatable.state.destroy');
 
         // Import routes (must be registered before their resource routes)
         Route::get('transactions/import', [ImportController::class, 'create'])

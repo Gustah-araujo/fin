@@ -7,9 +7,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { DataTable } from '@/Components/DataTable/DataTable';
 import { MonthPicker } from '@/Components/MonthPicker';
+import type { ActiveFilter } from '@/Components/DataTable/ActiveFilters';
 import { formatCurrency } from '@/lib/format-currency';
 import { getCurrentMonth } from '@/lib/month';
-import type { DataTableColumn, SelectOption } from '@/types/datatable';
+import type {
+    DataTableColumn,
+    DataTableParams,
+    SelectOption,
+    TableState,
+} from '@/types/datatable';
 
 interface TagItem {
     uuid: string;
@@ -47,6 +53,7 @@ interface Props {
     accounts: AccountItem[];
     categories: CategoryItem[];
     tags: TagItem[];
+    initialState: TableState;
 }
 
 function formatDate(dateStr: string): string {
@@ -57,7 +64,59 @@ function getTagStyle(color: string): string {
     return `background-color: ${color}20; color: ${color}; border-color: ${color}40`;
 }
 
-export default function Index({ accounts, categories }: Props) {
+function buildActiveFilters(
+    filters: Record<string, string>,
+    accounts: AccountItem[],
+    categories: CategoryItem[],
+): ActiveFilter[] {
+    const result: ActiveFilter[] = [];
+
+    for (const [key, value] of Object.entries(filters)) {
+        if (value === '') continue;
+
+        let label = '';
+
+        switch (key) {
+            case 'account': {
+                const account = accounts.find((a) => a.uuid === value);
+                label = `Conta: ${account?.name ?? value}`;
+                break;
+            }
+            case 'category': {
+                const category = categories.find((c) => c.uuid === value);
+                label = `Categoria: ${category?.name ?? value}`;
+                break;
+            }
+            case 'status': {
+                label = `Status: ${value === 'paid' ? 'Paga' : 'Não paga'}`;
+                break;
+            }
+            case 'description': {
+                label = `Descrição: ${value}`;
+                break;
+            }
+            case 'value': {
+                // For number range, we'd need _min/_max — but for simplicity just show value
+                label = `Valor: ${value}`;
+                break;
+            }
+            case 'date': {
+                label = `Data: ${value}`;
+                break;
+            }
+            default: {
+                label = `${key}: ${value}`;
+                break;
+            }
+        }
+
+        result.push({ key, label, value });
+    }
+
+    return result;
+}
+
+export default function Index({ accounts, categories, initialState }: Props) {
     const workspace = useWorkspace();
     const page = usePage();
     const urlParams = new URLSearchParams(page.url.split('?')[1] ?? '');
@@ -65,6 +124,10 @@ export default function Index({ accounts, categories }: Props) {
         () => urlParams.get('month') ?? getCurrentMonth(),
     );
     const [reloadTrigger, setReloadTrigger] = useState(0);
+    const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>(() =>
+        buildActiveFilters(initialState.filters, accounts, categories),
+    );
+    const clearState = useForm();
 
     function handleMonthChange(newMonth: string) {
         setMonth(newMonth);
@@ -80,6 +143,34 @@ export default function Index({ accounts, categories }: Props) {
     const bumpReload = useCallback(() => {
         setReloadTrigger((n) => n + 1);
     }, []);
+
+    const syncActiveFilters = useCallback(
+        (filters: Record<string, string>): void => {
+            setActiveFilters(buildActiveFilters(filters, accounts, categories));
+        },
+        [accounts, categories],
+    );
+
+    const handleStateChange = useCallback(
+        (state: DataTableParams): void => {
+            syncActiveFilters(state.filters);
+        },
+        [syncActiveFilters],
+    );
+
+    function handleClearFilters(): void {
+        clearState.delete(
+            route('datatable.state.destroy', {
+                workspace: workspace.uuid,
+                entity: 'transactions',
+            }),
+            {
+                onSuccess: () => {
+                    router.reload();
+                },
+            },
+        );
+    }
 
     const accountOptions: SelectOption[] = accounts.map((account) => ({
         label: account.name,
@@ -228,6 +319,15 @@ export default function Index({ accounts, categories }: Props) {
                                 month,
                             })}
                             columns={columns}
+                            initialState={initialState}
+                            onStateChange={handleStateChange}
+                            activeFilters={activeFilters}
+                            onRemoveFilter={(key) => {
+                                setActiveFilters((prev) =>
+                                    prev.filter((filter) => filter.key !== key),
+                                );
+                            }}
+                            onClearAll={handleClearFilters}
                             reloadTrigger={reloadTrigger}
                             emptyState={
                                 <div className="flex flex-col items-center justify-center py-12">

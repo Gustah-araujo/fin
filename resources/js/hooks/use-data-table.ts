@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 
 import { getJson } from '@/lib/api';
@@ -7,6 +7,7 @@ import type {
     Paginated,
     PaginatedMeta,
     SortDirection,
+    TableState,
 } from '@/types/datatable';
 
 const DEBOUNCE_MS = 300;
@@ -49,7 +50,8 @@ export function buildQueryParams(
 
 export function useDataTable<T>(
     endpoint: string,
-    initial?: Partial<DataTableParams>,
+    initialState?: TableState,
+    onStateChange?: (state: DataTableParams) => void,
 ): UseDataTableResult<T> {
     const [rows, setRows] = useState<T[]>([]);
     const [meta, setMeta] = useState<PaginatedMeta | null>(null);
@@ -59,11 +61,33 @@ export function useDataTable<T>(
 
     const [params, setParams] = useState<DataTableParams>(() => ({
         page: 1,
-        per_page: initial?.per_page ?? DEFAULT_PER_PAGE,
-        sort: initial?.sort ?? null,
-        direction: initial?.direction ?? 'asc',
-        filters: initial?.filters ?? {},
+        per_page: DEFAULT_PER_PAGE,
+        sort: initialState?.sort ?? null,
+        direction: initialState?.direction ?? 'asc',
+        filters: initialState?.filters ?? {},
     }));
+
+    // Track whether this is the initial mount
+    const isInitialMount = useRef(true);
+
+    // Debounced onStateChange callback
+    useEffect(() => {
+        // Skip on initial mount
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
+        if (!onStateChange) {
+            return;
+        }
+
+        const timer = window.setTimeout(() => {
+            onStateChange(params);
+        }, DEBOUNCE_MS);
+
+        return () => window.clearTimeout(timer);
+    }, [params, onStateChange]);
 
     useEffect(() => {
         let active = true;

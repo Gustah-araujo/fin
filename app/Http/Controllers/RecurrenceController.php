@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Enums\RecurrenceStatus;
 use App\Enums\TransactionType;
 use App\Exceptions\RecurrenceGenerationException;
+use App\Http\Controllers\Concerns\PersistsTableState;
 use App\Http\Requests\UpdateRecurrenceRequest;
 use App\Http\Resources\AccountResource;
 use App\Http\Resources\CategoryResource;
@@ -17,6 +18,7 @@ use App\Models\Workspace;
 use App\Services\Datatable\DatatableConfig;
 use App\Services\Datatable\DatatableService;
 use App\Services\Datatable\Filter;
+use App\Services\Datatable\TableStateService;
 use App\Services\RecurrenceService;
 use App\Support\Toast;
 use Illuminate\Database\Eloquent\Builder;
@@ -27,19 +29,34 @@ use Inertia\Response;
 
 class RecurrenceController extends Controller
 {
+    use PersistsTableState;
+
     public function index(Workspace $workspace): Response
     {
         $this->authorize('viewAny', [Recurrence::class, $workspace]);
 
+        $state = app(TableStateService::class)->restore(
+            request(), 'recurrences'
+        );
+
         return inertia('Recurrences/Index', [
             'accounts' => AccountResource::collection($workspace->accounts()->orderBy('name')->get()),
             'categories' => CategoryResource::collection($workspace->categories()->orderBy('name')->get()),
+            'initialState' => $state,
         ]);
     }
 
     public function datatable(Workspace $workspace, Request $request): JsonResponse
     {
         $this->authorize('viewAny', [Recurrence::class, $workspace]);
+
+        $state = $this->resolveTableState($request, 'recurrences', $this->datatableConfig());
+
+        $request->merge([
+            'sort' => $state['sort'],
+            'direction' => $state['direction'],
+            ...$state['filters'],
+        ]);
 
         $query = $workspace->recurrences()
             ->with(['account', 'category', 'tags'])
