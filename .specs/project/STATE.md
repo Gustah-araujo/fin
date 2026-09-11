@@ -74,6 +74,8 @@
 | D-54 | Dedicated JSON datatable endpoints per entity (`{entity}.datatable`); Inertia `index` returns shell + select options only | 2026-08-20 | DTBL-01 spec; partial departure from D-08 for listings |
 | D-55 | axios as request lib for datatable JSON fetch (chosen over ky/ofetch for ubiquity + already transitive) | 2026-08-20 | DTBL-01 spec |
 | D-56 | Server-side sort (whitelisted) + typed per-column filters (text/number/date/select); FK columns filter via `whereHas` relation uuid — fixes category/account uuid-vs-int bug | 2026-08-20 | DTBL-01 spec |
+| D-71 | Table state (filters + sort) persisted in Laravel session per table key (`datatable.{entity}`); isolated between tables; request params override session | 2026-09-11 | DTBL-02 spec; solves state loss on navigation |
+| D-72 | Pagination is ephemeral (never persisted); only filters + sort survive across requests | 2026-09-11 | DTBL-02 design; page resets on filter change |
 
 ## Blockers
 
@@ -113,3 +115,4 @@ None yet.
 | 2026-09-02 | PLAN-01 | Execute | All 9 tasks via subagents. PlanningService (16 tests), PlanningController (9 tests), PlanningResource, routes+sidebar, types, Planning/Index.tsx (438 lines), MonthDetailModal.tsx (171 lines), planning.cy.js (7 E2E tests). 25 PHPUnit tests (107 assertions), composer quality + npm run quality + build green. PLAN-01→05 done, PLAN-06 deferred to P3. ROADMAP PLAN-01 → 🟢 |
 | 2026-09-03 | REEX-01 | Specify+Design | Recurring expenses spec (4 requirements: REEX-01 to REEX-04) + design. Decisions D-62 (type immutable), D-63 (single list + type filter), D-64 (toggle on expense form), D-65 (RecurrenceService reads type). 9 backend + 2 frontend files modified, 1 new test file, ~16 PHPUnit + 3 Cypress tests. Zero changes to PlanningService (already generic). |
 | 2026-09-10 | IMPT-01 | Specify+Design | CSV import com IA (7 ACs: AC-01 a AC-07). Processamento assíncrono via Job + polling no frontend (D-67). 5 decisões novas (D-66 a D-70). 17 tasks, 5 fases, 22 arquivos novos + migration + 4 modificados. ≥39 PHPUnit + 6 Cypress E2E. Spec, design, tasks escritos. Refatorado de síncrono para assíncrono. |
+| 2026-09-11 | DTBL-02 | Specify+Design+Tasks | Persistência de estado de filtros/ordenação nas DataTables. 7 requisitos (DTBL-02 a DTBL-07), 2 decisões (D-71 session persistence, D-72 pagination ephemeral). TableStateService + Trait PersistsTableState + DatatableStateController. ActiveFilters component (badges + limpar). 9 tasks, 4 fases. ≥14 PHPUnit + 5 Cypress E2E. |
