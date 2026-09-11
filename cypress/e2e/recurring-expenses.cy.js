@@ -1,15 +1,6 @@
 describe('Recurring Expenses E2E', () => {
     let workspaceUuid;
 
-    // Suppress ResizeObserver loop errors from Radix UI components
-    beforeEach(() => {
-        cy.on('uncaught:exception', (err) => {
-            if (err.message.includes('ResizeObserver loop')) {
-                return false;
-            }
-        });
-    });
-
     before(() => {
         cy.loginViaSession('recurring-expenses-session');
 
