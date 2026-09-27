@@ -7,9 +7,9 @@ namespace Tests\Feature\Bills;
 use App\Models\CreditCardBill;
 use App\Models\Transaction;
 use Illuminate\Support\Str;
-use Tests\Feature\CardExpenses\CardExpenseTestCase;
+use Tests\Feature\Bills\BillTestCase;
 
-class BillViewTest extends CardExpenseTestCase
+class BillViewTest extends BillTestCase
 {
     public function test_card_show_displays_open_bill(): void
     {
@@ -42,7 +42,7 @@ class BillViewTest extends CardExpenseTestCase
 
         $response->assertInertia(fn ($page) => $page
             ->component('Cards/Show', false)
-            ->has('openBill.expenses')
+            ->has('currentBill.expenses')
         );
     }
 
@@ -74,7 +74,7 @@ class BillViewTest extends CardExpenseTestCase
 
         $response->assertInertia(fn ($page) => $page
             ->component('Cards/Show', false)
-            ->where('openBill', null)
+            ->has('currentBill')
         );
     }
 

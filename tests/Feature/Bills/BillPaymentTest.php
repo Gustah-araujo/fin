@@ -9,9 +9,9 @@ use App\Models\CreditCardBill;
 use App\Models\Transaction;
 use App\Services\CreditCardService;
 use Illuminate\Support\Str;
-use Tests\Feature\CardExpenses\CardExpenseTestCase;
+use Tests\Feature\Bills\BillTestCase;
 
-class BillPaymentTest extends CardExpenseTestCase
+class BillPaymentTest extends BillTestCase
 {
     public function test_can_pay_closed_bill(): void
     {
