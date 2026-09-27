@@ -38,6 +38,21 @@ interface AccountItem {
     current_balance: number;
 }
 
+interface CardItem {
+    uuid: string;
+    name: string;
+    credit_limit: number;
+    available_limit: number;
+}
+
+interface BillItem {
+    uuid: string;
+    period_label: string;
+    period_year: number;
+    period_month: number;
+    credit_card_name: string;
+}
+
 interface TransactionItem {
     uuid: string;
     description: string;
@@ -47,12 +62,18 @@ interface TransactionItem {
     account: AccountItem | null;
     category: CategoryItem | null;
     tags: TagItem[];
+    credit_card?: { uuid: string; name: string } | null;
+    credit_card_id?: string | null;
+    credit_card_bill_id?: string | null;
+    bill?: { uuid: string; period_label: string; status: string } | null;
 }
 
 interface Props {
     accounts: AccountItem[];
     categories: CategoryItem[];
     tags: TagItem[];
+    cards: CardItem[];
+    bills: BillItem[];
     initialState: TableState;
 }
 
@@ -68,6 +89,8 @@ function buildActiveFilters(
     filters: Record<string, string>,
     accounts: AccountItem[],
     categories: CategoryItem[],
+    cards: CardItem[],
+    bills: BillItem[],
 ): ActiveFilter[] {
     const result: ActiveFilter[] = [];
 
@@ -96,12 +119,21 @@ function buildActiveFilters(
                 break;
             }
             case 'value': {
-                // For number range, we'd need _min/_max — but for simplicity just show value
                 label = `Valor: ${value}`;
                 break;
             }
             case 'date': {
                 label = `Data: ${value}`;
+                break;
+            }
+            case 'credit_card_id': {
+                const card = cards.find((c) => c.uuid === value);
+                label = `Cartão: ${card?.name ?? value}`;
+                break;
+            }
+            case 'credit_card_bill_id': {
+                const bill = bills.find((b) => b.uuid === value);
+                label = `Fatura: ${bill ? `${bill.credit_card_name} — ${bill.period_label}` : value}`;
                 break;
             }
             default: {
@@ -116,7 +148,13 @@ function buildActiveFilters(
     return result;
 }
 
-export default function Index({ accounts, categories, initialState }: Props) {
+export default function Index({
+    accounts,
+    categories,
+    cards,
+    bills,
+    initialState,
+}: Props) {
     const workspace = useWorkspace();
     const page = usePage();
     const urlParams = new URLSearchParams(page.url.split('?')[1] ?? '');
@@ -125,7 +163,13 @@ export default function Index({ accounts, categories, initialState }: Props) {
     );
     const [reloadTrigger, setReloadTrigger] = useState(0);
     const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>(() =>
-        buildActiveFilters(initialState.filters, accounts, categories),
+        buildActiveFilters(
+            initialState.filters,
+            accounts,
+            categories,
+            cards,
+            bills,
+        ),
     );
     const clearState = useForm();
 
@@ -146,9 +190,11 @@ export default function Index({ accounts, categories, initialState }: Props) {
 
     const syncActiveFilters = useCallback(
         (filters: Record<string, string>): void => {
-            setActiveFilters(buildActiveFilters(filters, accounts, categories));
+            setActiveFilters(
+                buildActiveFilters(filters, accounts, categories, cards, bills),
+            );
         },
-        [accounts, categories],
+        [accounts, categories, cards, bills],
     );
 
     const handleStateChange = useCallback(
@@ -182,6 +228,16 @@ export default function Index({ accounts, categories, initialState }: Props) {
         value: category.uuid,
     }));
 
+    const cardOptions: SelectOption[] = cards.map((card) => ({
+        label: card.name,
+        value: card.uuid,
+    }));
+
+    const billOptions: SelectOption[] = bills.map((bill) => ({
+        label: `${bill.credit_card_name} — ${bill.period_label}`,
+        value: bill.uuid,
+    }));
+
     const columns: DataTableColumn<TransactionItem>[] = [
         {
             key: 'description',
@@ -209,6 +265,18 @@ export default function Index({ accounts, categories, initialState }: Props) {
             header: 'Conta',
             filter: { type: 'select', options: accountOptions },
             cell: (row) => row.account?.name ?? '—',
+        },
+        {
+            key: 'credit_card_id',
+            header: 'Cartão',
+            filter: { type: 'select', options: cardOptions },
+            cell: (row) => row.credit_card?.name ?? '—',
+        },
+        {
+            key: 'credit_card_bill_id',
+            header: 'Fatura',
+            filter: { type: 'select', options: billOptions },
+            cell: (row) => row.bill?.period_label ?? '—',
         },
         {
             key: 'category',
@@ -254,12 +322,41 @@ export default function Index({ accounts, categories, initialState }: Props) {
                     { label: 'Pendentes', value: 'unpaid' },
                 ],
             },
-            cell: (row) =>
-                row.paid_at !== null ? (
+            cell: (row) => {
+                // Card expense status
+                if (row.credit_card_id != null) {
+                    if (!row.bill)
+                        return <span className="text-muted-foreground">—</span>;
+                    switch (row.bill.status) {
+                        case 'open':
+                            return (
+                                <span className="text-amber-600">
+                                    Na fatura (Aberta)
+                                </span>
+                            );
+                        case 'closed':
+                            return (
+                                <span className="text-orange-600">
+                                    Na fatura (Fechada)
+                                </span>
+                            );
+                        case 'paid':
+                            return (
+                                <span className="text-emerald-600">Paga</span>
+                            );
+                        default:
+                            return (
+                                <span className="text-muted-foreground">—</span>
+                            );
+                    }
+                }
+                // Account expense status
+                return row.paid_at !== null ? (
                     <span className="text-emerald-600">✓</span>
                 ) : (
                     <span className="text-amber-600">○</span>
-                ),
+                );
+            },
         },
         {
             key: 'actions',
@@ -385,18 +482,20 @@ function RowActions({
     }
 
     const isPaid = transaction.paid_at !== null;
+    const isCardExpense = transaction.credit_card_id != null;
 
     return (
         <div className="flex items-center justify-end gap-2">
-            {isPaid ? (
-                <Button variant="outline" size="sm" onClick={handleUnpay}>
-                    Desmarcar
-                </Button>
-            ) : (
-                <Button size="sm" onClick={handlePay}>
-                    Pagar
-                </Button>
-            )}
+            {!isCardExpense &&
+                (isPaid ? (
+                    <Button variant="outline" size="sm" onClick={handleUnpay}>
+                        Desmarcar
+                    </Button>
+                ) : (
+                    <Button size="sm" onClick={handlePay}>
+                        Pagar
+                    </Button>
+                ))}
             <Button variant="outline" size="sm" asChild>
                 <Link
                     href={route('transactions.edit', {

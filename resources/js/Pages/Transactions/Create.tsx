@@ -14,6 +14,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { PaymentMethodSelector } from '@/Components/Transactions/PaymentMethodSelector';
+import { AccountFields } from '@/Components/Transactions/AccountFields';
+import { CardExpenseFields } from '@/Components/Transactions/CardExpenseFields';
 
 interface AccountItem {
     uuid: string;
@@ -36,8 +39,16 @@ interface TagItem {
     color: string;
 }
 
+interface CardItem {
+    uuid: string;
+    name: string;
+    credit_limit: number;
+    available_limit: number;
+}
+
 interface Props {
     accounts: AccountItem[];
+    cards: CardItem[];
     categories: CategoryItem[];
     tags: TagItem[];
 }
@@ -52,12 +63,18 @@ const WEEKDAYS = [
     { value: 6, label: 'Sábado' },
 ];
 
-export default function Create({ accounts, categories, tags }: Props) {
+export default function Create({ accounts, cards, categories, tags }: Props) {
     const workspace = useWorkspace();
 
     const today = new Date().toISOString().split('T')[0];
 
-    const { data, setData, post, processing, errors } = useForm({
+    const params = new URLSearchParams(window.location.search);
+    const paymentMethodParam = params.get('payment_method');
+    const cardIdParam = params.get('card_id') ?? '';
+
+    const isCardFromUrl = paymentMethodParam === 'card' && !!cardIdParam;
+
+    const form = useForm({
         description: '',
         value: '',
         date: today,
@@ -70,20 +87,40 @@ export default function Create({ accounts, categories, tags }: Props) {
         until_date: '',
         has_until_date: false,
         buffer_ahead: 12,
+        credit_card_id: isCardFromUrl ? cardIdParam : '',
+        installments: 1,
+        total_value: '',
+        payment_method: (isCardFromUrl ? 'card' : 'account') as
+            'account' | 'card',
     });
+
+    const { data, setData, post, processing, errors } = form;
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
+
+        const isCard = data.payment_method === 'card';
 
         const payload: Record<string, unknown> = {
             description: data.description,
             value: data.value,
             date: data.date,
-            account_id: data.account_id,
             category_id: data.category_id,
             tags: data.tags,
             is_recurring: data.is_recurring,
         };
+
+        if (isCard) {
+            payload.credit_card_id = data.credit_card_id;
+            if (!data.is_recurring) {
+                payload.installments = data.installments;
+                if (data.installments > 1) {
+                    payload.total_value = data.total_value;
+                }
+            }
+        } else {
+            payload.account_id = data.account_id;
+        }
 
         if (data.is_recurring) {
             payload.frequency = data.frequency;
@@ -187,34 +224,36 @@ export default function Create({ accounts, categories, tags }: Props) {
                                 )}
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="account_id">Conta</Label>
-                                <Select
-                                    value={data.account_id}
-                                    onValueChange={(value) =>
-                                        setData('account_id', value)
-                                    }
-                                >
-                                    <SelectTrigger id="account_id">
-                                        <SelectValue placeholder="Selecione a conta" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {accounts.map((account) => (
-                                            <SelectItem
-                                                key={account.uuid}
-                                                value={account.uuid}
-                                            >
-                                                {account.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                {errors.account_id && (
-                                    <p className="text-sm text-destructive">
-                                        {errors.account_id}
-                                    </p>
-                                )}
-                            </div>
+                            <PaymentMethodSelector
+                                value={data.payment_method}
+                                onChange={(val) =>
+                                    setData('payment_method', val)
+                                }
+                            />
+
+                            {data.payment_method === 'account' ? (
+                                <AccountFields
+                                    accounts={accounts.map((a) => ({
+                                        id: a.uuid,
+                                        name: a.name,
+                                        type: a.type,
+                                        balance: a.current_balance,
+                                    }))}
+                                    form={form}
+                                />
+                            ) : (
+                                <CardExpenseFields
+                                    cards={cards.map((c) => ({
+                                        id: c.uuid,
+                                        name: c.name,
+                                        credit_limit: c.credit_limit,
+                                        available_limit: c.available_limit,
+                                    }))}
+                                    form={form}
+                                    locked={data.is_recurring}
+                                    preselectedCardId={cardIdParam}
+                                />
+                            )}
 
                             <div className="space-y-2">
                                 <Label htmlFor="category_id">Categoria</Label>
