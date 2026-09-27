@@ -26,6 +26,7 @@ class RecurrenceResource extends JsonResource
             'status' => $this->status->value,
             'buffer_ahead' => (int) $this->buffer_ahead,
             'account' => new AccountResource($this->whenLoaded('account')),
+            'credit_card' => new CreditCardResource($this->whenLoaded('creditCard')),
             'category' => new CategoryResource($this->whenLoaded('category')),
             'tags' => TagResource::collection($this->whenLoaded('tags')),
             'created_at' => $this->created_at?->toISOString(),

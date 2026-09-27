@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Enums\BillStatus;
 use App\Http\Requests\StoreCardRequest;
 use App\Http\Requests\UpdateCardRequest;
+use App\Http\Resources\AccountResource;
 use App\Http\Resources\CreditCardBillResource;
 use App\Http\Resources\CreditCardResource;
 use App\Models\CreditCard;
 use App\Models\Workspace;
+use App\Services\BillService;
 use App\Services\CreditCardService;
 use App\Support\Toast;
 use Illuminate\Http\RedirectResponse;
@@ -17,6 +20,10 @@ use Inertia\Response;
 
 class CreditCardController extends Controller
 {
+    public function __construct(
+        private readonly BillService $billService,
+    ) {}
+
     public function index(Workspace $workspace): Response
     {
         $this->authorize('viewAny', [CreditCard::class, $workspace]);
@@ -33,21 +40,32 @@ class CreditCardController extends Controller
         abort_if($card->workspace_id !== $workspace->id, 404);
         $this->authorize('viewAny', [CreditCard::class, $workspace]);
 
-        $card->load(['bills' => fn ($q) => $q->orderByDesc('period_year')
-            ->orderByDesc('period_month')->limit(12)]);
+        // On-demand close: close any Open bill with closing_date < today (fallback for delayed job)
+        $staleBills = $card->bills()
+            ->where('status', BillStatus::Open)
+            ->where('closing_date', '<', now()->toDateString())
+            ->get();
 
-        $openBill = $card->bills()->where('status', 'open')->first();
-        if ($openBill) {
-            $openBill->load(['transactions' => fn ($q) => $q
-                ->with(['category', 'tags'])
-                ->orderBy('date')
-                ->orderBy('installment_number')]);
+        foreach ($staleBills as $staleBill) {
+            $this->billService->closeBill($staleBill);
         }
+
+        // Load all bills (past, current, future pre-created) for the invoice selector
+        $bills = $card->bills()
+            ->orderBy('period_year', 'desc')
+            ->orderBy('period_month', 'desc')
+            ->get();
+
+        // Current cycle bill (the one with the current date's period)
+        $currentBill = $this->billService->findOrCreateBill($card, now(), $card->created_by);
 
         return inertia('Cards/Show', [
             'card' => new CreditCardResource($card),
-            'openBill' => $openBill ? new CreditCardBillResource($openBill) : null,
-            'bills' => CreditCardBillResource::collection($card->bills),
+            'bills' => CreditCardBillResource::collection($bills),
+            'currentBill' => new CreditCardBillResource($currentBill->load('transactions')),
+            'accounts' => AccountResource::collection(
+                $workspace->accounts()->whereNull('deleted_at')->get()
+            ),
         ]);
     }
 
