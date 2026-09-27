@@ -144,6 +144,9 @@ class BillService
             $bill->payment_transaction_id = $paymentTransaction->id;
             $bill->save();
 
+            // Mark all non-deleted transactions linked to this bill as paid
+            $bill->transactions()->whereNull('deleted_at')->update(['paid_at' => now()]);
+
             $this->accountService->recalculateBalance($account);
             $this->creditCardService->recalculateAvailableLimit($card->fresh());
 
@@ -163,6 +166,9 @@ class BillService
             $bill->paid_to_account_id = null;
             $bill->payment_transaction_id = null;
             $bill->save();
+
+            // Revert paid_at to null on all transactions of this bill
+            $bill->transactions()->whereNull('deleted_at')->update(['paid_at' => null]);
 
             if ($paymentTransaction) {
                 $paymentTransaction->delete();

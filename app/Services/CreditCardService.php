@@ -10,6 +10,7 @@ use App\Models\CreditCard;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Workspace;
+use Carbon\Carbon;
 use Illuminate\Support\Str;
 
 class CreditCardService
@@ -18,7 +19,7 @@ class CreditCardService
 
     public function create(Workspace $workspace, User $creator, array $data): CreditCard
     {
-        return CreditCard::create([
+        $card = CreditCard::create([
             'uuid' => Str::orderedUuid()->toString(),
             'workspace_id' => $workspace->id,
             'created_by' => $creator->id,
@@ -28,6 +29,28 @@ class CreditCardService
             'closing_day' => $data['closing_day'],
             'due_day' => $data['due_day'],
         ]);
+
+        // Pre-create 13 months of bills synchronously
+        $this->preCreateBills($card);
+
+        return $card;
+    }
+
+    /**
+     * Pre-create 13 bills (current cycle + 12 future) for a credit card.
+     * Idempotent — safe to call multiple times (unique constraint protects).
+     */
+    public function preCreateBills(CreditCard $card): void
+    {
+        // Use app() to resolve BillService to avoid circular dependency
+        // (BillService already injects CreditCardService)
+        $billService = app(BillService::class);
+        $now = Carbon::now();
+
+        for ($i = 0; $i < 13; $i++) {
+            $targetDate = $now->copy()->addMonthsNoOverflow($i);
+            $billService->findOrCreateBill($card, $targetDate, $card->created_by);
+        }
     }
 
     public function update(CreditCard $card, array $data): CreditCard
