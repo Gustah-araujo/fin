@@ -7,7 +7,6 @@ namespace Tests\Feature\Bills;
 use App\Models\CreditCardBill;
 use App\Models\Transaction;
 use Illuminate\Support\Str;
-use Tests\Feature\Bills\BillTestCase;
 
 class BillViewTest extends BillTestCase
 {

@@ -76,8 +76,12 @@ describe('Credit Card Hub', () => {
 
         cy.url().should('include', '/cards/');
 
+        // Navigate to the card Show page (hub)
+        cy.contains('a', 'Ver fatura').first().click();
+        cy.url().should('match', /\/cards\/[a-f0-9-]+$/);
+
         // Click "Nova despesa neste cartão"
-        cy.contains('Nova despesa neste cartão').click();
+        cy.contains('a, button', 'Nova despesa neste cartão').click();
         cy.url().should('include', '/transactions/create');
         cy.url().should('include', 'payment_method=card');
 
@@ -144,6 +148,8 @@ describe('Credit Card Hub', () => {
 
     // ── Pay a closed bill ───────────────────────────────────────
     it('pays a closed bill and verifies expenses marked paid', () => {
+        let cardUuid;
+
         // Create card
         cy.get('[data-testid="sidebar-cards"]').click();
         cy.contains('Novo Cartão').click();
@@ -154,8 +160,15 @@ describe('Credit Card Hub', () => {
         cy.contains('Criar Cartão').click();
         cy.assertToast('success', 'criado');
 
+        // Navigate to the card Show page (hub) and capture UUID
+        cy.contains('a', 'Ver fatura').first().click();
+        cy.url().should('match', /\/cards\/([a-f0-9-]+)$/);
+        cy.url().then((url) => {
+            cardUuid = url.match(/\/cards\/([a-f0-9-]+)$/)[1];
+        });
+
         // Create an expense on this card
-        cy.contains('Nova despesa neste cartão').click();
+        cy.contains('a, button', 'Nova despesa neste cartão').click();
         cy.get('#description').type('Compra Teste Fatura');
         cy.get('#total_value').type('200');
         cy.get('#category_id').click();
@@ -169,17 +182,12 @@ describe('Credit Card Hub', () => {
             if (workspaceMatch) {
                 cy.request('POST', `/w/${workspaceMatch[1]}/bills/close-current`, {
                     credit_card_id: undefined,
-                }).then(() => {
-                    // Reload to see the updated bill status
-                    cy.visit(`/w/${workspaceMatch[1]}`);
                 });
             }
         });
 
-        // Navigate to the card hub
-        cy.get('[data-testid="sidebar-cards"]').click();
-        cy.contains('Ver fatura').first().click();
-        cy.url().should('include', '/cards/');
+        // Navigate directly to the card Show page
+        cy.visit(`/w/${workspaceUuid}/cards/${cardUuid}`);
 
         // The bill should now be closed — look for pay button
         cy.contains('Marcar fatura como paga').should('be.visible');
@@ -197,6 +205,8 @@ describe('Credit Card Hub', () => {
 
     // ── Undo bill payment ───────────────────────────────────────
     it('undoes a bill payment', () => {
+        let cardUuid;
+
         // Create card
         cy.get('[data-testid="sidebar-cards"]').click();
         cy.contains('Novo Cartão').click();
@@ -207,8 +217,15 @@ describe('Credit Card Hub', () => {
         cy.contains('Criar Cartão').click();
         cy.assertToast('success', 'criado');
 
+        // Navigate to the card Show page (hub) and capture UUID
+        cy.contains('a', 'Ver fatura').first().click();
+        cy.url().should('match', /\/cards\/([a-f0-9-]+)$/);
+        cy.url().then((url) => {
+            cardUuid = url.match(/\/cards\/([a-f0-9-]+)$/)[1];
+        });
+
         // Create expense
-        cy.contains('Nova despesa neste cartão').click();
+        cy.contains('a, button', 'Nova despesa neste cartão').click();
         cy.get('#description').type('Compra Undo Test');
         cy.get('#total_value').type('150');
         cy.get('#category_id').click();
@@ -220,16 +237,12 @@ describe('Credit Card Hub', () => {
         cy.url().then((url) => {
             const workspaceMatch = url.match(/\/w\/([a-f0-9-]+)/);
             if (workspaceMatch) {
-                cy.request('POST', `/w/${workspaceMatch[1]}/bills/close-current`).then(() => {
-                    cy.visit(`/w/${workspaceMatch[1]}`);
-                });
+                cy.request('POST', `/w/${workspaceMatch[1]}/bills/close-current`);
             }
         });
 
-        // Navigate to card hub
-        cy.get('[data-testid="sidebar-cards"]').click();
-        cy.contains('Ver fatura').first().click();
-        cy.url().should('include', '/cards/');
+        // Navigate directly to the card Show page
+        cy.visit(`/w/${workspaceUuid}/cards/${cardUuid}`);
 
         // Pay the bill
         cy.contains('Marcar fatura como paga').click();

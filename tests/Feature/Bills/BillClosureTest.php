@@ -8,7 +8,6 @@ use App\Enums\BillStatus;
 use App\Models\CreditCardBill;
 use App\Models\Transaction;
 use App\Services\BillService;
-use Tests\Feature\Bills\BillTestCase;
 
 class BillClosureTest extends BillTestCase
 {

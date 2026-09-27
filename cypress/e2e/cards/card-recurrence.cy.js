@@ -62,7 +62,7 @@ describe('Card Recurrence', () => {
 
         // Fill description and value
         cy.get('#description').type('Streaming Mensal');
-        cy.get('#total_value').type('59.90');
+        cy.get('#value').type('59.90');
 
         // Select category
         cy.get('#category_id').click();
@@ -120,7 +120,7 @@ describe('Card Recurrence', () => {
 
         // Fill required fields and submit
         cy.get('#description').type('Recorrência com Parcela');
-        cy.get('#total_value').type('300');
+        cy.get('#value').type('300');
         cy.get('#category_id').click();
         cy.contains('[role="option"]', 'Sem Categoria').click();
 
@@ -154,7 +154,7 @@ describe('Card Recurrence', () => {
 
         // Fill description and value
         cy.get('#description').type('Data Passada');
-        cy.get('#total_value').type('100');
+        cy.get('#value').type('100');
 
         // Select category
         cy.get('#category_id').click();

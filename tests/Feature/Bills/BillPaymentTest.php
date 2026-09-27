@@ -9,7 +9,6 @@ use App\Models\CreditCardBill;
 use App\Models\Transaction;
 use App\Services\CreditCardService;
 use Illuminate\Support\Str;
-use Tests\Feature\Bills\BillTestCase;
 
 class BillPaymentTest extends BillTestCase
 {
