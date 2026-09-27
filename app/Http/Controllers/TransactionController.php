@@ -106,6 +106,7 @@ class TransactionController extends Controller
 
         return inertia('Transactions/Create', [
             'accounts' => AccountResource::collection($workspace->accounts()->orderBy('name')->get()),
+            'cards' => CreditCardResource::collection($workspace->creditCards()->whereNull('deleted_at')->orderBy('name')->get()),
             'categories' => CategoryResource::collection(
                 $workspace->categories()
                     ->whereIn('type', [TransactionType::Expense->value, TransactionType::Both->value])
@@ -170,11 +171,12 @@ class TransactionController extends Controller
 
         $this->authorize('update', [$transaction, $workspace]);
 
-        $transaction->load(['account', 'category', 'tags']);
+        $transaction->load(['account', 'category', 'tags', 'creditCard']);
 
         return inertia('Transactions/Edit', [
             'transaction' => new TransactionResource($transaction),
             'accounts' => AccountResource::collection($workspace->accounts()->orderBy('name')->get()),
+            'cards' => CreditCardResource::collection($workspace->creditCards()->whereNull('deleted_at')->orderBy('name')->get()),
             'categories' => CategoryResource::collection(
                 $workspace->categories()
                     ->whereIn('type', [TransactionType::Expense->value, TransactionType::Both->value])

@@ -10,7 +10,6 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\Auth\VerifyEmailController;
-use App\Http\Controllers\CardExpenseController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CreditCardBillController;
 use App\Http\Controllers\CreditCardController;
@@ -151,17 +150,6 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
         Route::get('planning/month-detail', [PlanningController::class, 'monthDetail'])->name('planning.month-detail');
 
         Route::resource('cards', CreditCardController::class);
-
-        Route::get('cards/{card}/expenses/create', [CardExpenseController::class, 'create'])
-            ->name('card-expenses.create')->withTrashed();
-        Route::post('cards/{card}/expenses', [CardExpenseController::class, 'store'])
-            ->name('card-expenses.store')->withTrashed();
-        Route::get('cards/{card}/expenses/{transaction}/edit', [CardExpenseController::class, 'edit'])
-            ->name('card-expenses.edit');
-        Route::put('cards/{card}/expenses/{transaction}', [CardExpenseController::class, 'update'])
-            ->name('card-expenses.update');
-        Route::delete('cards/{card}/expenses/{transaction}', [CardExpenseController::class, 'destroy'])
-            ->name('card-expenses.destroy');
 
         Route::get('bills/{bill}', [CreditCardBillController::class, 'show'])
             ->name('bills.show');
