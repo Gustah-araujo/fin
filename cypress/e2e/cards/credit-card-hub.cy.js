@@ -75,13 +75,9 @@ describe('Credit Card Hub', () => {
         cy.contains('Criar Cartão').click();
         cy.assertToast('success', 'criado');
 
-        cy.url().should('include', '/cards/');
-
-        // Navigate to the card Show page (hub)
-        cy.contains('a', 'Ver fatura').first().click();
         cy.url().should('match', /\/cards\/[a-f0-9-]+$/);
 
-        // Click "Nova despesa neste cartão"
+        // Already on the card Show page (hub) — click "Nova despesa neste cartão"
         cy.contains('a, button', 'Nova despesa neste cartão').click();
         cy.url().should('include', '/transactions/create');
         cy.url().should('include', 'payment_method=card');
@@ -162,8 +158,7 @@ describe('Credit Card Hub', () => {
         cy.contains('Criar Cartão').click();
         cy.assertToast('success', 'criado');
 
-        // Navigate to the card Show page (hub) and capture UUID
-        cy.contains('a', 'Ver fatura').first().click();
+        // Already on the card Show page — capture UUID from current URL
         cy.url().should('match', /\/cards\/([a-f0-9-]+)$/);
         cy.url().then((url) => {
             cardUuid = url.match(/\/cards\/([a-f0-9-]+)$/)[1];
@@ -223,8 +218,7 @@ describe('Credit Card Hub', () => {
         cy.contains('Criar Cartão').click();
         cy.assertToast('success', 'criado');
 
-        // Navigate to the card Show page (hub) and capture UUID
-        cy.contains('a', 'Ver fatura').first().click();
+        // Already on the card Show page — capture UUID from current URL
         cy.url().should('match', /\/cards\/([a-f0-9-]+)$/);
         cy.url().then((url) => {
             cardUuid = url.match(/\/cards\/([a-f0-9-]+)$/)[1];

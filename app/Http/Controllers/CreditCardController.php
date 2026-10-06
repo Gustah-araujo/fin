@@ -80,11 +80,11 @@ class CreditCardController extends Controller
     {
         $this->authorize('create', [CreditCard::class, $workspace]);
 
-        $service->create($workspace, $request->user(), $request->validated());
+        $card = $service->create($workspace, $request->user(), $request->validated());
 
         Toast::success('Cartão criado com sucesso.');
 
-        return redirect()->route('cards.index', $workspace);
+        return redirect()->route('cards.show', [$workspace, $card]);
     }
 
     public function edit(Workspace $workspace, CreditCard $card): Response

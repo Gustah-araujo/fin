@@ -143,8 +143,7 @@ describe('Card Recurrence', () => {
         cy.contains('Criar Cartão').click();
         cy.assertToast('success', 'criado');
 
-        // Navigate to the card Show page and capture UUID
-        cy.contains('a', 'Ver fatura').first().click();
+        // Already on the card Show page — capture UUID from current URL
         cy.url().should('match', /\/cards\/([a-f0-9-]+)$/);
         cy.url().then((url) => {
             cardUuid = url.match(/\/cards\/([a-f0-9-]+)$/)[1];
