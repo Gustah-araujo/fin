@@ -51,7 +51,12 @@ class CreditCardController extends Controller
         }
 
         // Load all bills (past, current, future pre-created) for the invoice selector
+        // Eager-load transactions so CreditCardBillResource can serialize expenses
         $bills = $card->bills()
+            ->with(['transactions' => fn ($q) => $q
+                ->with(['category', 'tags'])
+                ->orderBy('date')
+                ->orderBy('installment_number')])
             ->orderBy('period_year', 'desc')
             ->orderBy('period_month', 'desc')
             ->get();

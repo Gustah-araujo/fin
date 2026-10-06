@@ -467,7 +467,7 @@ export default function Show({ card, bills, currentBill, accounts }: Props) {
                         {/* -------------------------------------------------------------- */}
                         {/* 5. Invoice Expenses (Table)                                     */}
                         {/* -------------------------------------------------------------- */}
-                        {selectedBill.expenses.length === 0 ? (
+                        {(selectedBill.expenses?.length ?? 0) === 0 ? (
                             <p className="text-sm text-muted-foreground py-8 text-center">
                                 Nenhuma despesa nesta fatura
                             </p>
@@ -486,7 +486,7 @@ export default function Show({ card, bills, currentBill, accounts }: Props) {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {selectedBill.expenses.map((expense) => (
+                                    {selectedBill.expenses!.map((expense) => (
                                         <TableRow
                                             key={expense.uuid}
                                             data-testid="expense-row"
