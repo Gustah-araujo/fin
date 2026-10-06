@@ -83,14 +83,18 @@ class CreditCardBillController extends Controller
             ->where('workspace_id', $workspace->id)
             ->firstOrFail();
 
+        // Find the most recent non-Paid bill (Open or Closed).
+        // Idempotent: if already Closed (e.g. auto-closed by show()), return success.
         $bill = $card->bills()
-            ->where('status', BillStatus::Open)
+            ->whereIn('status', [BillStatus::Open, BillStatus::Closed])
             ->orderBy('period_year', 'desc')
             ->orderBy('period_month', 'desc')
             ->firstOrFail();
 
-        $this->billService->closeBill($bill);
-        Toast::success('Fatura fechada com sucesso.');
+        if ($bill->status === BillStatus::Open) {
+            $this->billService->closeBill($bill);
+            Toast::success('Fatura fechada com sucesso.');
+        }
 
         return response()->json(['message' => 'Fatura fechada com sucesso.']);
     }
