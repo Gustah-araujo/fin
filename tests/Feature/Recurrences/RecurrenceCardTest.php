@@ -69,31 +69,22 @@ class RecurrenceCardTest extends TestCase
                 'buffer_ahead' => 12,
             ]);
 
-        // SQLite FK limitation: account_id nullable constraint not properly enforced
-        // The service may throw an exception on SQLite. Verify the validation path works.
-        // On MariaDB/MySQL this would succeed.
-        if ($response->isRedirect()) {
-            // On a real DB, verify the recurrence and transactions
-            $recurrence = Recurrence::where('description', 'Netflix Cartão')->first();
-            $this->assertNotNull($recurrence);
-            $this->assertEquals($this->card->uuid, $recurrence->credit_card_id);
-            $this->assertNull($recurrence->account_id);
+        $response->assertRedirect();
 
-            $transactions = Transaction::where('recurrence_id', $recurrence->id)
-                ->whereNull('deleted_at')
-                ->get();
-            $this->assertCount(12, $transactions);
+        $recurrence = Recurrence::where('description', 'Netflix Cartão')->first();
+        $this->assertNotNull($recurrence);
+        $this->assertEquals($this->card->uuid, $recurrence->credit_card_id);
+        $this->assertNull($recurrence->account_id);
 
-            foreach ($transactions as $tx) {
-                $this->assertNotNull($tx->credit_card_bill_id);
-                $this->assertEquals($this->card->id, $tx->credit_card_id);
-                $this->assertNull($tx->account_id);
-            }
-        } else {
-            // On SQLite, the FK constraint may prevent null account_id.
-            // This is a known SQLite limitation with nullable FK via ->change().
-            // The test still verifies the endpoint is reachable and processes the request.
-            $this->assertTrue(true, 'SQLite FK limitation — card recurrence tested via service in CI');
+        $transactions = Transaction::where('recurrence_id', $recurrence->id)
+            ->whereNull('deleted_at')
+            ->get();
+        $this->assertCount(12, $transactions);
+
+        foreach ($transactions as $tx) {
+            $this->assertNotNull($tx->credit_card_bill_id);
+            $this->assertEquals($this->card->id, $tx->credit_card_id);
+            $this->assertNull($tx->account_id);
         }
     }
 
@@ -186,19 +177,15 @@ class RecurrenceCardTest extends TestCase
                 'frequency_day' => (int) Carbon::today()->format('d'),
             ]);
 
-        // On SQLite the FK may prevent creation, but on MariaDB it succeeds
-        if ($response->isRedirect()) {
-            $recurrence = Recurrence::where('description', 'Listável Cartão')->first();
-            $this->assertNotNull($recurrence);
+        $response->assertRedirect();
 
-            $this->assertDatabaseHas('recurrences', [
-                'description' => 'Listável Cartão',
-                'credit_card_id' => $this->card->uuid,
-                'workspace_id' => $this->workspace->id,
-            ]);
-        } else {
-            // Verify the endpoint processes the request (even if SQLite FK blocks it)
-            $this->assertTrue(true, 'SQLite FK limitation');
-        }
+        $recurrence = Recurrence::where('description', 'Listável Cartão')->first();
+        $this->assertNotNull($recurrence);
+
+        $this->assertDatabaseHas('recurrences', [
+            'description' => 'Listável Cartão',
+            'credit_card_id' => $this->card->uuid,
+            'workspace_id' => $this->workspace->id,
+        ]);
     }
 }
