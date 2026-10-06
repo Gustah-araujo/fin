@@ -76,10 +76,10 @@ describe('Card Recurrence', () => {
 
         // Submit
         cy.contains('Criar Despesa').click({ force: true });
-        cy.assertToast('success', 'criada');
 
-        // Should redirect to transactions index
+        // Verify redirect happened (catches 422/500 before vague toast timeout)
         cy.url().should('include', '/transactions');
+        cy.assertToast('success', 'criada');
         cy.contains('Streaming Mensal').should('be.visible');
 
         // Navigate to recurrences and verify it appears
@@ -126,6 +126,9 @@ describe('Card Recurrence', () => {
 
         // Submit — should succeed because installments is locked to 1
         cy.contains('Criar Despesa').click({ force: true });
+
+        // Verify redirect happened (catches 422/500 before vague toast timeout)
+        cy.url().should('include', '/transactions');
         cy.assertToast('success', 'criada');
     });
 
