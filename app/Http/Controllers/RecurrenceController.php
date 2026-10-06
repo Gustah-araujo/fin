@@ -78,7 +78,7 @@ class RecurrenceController extends Controller
             ->filter('value', Filter::numberRange('value'))
             ->filter('next_date', Filter::dateRange('next_date'))
             ->filter('account', Filter::relation('account', 'uuid'))
-            ->filter('credit_card_id', Filter::select(fn (Builder $q, string $v) => $q->where('credit_card_id', CreditCard::where('uuid', $v)->value('id'))))
+            ->filter('credit_card_id', Filter::select(fn (Builder $q, string $v) => $q->where('credit_card_id', CreditCard::where('uuid', $v)->value('uuid'))))
             ->filter('category', Filter::relation('category', 'uuid'))
             ->filter('status', Filter::select(fn (Builder $q, string $v) => match ($v) {
                 'paused' => $q->where('status', RecurrenceStatus::Paused),

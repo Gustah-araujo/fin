@@ -76,7 +76,7 @@ class Recurrence extends Model
 
     public function creditCard(): BelongsTo
     {
-        return $this->belongsTo(CreditCard::class);
+        return $this->belongsTo(CreditCard::class, 'credit_card_id', 'uuid');
     }
 
     public function category(): BelongsTo

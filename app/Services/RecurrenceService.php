@@ -193,7 +193,7 @@ class RecurrenceService
                 'uuid' => Str::orderedUuid()->toString(),
                 'workspace_id' => $workspace->id,
                 'account_id' => $accountId,
-                'credit_card_id' => $card?->id,
+                'credit_card_id' => $card?->uuid,
                 'category_id' => $categoryId,
                 'type' => $type,
                 'description' => $data['description'],
@@ -268,7 +268,7 @@ class RecurrenceService
             return null;
         }
 
-        $card = CreditCard::withTrashed()->find($recurrence->credit_card_id);
+        $card = CreditCard::withTrashed()->where('uuid', $recurrence->credit_card_id)->first();
 
         if (! $card || $card->trashed()) {
             return null;
@@ -1240,7 +1240,7 @@ class RecurrenceService
                 'uuid' => Str::orderedUuid()->toString(),
                 'workspace_id' => $recurrence->workspace_id,
                 'account_id' => null,
-                'credit_card_id' => $recurrence->credit_card_id,
+                'credit_card_id' => $card->id,
                 'credit_card_bill_id' => $bill->id,
                 'category_id' => $recurrence->category_id,
                 'type' => $recurrence->type->value,

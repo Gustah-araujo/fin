@@ -219,8 +219,8 @@ describe('Card Expense Pay Guard', () => {
             .eq(2) // Fatura is the 3rd select-trigger (0-indexed: 2)
             .click();
 
-        // Select the first bill option (Cartão — <period>)
-        cy.contains('[role="option"]').first().click();
+        // Select the first bill option for this card (skip "Todos" which is always first)
+        cy.contains('[role="option"]', 'Nubank BillFilter').first().click();
 
         // The expense from the current bill should still be visible
         cy.contains('Compra Filtro Fatura').should('be.visible');

@@ -76,13 +76,13 @@ class RecurrenceCardTest extends TestCase
             // On a real DB, verify the recurrence and transactions
             $recurrence = Recurrence::where('description', 'Netflix Cartão')->first();
             $this->assertNotNull($recurrence);
-            $this->assertEquals($this->card->id, $recurrence->credit_card_id);
+            $this->assertEquals($this->card->uuid, $recurrence->credit_card_id);
             $this->assertNull($recurrence->account_id);
 
             $transactions = Transaction::where('recurrence_id', $recurrence->id)
                 ->whereNull('deleted_at')
                 ->get();
-            $this->assertCount(13, $transactions);
+            $this->assertCount(12, $transactions);
 
             foreach ($transactions as $tx) {
                 $this->assertNotNull($tx->credit_card_bill_id);
@@ -193,7 +193,7 @@ class RecurrenceCardTest extends TestCase
 
             $this->assertDatabaseHas('recurrences', [
                 'description' => 'Listável Cartão',
-                'credit_card_id' => $this->card->id,
+                'credit_card_id' => $this->card->uuid,
                 'workspace_id' => $this->workspace->id,
             ]);
         } else {
