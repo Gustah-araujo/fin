@@ -17,6 +17,7 @@ class UpdateTransactionRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'account_id' => ['sometimes', 'required', 'exists:accounts,uuid'],
             'description' => ['sometimes', 'required', 'string', 'max:255'],
             'value' => ['sometimes', 'required', 'numeric', 'gt:0', 'max:999999999.99'],
             'date' => ['sometimes', 'required', 'date'],

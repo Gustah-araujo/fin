@@ -33,6 +33,7 @@ class TransactionValidator
     {
         $workspace = $request->route('workspace');
 
+        self::validateAccountBelongsToWorkspace($validator, $request, $workspace);
         self::validateCategory($validator, $request, $workspace);
         self::validateTags($validator, $request, $workspace);
     }
