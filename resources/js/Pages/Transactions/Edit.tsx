@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ValueField } from '@/Components/Transactions/ValueField';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
     Select,
@@ -277,24 +278,12 @@ export default function Edit({
                                 )}
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="value">Valor</Label>
-                                <Input
-                                    id="value"
-                                    type="number"
-                                    step="0.01"
-                                    min="0.01"
-                                    value={data.value}
-                                    onChange={(e) =>
-                                        setData('value', e.target.value)
-                                    }
-                                />
-                                {errors.value && (
-                                    <p className="text-sm text-destructive">
-                                        {errors.value}
-                                    </p>
-                                )}
-                            </div>
+                            <ValueField
+                                hidden={isCard && transaction.is_installment}
+                                value={data.value}
+                                error={errors.value}
+                                onChange={(value) => setData('value', value)}
+                            />
 
                             <div className="space-y-2">
                                 <Label htmlFor="date">Data</Label>

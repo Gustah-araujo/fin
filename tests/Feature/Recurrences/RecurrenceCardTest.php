@@ -188,4 +188,119 @@ class RecurrenceCardTest extends TestCase
             'workspace_id' => $this->workspace->id,
         ]);
     }
+
+    public function test_edit_card_recurrence_loads_credit_card(): void
+    {
+        $recurrence = Recurrence::factory()->expense()->create([
+            'workspace_id' => $this->workspace->id,
+            'account_id' => null,
+            'credit_card_id' => $this->card->uuid,
+            'category_id' => $this->category->id,
+            'created_by' => $this->user->id,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->get(route('recurrences.edit', [$this->workspace, $recurrence]));
+
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->component('Recurrences/Edit')
+            ->where('recurrence.credit_card.uuid', $this->card->uuid)
+            ->where('recurrence.account', null)
+        );
+    }
+
+    public function test_card_recurrence_can_be_edited_without_switching_payment_method(): void
+    {
+        $recurrence = Recurrence::factory()->expense()->create([
+            'workspace_id' => $this->workspace->id,
+            'account_id' => null,
+            'credit_card_id' => $this->card->uuid,
+            'category_id' => $this->category->id,
+            'created_by' => $this->user->id,
+            'description' => 'Original',
+            'start_date' => Carbon::today()->toDateString(),
+            'next_date' => Carbon::today()->toDateString(),
+        ]);
+
+        Transaction::factory()->create([
+            'workspace_id' => $this->workspace->id,
+            'account_id' => null,
+            'credit_card_id' => $this->card->id,
+            'category_id' => $this->category->id,
+            'created_by' => $this->user->id,
+            'type' => TransactionType::Expense->value,
+            'recurrence_id' => $recurrence->id,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->put(route('recurrences.update', [$this->workspace, $recurrence]), [
+                'description' => 'Edited',
+                'value' => 59.90,
+                'account_id' => '',
+                'credit_card_id' => $this->card->uuid,
+                'category_id' => $this->category->uuid,
+                'frequency' => 'monthly',
+                'frequency_day' => (int) Carbon::today()->format('d'),
+                'start_date' => Carbon::today()->toDateString(),
+                'until_date' => '',
+                'tags' => [],
+                'buffer_ahead' => 12,
+                'propagate_to_future' => false,
+            ]);
+
+        $response->assertRedirect(route('recurrences.index', $this->workspace));
+        $response->assertSessionHasNoErrors();
+        $this->assertEquals('Edited', $recurrence->refresh()->description);
+    }
+
+    public function test_card_recurrence_update_rejects_start_date_colliding_with_paid_bill(): void
+    {
+        $card = CreditCard::factory()->create([
+            'workspace_id' => $this->workspace->id,
+            'created_by' => $this->user->id,
+            'closing_day' => 15,
+            'due_day' => 20,
+            'credit_limit' => 5000,
+            'available_limit' => 5000,
+        ]);
+
+        $pastDate = Carbon::now()->subMonthsNoOverflow(3);
+        $bill = CreditCardBill::factory()->closed()->create([
+            'credit_card_id' => $card->id,
+            'workspace_id' => $this->workspace->id,
+            'created_by' => $this->user->id,
+            'period_year' => $pastDate->year,
+            'period_month' => $pastDate->month,
+            'total_amount' => 100,
+        ]);
+
+        $account = Account::factory()->create([
+            'workspace_id' => $this->workspace->id,
+            'created_by' => $this->user->id,
+            'initial_balance' => 5000,
+            'current_balance' => 5000,
+        ]);
+
+        app(BillService::class)->payBill($bill, $account, $this->user);
+
+        $recurrence = Recurrence::factory()->expense()->create([
+            'workspace_id' => $this->workspace->id,
+            'account_id' => null,
+            'credit_card_id' => $card->uuid,
+            'category_id' => $this->category->id,
+            'created_by' => $this->user->id,
+            'start_date' => Carbon::today()->toDateString(),
+            'next_date' => Carbon::today()->toDateString(),
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->put(route('recurrences.update', [$this->workspace, $recurrence]), [
+                'start_date' => $pastDate->format('Y-m-d'),
+            ]);
+
+        $response->assertSessionHasErrors([
+            'start_date' => 'A data de início colide com faturas já pagas do cartão.',
+        ]);
+    }
 }

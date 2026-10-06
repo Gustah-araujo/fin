@@ -514,6 +514,8 @@ class RecurrenceService
     {
         $data = $this->resolveForeignKeyIds($recurrence, $data);
 
+        $this->validateUpdatePaidBillCollision($recurrence, $data);
+
         $this->applyStartDate($recurrence, $data);
 
         $this->applyEditableFields($recurrence, $data);
@@ -831,13 +833,44 @@ class RecurrenceService
             return;
         }
 
+        $newStartDate = Carbon::parse($data['start_date']);
+
+        if ($recurrence->start_date && $recurrence->start_date->isSameDay($newStartDate)) {
+            return;
+        }
+
         if ($recurrence->transactions()->exists()) {
             throw ValidationException::withMessages([
                 'start_date' => 'A data de início não pode ser alterada pois já existem transações geradas.',
             ]);
         }
 
-        $recurrence->start_date = Carbon::parse($data['start_date']);
+        $recurrence->start_date = $newStartDate;
+    }
+
+    /**
+     * Reject changing a card recurrence's start_date when any occurrence between
+     * the new start_date and today would fall on a bill that is already PAID.
+     */
+    private function validateUpdatePaidBillCollision(Recurrence $recurrence, array $data): void
+    {
+        if (! isset($data['start_date']) || ! $recurrence->credit_card_id) {
+            return;
+        }
+
+        $newStartDate = Carbon::parse($data['start_date']);
+
+        if ($recurrence->start_date && $recurrence->start_date->isSameDay($newStartDate)) {
+            return;
+        }
+
+        $card = CreditCard::where('uuid', $recurrence->credit_card_id)->first();
+
+        if (! $card) {
+            return;
+        }
+
+        $this->validatePaidBillCollision($card, $newStartDate);
     }
 
     private function applyEditableFields(Recurrence $recurrence, array $data): void

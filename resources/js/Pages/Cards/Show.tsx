@@ -201,9 +201,10 @@ function PaymentConfirmDialog({
 interface BillPaymentFormProps {
     bill: BillItem;
     accounts: Account[];
+    isViewer: boolean;
 }
 
-function BillPaymentForm({ bill, accounts }: BillPaymentFormProps) {
+function BillPaymentForm({ bill, accounts, isViewer }: BillPaymentFormProps) {
     const workspace = useWorkspace();
     const [showDialog, setShowDialog] = useState(false);
     const form = useForm({ account_id: '' });
@@ -236,9 +237,11 @@ function BillPaymentForm({ bill, accounts }: BillPaymentFormProps) {
     if (bill.status === 'closed') {
         return (
             <>
-                <Button onClick={() => setShowDialog(true)}>
-                    Marcar fatura como paga
-                </Button>
+                {!isViewer && (
+                    <Button onClick={() => setShowDialog(true)}>
+                        Marcar fatura como paga
+                    </Button>
+                )}
                 <PaymentConfirmDialog
                     open={showDialog}
                     onOpenChange={setShowDialog}
@@ -265,14 +268,16 @@ function BillPaymentForm({ bill, accounts }: BillPaymentFormProps) {
                     Pago em {formatDate(bill.paid_at!)}{' '}
                     {bill.payment_account && `via ${bill.payment_account.name}`}
                 </p>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleUnpay}
-                    disabled={form.processing}
-                >
-                    Desfazer pagamento
-                </Button>
+                {!isViewer && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleUnpay}
+                        disabled={form.processing}
+                    >
+                        Desfazer pagamento
+                    </Button>
+                )}
             </div>
         );
     }
@@ -570,6 +575,7 @@ export default function Show({ card, bills, currentBill, accounts }: Props) {
                             <BillPaymentForm
                                 bill={selectedBill}
                                 accounts={accounts}
+                                isViewer={isViewer}
                             />
                         </div>
                     </CardContent>

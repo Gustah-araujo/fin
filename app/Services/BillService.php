@@ -14,6 +14,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class BillService
 {
@@ -115,6 +116,12 @@ class BillService
 
     public function payBill(CreditCardBill $bill, Account $account, User $user): Transaction
     {
+        if ($bill->total_amount <= 0) {
+            throw ValidationException::withMessages([
+                'bill' => 'Esta fatura não possui despesas',
+            ]);
+        }
+
         return DB::transaction(function () use ($bill, $account, $user) {
             $workspace = $bill->workspace;
             $card = $bill->creditCard;

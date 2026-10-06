@@ -97,7 +97,7 @@ class RecurrenceController extends Controller
 
         $this->authorize('update', [$recurrence, $workspace]);
 
-        $recurrence->load(['account', 'category', 'tags']);
+        $recurrence->load(['account', 'creditCard', 'category', 'tags']);
 
         return inertia('Recurrences/Edit', [
             'recurrence' => new RecurrenceResource($recurrence),

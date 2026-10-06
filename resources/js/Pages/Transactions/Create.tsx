@@ -17,6 +17,7 @@ import {
 import { PaymentMethodSelector } from '@/Components/Transactions/PaymentMethodSelector';
 import { AccountFields } from '@/Components/Transactions/AccountFields';
 import { CardExpenseFields } from '@/Components/Transactions/CardExpenseFields';
+import { ValueField } from '@/Components/Transactions/ValueField';
 
 interface AccountItem {
     uuid: string;
@@ -183,25 +184,15 @@ export default function Create({ accounts, cards, categories, tags }: Props) {
                                 )}
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="value">Valor</Label>
-                                <Input
-                                    id="value"
-                                    type="number"
-                                    step="0.01"
-                                    min="0.01"
-                                    value={data.value}
-                                    onChange={(e) =>
-                                        setData('value', e.target.value)
-                                    }
-                                    placeholder="0,00"
-                                />
-                                {errors.value && (
-                                    <p className="text-sm text-destructive">
-                                        {errors.value}
-                                    </p>
-                                )}
-                            </div>
+                            <ValueField
+                                hidden={
+                                    data.payment_method === 'card' &&
+                                    data.installments > 1
+                                }
+                                value={data.value}
+                                error={errors.value}
+                                onChange={(value) => setData('value', value)}
+                            />
 
                             <div className="space-y-2">
                                 <Label htmlFor="date">

@@ -172,15 +172,17 @@ class BillPaymentMarkExpensesTest extends BillTestCase
                 'account_id' => $account->uuid,
             ]);
 
-        // Empty bill with total_amount=0 — verify it doesn't create a meaningful payment
-        // The service allows it but the payment transaction will have value=0
-        $response->assertRedirect();
+        $response->assertSessionHasErrors([
+            'bill' => 'Esta fatura não possui despesas',
+        ]);
 
-        // A payment transaction with value=0 should be created
-        $paymentTx = Transaction::where('account_id', $account->id)
-            ->where('description', 'like', '%Pagamento Fatura%')
-            ->first();
-        $this->assertNotNull($paymentTx);
-        $this->assertEquals(0.00, (float) $paymentTx->value);
+        // No payment transaction should be created
+        $this->assertFalse(
+            Transaction::where('description', 'like', '%Pagamento Fatura%')->exists()
+        );
+
+        // Bill should remain Closed (not Paid)
+        $bill->refresh();
+        $this->assertEquals(BillStatus::Closed, $bill->status);
     }
 }

@@ -35,6 +35,15 @@ interface TagItem {
     color: string;
 }
 
+interface CreditCardItem {
+    uuid: string;
+    name: string;
+    credit_limit: number;
+    available_limit: number;
+    closing_day: number;
+    due_day: number;
+}
+
 interface RecurrenceItem {
     uuid: string;
     description: string;
@@ -47,6 +56,7 @@ interface RecurrenceItem {
     status: string;
     buffer_ahead: number;
     account: AccountItem | null;
+    credit_card: CreditCardItem | null;
     category: CategoryItem | null;
     tags: TagItem[];
 }
@@ -69,6 +79,64 @@ const WEEKDAYS = [
     { value: 6, label: 'Sábado' },
 ];
 
+interface PaymentMethodFieldProps {
+    isCard: boolean;
+    cardName?: string | null;
+    accountId: string;
+    accounts: AccountItem[];
+    onAccountChange: (value: string) => void;
+    accountError?: string;
+    creditCardError?: string;
+}
+
+function PaymentMethodField({
+    isCard,
+    cardName,
+    accountId,
+    accounts,
+    onAccountChange,
+    accountError,
+    creditCardError,
+}: PaymentMethodFieldProps) {
+    return (
+        <div className="space-y-2">
+            <Label>Forma de pagamento</Label>
+            {isCard ? (
+                <div className="flex items-center justify-between rounded-md border px-3 py-2">
+                    <span className="text-sm">Cartão de crédito</span>
+                    <span className="text-sm font-medium">{cardName}</span>
+                </div>
+            ) : (
+                <>
+                    <Select value={accountId} onValueChange={onAccountChange}>
+                        <SelectTrigger id="account_id">
+                            <SelectValue placeholder="Selecione a conta" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {accounts.map((account) => (
+                                <SelectItem
+                                    key={account.uuid}
+                                    value={account.uuid}
+                                >
+                                    {account.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    {accountError && (
+                        <p className="text-sm text-destructive">
+                            {accountError}
+                        </p>
+                    )}
+                </>
+            )}
+            {creditCardError && (
+                <p className="text-sm text-destructive">{creditCardError}</p>
+            )}
+        </div>
+    );
+}
+
 export default function Edit({
     recurrence,
     accounts,
@@ -82,6 +150,7 @@ export default function Edit({
         description: recurrence.description,
         value: String(recurrence.value),
         account_id: recurrence.account?.uuid ?? '',
+        credit_card_id: recurrence.credit_card?.uuid ?? '',
         category_id: recurrence.category?.uuid ?? '',
         frequency: recurrence.frequency as 'weekly' | 'monthly',
         frequency_day: recurrence.frequency_day,
@@ -166,34 +235,17 @@ export default function Edit({
                                 )}
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="account_id">Conta</Label>
-                                <Select
-                                    value={data.account_id}
-                                    onValueChange={(value) =>
-                                        setData('account_id', value)
-                                    }
-                                >
-                                    <SelectTrigger id="account_id">
-                                        <SelectValue placeholder="Selecione a conta" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {accounts.map((account) => (
-                                            <SelectItem
-                                                key={account.uuid}
-                                                value={account.uuid}
-                                            >
-                                                {account.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                {errors.account_id && (
-                                    <p className="text-sm text-destructive">
-                                        {errors.account_id}
-                                    </p>
-                                )}
-                            </div>
+                            <PaymentMethodField
+                                isCard={recurrence.credit_card !== null}
+                                cardName={recurrence.credit_card?.name}
+                                accountId={data.account_id}
+                                accounts={accounts}
+                                onAccountChange={(value) =>
+                                    setData('account_id', value)
+                                }
+                                accountError={errors.account_id}
+                                creditCardError={errors.credit_card_id}
+                            />
 
                             <div className="space-y-2">
                                 <Label htmlFor="category_id">Categoria</Label>

@@ -59,8 +59,8 @@ describe('Credit Card Hub', () => {
         cy.contains('Fatura em vista').should('be.visible');
 
         // Invoice selector should be present (13 pre-created bills)
-        // period_label format is YYYY/MM (e.g. "2026/10")
-        cy.contains(/\d{4}\/\d{2}/).should('exist');
+        // period_label format is MM/YYYY (e.g. "10/2026")
+        cy.contains(/\d{2}\/\d{4}/).should('exist');
     });
 
     // ── Create single card expense from hub ─────────────────────
@@ -126,8 +126,8 @@ describe('Credit Card Hub', () => {
         // Set installments to 12
         cy.get('#installments').clear().type('12');
 
-        // Set total value (installments > 1 shows both fields)
-        cy.get('#value').type('1200');
+        // Set total value (installments > 1 replaces "Valor" with "Valor total")
+        cy.get('#value').should('not.exist');
         cy.get('#total_value').type('1200');
 
         // Fill description
