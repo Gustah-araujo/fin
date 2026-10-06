@@ -59,7 +59,8 @@ describe('Credit Card Hub', () => {
         cy.contains('Fatura em vista').should('be.visible');
 
         // Invoice selector should be present (13 pre-created bills)
-        cy.contains('Abril').should('exist');
+        // period_label format is YYYY/MM (e.g. "2026/10")
+        cy.contains(/\d{4}\/\d{2}/).should('exist');
     });
 
     // ── Create single card expense from hub ─────────────────────
@@ -90,7 +91,7 @@ describe('Credit Card Hub', () => {
 
         // Fill the form
         cy.get('#description').type('Compra Online');
-                                cy.get('#value').type('500');
+        cy.get('#value').type('500');
 
         cy.get('#category_id').click();
         cy.contains('[role="option"]', 'Sem Categoria').click();
@@ -178,13 +179,8 @@ describe('Credit Card Hub', () => {
         cy.assertToast('success', 'criada');
 
         // Close the current bill via API
-        cy.url().then((url) => {
-            const workspaceMatch = url.match(/\/w\/([a-f0-9-]+)/);
-            if (workspaceMatch) {
-                cy.request('POST', `/w/${workspaceMatch[1]}/bills/close-current`, {
-                    credit_card_id: undefined,
-                });
-            }
+        cy.request('POST', `/w/${workspaceUuid}/bills/close-current`, {
+            credit_card_id: cardUuid,
         });
 
         // Navigate directly to the card Show page
@@ -195,10 +191,10 @@ describe('Credit Card Hub', () => {
         cy.contains('Marcar fatura como paga').click();
 
         // Dialog opens — select account
-                                cy.contains('Confirmar Pagamento').should('be.visible');
+        cy.contains('Confirmar Pagamento').should('be.visible');
         cy.get('[data-slot="select-trigger"]').click();
         cy.contains('[role="option"]', 'Conta Principal').click();
-        cy.contains('Marcar fatura como paga').last().click();
+        cy.contains('Confirmar Pagamento').click();
 
         // Bill status should change to paid
         cy.contains('Paga').should('be.visible');
@@ -235,11 +231,8 @@ describe('Credit Card Hub', () => {
         cy.assertToast('success', 'criada');
 
         // Close bill via API
-        cy.url().then((url) => {
-            const workspaceMatch = url.match(/\/w\/([a-f0-9-]+)/);
-            if (workspaceMatch) {
-                cy.request('POST', `/w/${workspaceMatch[1]}/bills/close-current`);
-            }
+        cy.request('POST', `/w/${workspaceUuid}/bills/close-current`, {
+            credit_card_id: cardUuid,
         });
 
         // Navigate directly to the card Show page
@@ -250,7 +243,7 @@ describe('Credit Card Hub', () => {
         cy.contains('Confirmar Pagamento').should('be.visible');
         cy.get('[data-slot="select-trigger"]').click();
         cy.contains('[role="option"]', 'Conta Principal').click();
-        cy.contains('Marcar fatura como paga').last().click();
+        cy.contains('Confirmar Pagamento').click();
         cy.contains('Paga').should('be.visible');
 
         // Undo the payment

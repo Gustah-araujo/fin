@@ -159,10 +159,11 @@ describe('Card Expense Pay Guard', () => {
 
         // Filter by card using the Cartão column filter
         // The filter row uses select triggers in thead
+        // Select-trigger order: [0]=Conta, [1]=Cartão, [2]=Fatura, [3]=Categoria, [4]=Status
         cy.get('table thead tr')
             .eq(1)
             .find('[data-slot="select-trigger"]')
-            .eq(4) // Cartão is the 5th column (0-indexed: 4)
+            .eq(1) // Cartão is the 2nd select-trigger (0-indexed: 1)
             .click();
 
         cy.contains('[role="option"]', 'Nubank Filter A').click();
@@ -200,10 +201,11 @@ describe('Card Expense Pay Guard', () => {
         cy.contains('Compra Filtro Fatura').should('be.visible');
 
         // Filter by bill using the Fatura column filter
+        // Select-trigger order: [0]=Conta, [1]=Cartão, [2]=Fatura, [3]=Categoria, [4]=Status
         cy.get('table thead tr')
             .eq(1)
             .find('[data-slot="select-trigger"]')
-            .eq(5) // Fatura is the 6th column (0-indexed: 5)
+            .eq(2) // Fatura is the 3rd select-trigger (0-indexed: 2)
             .click();
 
         // Select the first bill option (Cartão — <period>)
