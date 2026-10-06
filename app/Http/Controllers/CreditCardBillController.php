@@ -15,6 +15,7 @@ use App\Models\CreditCardBill;
 use App\Models\Workspace;
 use App\Services\BillService;
 use App\Support\Toast;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Response;
 
@@ -71,7 +72,7 @@ class CreditCardBillController extends Controller
         return redirect()->back();
     }
 
-    public function closeCurrent(Workspace $workspace): RedirectResponse
+    public function closeCurrent(Workspace $workspace): JsonResponse
     {
         $request = request();
         $cardUuid = $request->input('credit_card_id');
@@ -91,6 +92,6 @@ class CreditCardBillController extends Controller
         $this->billService->closeBill($bill);
         Toast::success('Fatura fechada com sucesso.');
 
-        return redirect()->back();
+        return response()->json(['message' => 'Fatura fechada com sucesso.']);
     }
 }

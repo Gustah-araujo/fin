@@ -179,8 +179,17 @@ describe('Credit Card Hub', () => {
         cy.assertToast('success', 'criada');
 
         // Close the current bill via API
-        cy.request('POST', `/w/${workspaceUuid}/bills/close-current`, {
-            credit_card_id: cardUuid,
+        cy.get('meta[name="csrf-token"]').then((meta) => {
+            cy.request({
+                method: 'POST',
+                url: `/w/${workspaceUuid}/bills/close-current`,
+                headers: {
+                    'X-CSRF-TOKEN': meta.attr('content'),
+                },
+                body: {
+                    credit_card_id: cardUuid,
+                },
+            });
         });
 
         // Navigate directly to the card Show page
@@ -231,8 +240,17 @@ describe('Credit Card Hub', () => {
         cy.assertToast('success', 'criada');
 
         // Close bill via API
-        cy.request('POST', `/w/${workspaceUuid}/bills/close-current`, {
-            credit_card_id: cardUuid,
+        cy.get('meta[name="csrf-token"]').then((meta) => {
+            cy.request({
+                method: 'POST',
+                url: `/w/${workspaceUuid}/bills/close-current`,
+                headers: {
+                    'X-CSRF-TOKEN': meta.attr('content'),
+                },
+                body: {
+                    credit_card_id: cardUuid,
+                },
+            });
         });
 
         // Navigate directly to the card Show page

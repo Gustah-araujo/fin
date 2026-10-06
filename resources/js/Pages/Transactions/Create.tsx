@@ -222,6 +222,11 @@ export default function Create({ accounts, cards, categories, tags }: Props) {
                                         {errors.date}
                                     </p>
                                 )}
+                                {errors.start_date && (
+                                    <p className="text-sm text-destructive">
+                                        {errors.start_date}
+                                    </p>
+                                )}
                             </div>
 
                             <PaymentMethodSelector
