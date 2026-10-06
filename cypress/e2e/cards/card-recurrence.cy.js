@@ -142,6 +142,7 @@ describe('Card Recurrence', () => {
         cy.assertToast('success', 'criado');
 
         // Already on the card Show page — capture UUID from current URL
+        cy.contains('h1', 'Nubank PaidBill').should('be.visible');
         cy.url().should('match', /\/cards\/([a-f0-9-]+)$/);
         cy.url().then((url) => {
             const cardUuid = url.match(/\/cards\/([a-f0-9-]+)$/)[1];

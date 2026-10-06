@@ -21,6 +21,9 @@ describe('DataTable State Persistence', () => {
             cy.get('#initial_balance').type('5000');
             cy.contains('Criar Conta').click({ force: true });
             cy.assertToast('success', 'criada');
+            cy.window().then((win) => {
+                win.__toastBuffer = [];
+            });
 
             // Create a category for filtering
             cy.url().should('include', '/accounts');

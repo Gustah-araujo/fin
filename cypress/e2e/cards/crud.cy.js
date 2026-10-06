@@ -97,6 +97,7 @@ describe('Credit Card CRUD', () => {
 
         // Controller redirects to cards.show — navigate back to cards index
         cy.get('[data-testid="sidebar-cards"]').click();
+        cy.get('[data-slot="card"]').should('contain', 'Para Excluir');
 
         cy.contains('Para Excluir')
             .closest('[data-slot="card"]')
