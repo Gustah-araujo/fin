@@ -90,7 +90,7 @@ describe('Credit Card Hub', () => {
 
         // Fill the form
         cy.get('#description').type('Compra Online');
-        cy.get('#total_value').type('500');
+                                cy.get('#value').type('500');
 
         cy.get('#category_id').click();
         cy.contains('[role="option"]', 'Sem Categoria').click();
@@ -129,7 +129,8 @@ describe('Credit Card Hub', () => {
         // Set installments to 12
         cy.get('#installments').clear().type('12');
 
-        // Set total value
+        // Set total value (installments > 1 shows both fields)
+        cy.get('#value').type('1200');
         cy.get('#total_value').type('1200');
 
         // Fill description
@@ -170,7 +171,7 @@ describe('Credit Card Hub', () => {
         // Create an expense on this card
         cy.contains('a, button', 'Nova despesa neste cartão').click();
         cy.get('#description').type('Compra Teste Fatura');
-        cy.get('#total_value').type('200');
+        cy.get('#value').type('200');
         cy.get('#category_id').click();
         cy.contains('[role="option"]', 'Sem Categoria').click();
         cy.contains('Criar Despesa').click({ force: true });
@@ -194,7 +195,7 @@ describe('Credit Card Hub', () => {
         cy.contains('Marcar fatura como paga').click();
 
         // Dialog opens — select account
-        cy.contains('Confirmar pagamento').should('be.visible');
+                                cy.contains('Confirmar Pagamento').should('be.visible');
         cy.get('[data-slot="select-trigger"]').click();
         cy.contains('[role="option"]', 'Conta Principal').click();
         cy.contains('Marcar fatura como paga').last().click();
@@ -227,7 +228,7 @@ describe('Credit Card Hub', () => {
         // Create expense
         cy.contains('a, button', 'Nova despesa neste cartão').click();
         cy.get('#description').type('Compra Undo Test');
-        cy.get('#total_value').type('150');
+        cy.get('#value').type('150');
         cy.get('#category_id').click();
         cy.contains('[role="option"]', 'Sem Categoria').click();
         cy.contains('Criar Despesa').click({ force: true });
@@ -246,7 +247,7 @@ describe('Credit Card Hub', () => {
 
         // Pay the bill
         cy.contains('Marcar fatura como paga').click();
-        cy.contains('Confirmar pagamento').should('be.visible');
+        cy.contains('Confirmar Pagamento').should('be.visible');
         cy.get('[data-slot="select-trigger"]').click();
         cy.contains('[role="option"]', 'Conta Principal').click();
         cy.contains('Marcar fatura como paga').last().click();

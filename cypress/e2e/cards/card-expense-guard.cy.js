@@ -50,7 +50,7 @@ describe('Card Expense Pay Guard', () => {
         // Create a card expense
         cy.contains('Nova despesa neste cartão').click();
         cy.get('#description').type('Compra Guard Test');
-        cy.get('#total_value').type('250');
+        cy.get('#value').type('250');
         cy.get('#category_id').click();
         cy.contains('[role="option"]', 'Sem Categoria').click();
         cy.contains('Criar Despesa').click({ force: true });
@@ -93,7 +93,7 @@ describe('Card Expense Pay Guard', () => {
         // Create expense
         cy.contains('Nova despesa neste cartão').click();
         cy.get('#description').type('Compra Status Test');
-        cy.get('#total_value').type('300');
+        cy.get('#value').type('300');
         cy.get('#category_id').click();
         cy.contains('[role="option"]', 'Sem Categoria').click();
         cy.contains('Criar Despesa').click({ force: true });
@@ -125,7 +125,7 @@ describe('Card Expense Pay Guard', () => {
         // Create expense on first card
         cy.contains('Nova despesa neste cartão').click();
         cy.get('#description').type('Compra Filtro A');
-        cy.get('#total_value').type('100');
+        cy.get('#value').type('100');
         cy.get('#category_id').click();
         cy.contains('[role="option"]', 'Sem Categoria').click();
         cy.contains('Criar Despesa').click({ force: true });
@@ -144,7 +144,7 @@ describe('Card Expense Pay Guard', () => {
         // Create expense on second card
         cy.contains('Nova despesa neste cartão').click();
         cy.get('#description').type('Compra Filtro B');
-        cy.get('#total_value').type('200');
+        cy.get('#value').type('200');
         cy.get('#category_id').click();
         cy.contains('[role="option"]', 'Sem Categoria').click();
         cy.contains('Criar Despesa').click({ force: true });
@@ -187,7 +187,7 @@ describe('Card Expense Pay Guard', () => {
         // Create expense
         cy.contains('Nova despesa neste cartão').click();
         cy.get('#description').type('Compra Filtro Fatura');
-        cy.get('#total_value').type('350');
+        cy.get('#value').type('350');
         cy.get('#category_id').click();
         cy.contains('[role="option"]', 'Sem Categoria').click();
         cy.contains('Criar Despesa').click({ force: true });
