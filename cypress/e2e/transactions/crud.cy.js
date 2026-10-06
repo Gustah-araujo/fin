@@ -44,7 +44,7 @@ describe('Transaction CRUD', () => {
 
         cy.contains('A descrição é obrigatória').should('be.visible');
         cy.contains('O valor é obrigatório').should('be.visible');
-        cy.contains('A conta é obrigatória').should('be.visible');
+        cy.contains('Uma transação deve ter uma conta ou cartão selecionado').should('be.visible');
         cy.contains('A categoria é obrigatória').should('be.visible');
     });
 

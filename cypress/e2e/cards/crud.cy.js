@@ -95,8 +95,8 @@ describe('Credit Card CRUD', () => {
         cy.contains('Criar Cartão').click();
         cy.assertToast('success', 'criado');
 
-        cy.url().should('include', '/cards');
-        cy.contains('Para Excluir').should('be.visible');
+        // Controller redirects to cards.show — navigate back to cards index
+        cy.get('[data-testid="sidebar-cards"]').click();
 
         cy.contains('Para Excluir')
             .closest('[data-slot="card"]')

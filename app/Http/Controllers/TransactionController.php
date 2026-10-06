@@ -93,7 +93,7 @@ class TransactionController extends Controller
             ->filter('category', Filter::relation('category', 'uuid'))
             ->filter('account', Filter::relation('account', 'uuid'))
             ->filter('status', Filter::select(fn (Builder $q, string $v) => $v === 'paid' ? $q->whereNotNull('paid_at') : $q->whereNull('paid_at')))
-            ->filter('credit_card_id', Filter::select(fn (Builder $q, string $v) => $q->where('credit_card_id', CreditCard::where('uuid', $v)->value('id'))))
+            ->filter('credit_card_id', Filter::select(fn (Builder $q, string $v) => $q->where('credit_card_id', CreditCard::where('uuid', $v)->value('uuid'))))
             ->filter('credit_card_bill_id', Filter::select(fn (Builder $q, string $v) => $q->where('credit_card_bill_id', CreditCardBill::where('uuid', $v)->value('id'))))
             ->sortable(['date', 'value', 'description'])
             ->defaultSort('date', 'desc')

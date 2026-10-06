@@ -131,8 +131,6 @@ describe('Card Recurrence', () => {
 
     // ── Block card recurrence with paid bill collision ───────────
     it('shows error for card recurrence with paid bill collision', () => {
-        let cardUuid;
-
         // Create card
         cy.get('[data-testid="sidebar-cards"]').click();
         cy.contains('Novo Cartão').click();
@@ -146,65 +144,65 @@ describe('Card Recurrence', () => {
         // Already on the card Show page — capture UUID from current URL
         cy.url().should('match', /\/cards\/([a-f0-9-]+)$/);
         cy.url().then((url) => {
-            cardUuid = url.match(/\/cards\/([a-f0-9-]+)$/)[1];
-        });
+            const cardUuid = url.match(/\/cards\/([a-f0-9-]+)$/)[1];
 
-        // Close the current bill via API
-        cy.get('meta[name="csrf-token"]').then((meta) => {
-            cy.request({
-                method: 'POST',
-                url: `/w/${workspaceUuid}/bills/close-current`,
-                headers: {
-                    'X-CSRF-TOKEN': meta.attr('content'),
-                },
-                body: {
-                    credit_card_id: cardUuid,
-                },
+            // Close the current bill via API
+            cy.get('meta[name="csrf-token"]').then((meta) => {
+                cy.request({
+                    method: 'POST',
+                    url: `/w/${workspaceUuid}/bills/close-current`,
+                    headers: {
+                        'X-CSRF-TOKEN': meta.attr('content'),
+                    },
+                    body: {
+                        credit_card_id: cardUuid,
+                    },
+                });
             });
+
+            // Reload the card show page to see the closed bill
+            cy.visit(`/w/${workspaceUuid}/cards/${cardUuid}`);
+
+            // Pay the bill via UI
+            cy.contains('Marcar fatura como paga').click();
+            cy.contains('Confirmar Pagamento').should('be.visible');
+            cy.get('[data-slot="select-trigger"]').click();
+            cy.contains('[role="option"]', 'Conta Principal').click();
+            cy.contains('Confirmar Pagamento').click();
+            cy.contains('Paga').should('be.visible');
+
+            // Now try to create a card recurrence with start_date in the paid period
+            cy.get('[data-testid="sidebar-transactions"]').click();
+            cy.contains('Nova Despesa').click({ force: true });
+
+            // Select card payment method
+            cy.contains('button', 'Cartão de crédito').click();
+
+            // Select card
+            cy.get('#credit_card_id').click();
+            cy.contains('[role="option"]', 'Nubank PaidBill').click();
+
+            // Fill description and value
+            cy.get('#description').type('Recorrência Colisão');
+            cy.get('#value').type('100');
+
+            // Select category
+            cy.get('#category_id').click();
+            cy.contains('[role="option"]', 'Sem Categoria').click();
+
+            // Enable recurrence
+            cy.get('#is_recurring').click();
+
+            // Set date to current month (which has a paid bill)
+            const today = new Date();
+            const currentDate = today.toISOString().split('T')[0];
+            cy.get('#date').clear().type(currentDate);
+
+            // Submit
+            cy.contains('Criar Despesa').click({ force: true });
+
+            // Should show validation error about paid bill collision
+            cy.contains('faturas já pagas').should('be.visible');
         });
-
-        // Reload the card show page to see the closed bill
-        cy.visit(`/w/${workspaceUuid}/cards/${cardUuid}`);
-
-        // Pay the bill via UI
-        cy.contains('Marcar fatura como paga').click();
-        cy.contains('Confirmar Pagamento').should('be.visible');
-        cy.get('[data-slot="select-trigger"]').click();
-        cy.contains('[role="option"]', 'Conta Principal').click();
-        cy.contains('Confirmar Pagamento').click();
-        cy.contains('Paga').should('be.visible');
-
-        // Now try to create a card recurrence with start_date in the paid period
-        cy.get('[data-testid="sidebar-transactions"]').click();
-        cy.contains('Nova Despesa').click({ force: true });
-
-        // Select card payment method
-        cy.contains('button', 'Cartão de crédito').click();
-
-        // Select card
-        cy.get('#credit_card_id').click();
-        cy.contains('[role="option"]', 'Nubank PaidBill').click();
-
-        // Fill description and value
-        cy.get('#description').type('Recorrência Colisão');
-        cy.get('#value').type('100');
-
-        // Select category
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
-
-        // Enable recurrence
-        cy.get('#is_recurring').click();
-
-        // Set date to current month (which has a paid bill)
-        const today = new Date();
-        const currentDate = today.toISOString().split('T')[0];
-        cy.get('#date').clear().type(currentDate);
-
-        // Submit
-        cy.contains('Criar Despesa').click({ force: true });
-
-        // Should show validation error about paid bill collision
-        cy.contains('faturas já pagas').should('be.visible');
     });
 });

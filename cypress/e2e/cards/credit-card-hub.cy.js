@@ -146,8 +146,6 @@ describe('Credit Card Hub', () => {
 
     // ── Pay a closed bill ───────────────────────────────────────
     it('pays a closed bill and verifies expenses marked paid', () => {
-        let cardUuid;
-
         // Create card
         cy.get('[data-testid="sidebar-cards"]').click();
         cy.contains('Novo Cartão').click();
@@ -161,53 +159,51 @@ describe('Credit Card Hub', () => {
         // Already on the card Show page — capture UUID from current URL
         cy.url().should('match', /\/cards\/([a-f0-9-]+)$/);
         cy.url().then((url) => {
-            cardUuid = url.match(/\/cards\/([a-f0-9-]+)$/)[1];
-        });
+            const cardUuid = url.match(/\/cards\/([a-f0-9-]+)$/)[1];
 
-        // Create an expense on this card
-        cy.contains('a, button', 'Nova despesa neste cartão').click();
-        cy.get('#description').type('Compra Teste Fatura');
-        cy.get('#value').type('200');
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
-        cy.contains('Criar Despesa').click({ force: true });
-        cy.assertToast('success', 'criada');
+            // Create an expense on this card
+            cy.contains('a, button', 'Nova despesa neste cartão').click();
+            cy.get('#description').type('Compra Teste Fatura');
+            cy.get('#value').type('200');
+            cy.get('#category_id').click();
+            cy.contains('[role="option"]', 'Sem Categoria').click();
+            cy.contains('Criar Despesa').click({ force: true });
+            cy.assertToast('success', 'criada');
 
-        // Close the current bill via API
-        cy.get('meta[name="csrf-token"]').then((meta) => {
-            cy.request({
-                method: 'POST',
-                url: `/w/${workspaceUuid}/bills/close-current`,
-                headers: {
-                    'X-CSRF-TOKEN': meta.attr('content'),
-                },
-                body: {
-                    credit_card_id: cardUuid,
-                },
+            // Close the current bill via API
+            cy.get('meta[name="csrf-token"]').then((meta) => {
+                cy.request({
+                    method: 'POST',
+                    url: `/w/${workspaceUuid}/bills/close-current`,
+                    headers: {
+                        'X-CSRF-TOKEN': meta.attr('content'),
+                    },
+                    body: {
+                        credit_card_id: cardUuid,
+                    },
+                });
             });
+
+            // Navigate directly to the card Show page
+            cy.visit(`/w/${workspaceUuid}/cards/${cardUuid}`);
+
+            // The bill should now be closed — look for pay button
+            cy.contains('Marcar fatura como paga').should('be.visible');
+            cy.contains('Marcar fatura como paga').click();
+
+            // Dialog opens — select account
+            cy.contains('Confirmar Pagamento').should('be.visible');
+            cy.get('[data-slot="select-trigger"]').click();
+            cy.contains('[role="option"]', 'Conta Principal').click();
+            cy.contains('Confirmar Pagamento').click();
+
+            // Bill status should change to paid
+            cy.contains('Paga').should('be.visible');
         });
-
-        // Navigate directly to the card Show page
-        cy.visit(`/w/${workspaceUuid}/cards/${cardUuid}`);
-
-        // The bill should now be closed — look for pay button
-        cy.contains('Marcar fatura como paga').should('be.visible');
-        cy.contains('Marcar fatura como paga').click();
-
-        // Dialog opens — select account
-        cy.contains('Confirmar Pagamento').should('be.visible');
-        cy.get('[data-slot="select-trigger"]').click();
-        cy.contains('[role="option"]', 'Conta Principal').click();
-        cy.contains('Confirmar Pagamento').click();
-
-        // Bill status should change to paid
-        cy.contains('Paga').should('be.visible');
     });
 
     // ── Undo bill payment ───────────────────────────────────────
     it('undoes a bill payment', () => {
-        let cardUuid;
-
         // Create card
         cy.get('[data-testid="sidebar-cards"]').click();
         cy.contains('Novo Cartão').click();
@@ -221,47 +217,47 @@ describe('Credit Card Hub', () => {
         // Already on the card Show page — capture UUID from current URL
         cy.url().should('match', /\/cards\/([a-f0-9-]+)$/);
         cy.url().then((url) => {
-            cardUuid = url.match(/\/cards\/([a-f0-9-]+)$/)[1];
-        });
+            const cardUuid = url.match(/\/cards\/([a-f0-9-]+)$/)[1];
 
-        // Create expense
-        cy.contains('a, button', 'Nova despesa neste cartão').click();
-        cy.get('#description').type('Compra Undo Test');
-        cy.get('#value').type('150');
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
-        cy.contains('Criar Despesa').click({ force: true });
-        cy.assertToast('success', 'criada');
+            // Create expense
+            cy.contains('a, button', 'Nova despesa neste cartão').click();
+            cy.get('#description').type('Compra Undo Test');
+            cy.get('#value').type('150');
+            cy.get('#category_id').click();
+            cy.contains('[role="option"]', 'Sem Categoria').click();
+            cy.contains('Criar Despesa').click({ force: true });
+            cy.assertToast('success', 'criada');
 
-        // Close bill via API
-        cy.get('meta[name="csrf-token"]').then((meta) => {
-            cy.request({
-                method: 'POST',
-                url: `/w/${workspaceUuid}/bills/close-current`,
-                headers: {
-                    'X-CSRF-TOKEN': meta.attr('content'),
-                },
-                body: {
-                    credit_card_id: cardUuid,
-                },
+            // Close bill via API
+            cy.get('meta[name="csrf-token"]').then((meta) => {
+                cy.request({
+                    method: 'POST',
+                    url: `/w/${workspaceUuid}/bills/close-current`,
+                    headers: {
+                        'X-CSRF-TOKEN': meta.attr('content'),
+                    },
+                    body: {
+                        credit_card_id: cardUuid,
+                    },
+                });
             });
+
+            // Navigate directly to the card Show page
+            cy.visit(`/w/${workspaceUuid}/cards/${cardUuid}`);
+
+            // Pay the bill
+            cy.contains('Marcar fatura como paga').click();
+            cy.contains('Confirmar Pagamento').should('be.visible');
+            cy.get('[data-slot="select-trigger"]').click();
+            cy.contains('[role="option"]', 'Conta Principal').click();
+            cy.contains('Confirmar Pagamento').click();
+            cy.contains('Paga').should('be.visible');
+
+            // Undo the payment
+            cy.contains('Desfazer pagamento').click();
+
+            // Bill status should revert
+            cy.contains('Fechada').should('be.visible');
         });
-
-        // Navigate directly to the card Show page
-        cy.visit(`/w/${workspaceUuid}/cards/${cardUuid}`);
-
-        // Pay the bill
-        cy.contains('Marcar fatura como paga').click();
-        cy.contains('Confirmar Pagamento').should('be.visible');
-        cy.get('[data-slot="select-trigger"]').click();
-        cy.contains('[role="option"]', 'Conta Principal').click();
-        cy.contains('Confirmar Pagamento').click();
-        cy.contains('Paga').should('be.visible');
-
-        // Undo the payment
-        cy.contains('Desfazer pagamento').click();
-
-        // Bill status should revert
-        cy.contains('Fechada').should('be.visible');
     });
 });
