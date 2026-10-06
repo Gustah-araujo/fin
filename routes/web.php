@@ -157,5 +157,7 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
             ->name('bills.pay');
         Route::post('bills/{bill}/unpay', [CreditCardBillController::class, 'unpay'])
             ->name('bills.unpay');
+        Route::post('bills/close-current', [CreditCardBillController::class, 'closeCurrent'])
+            ->name('bills.close-current');
     });
 });

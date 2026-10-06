@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Enums\BillStatus;
 use App\Http\Requests\PayBillRequest;
 use App\Http\Resources\AccountResource;
 use App\Http\Resources\CreditCardBillResource;
 use App\Http\Resources\CreditCardResource;
 use App\Models\Account;
+use App\Models\CreditCard;
 use App\Models\CreditCardBill;
 use App\Models\Workspace;
 use App\Services\BillService;
@@ -65,6 +67,29 @@ class CreditCardBillController extends Controller
 
         $billService->undoPayment($bill);
         Toast::success('Fatura marcada como não paga.');
+
+        return redirect()->back();
+    }
+
+    public function closeCurrent(Workspace $workspace): RedirectResponse
+    {
+        $request = request();
+        $cardUuid = $request->input('credit_card_id');
+
+        abort_if(empty($cardUuid), 422, 'credit_card_id é obrigatório.');
+
+        $card = CreditCard::where('uuid', $cardUuid)
+            ->where('workspace_id', $workspace->id)
+            ->firstOrFail();
+
+        $bill = $card->bills()
+            ->where('status', BillStatus::Open)
+            ->orderBy('period_year', 'desc')
+            ->orderBy('period_month', 'desc')
+            ->firstOrFail();
+
+        $this->billService->closeBill($bill);
+        Toast::success('Fatura fechada com sucesso.');
 
         return redirect()->back();
     }
