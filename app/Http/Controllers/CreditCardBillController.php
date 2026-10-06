@@ -83,13 +83,19 @@ class CreditCardBillController extends Controller
             ->where('workspace_id', $workspace->id)
             ->firstOrFail();
 
-        // Find the most recent non-Paid bill (Open or Closed).
-        // Idempotent: if already Closed (e.g. auto-closed by show()), return success.
+        // Close the CURRENT period's bill (based on today + card's closing_day logic),
+        // not the farthest-future pre-created bill.
+        $period = $this->billService->computeBillPeriod($card, now());
+
         $bill = $card->bills()
+            ->where('period_year', $period['year'])
+            ->where('period_month', $period['month'])
             ->whereIn('status', [BillStatus::Open, BillStatus::Closed])
-            ->orderBy('period_year', 'desc')
-            ->orderBy('period_month', 'desc')
-            ->firstOrFail();
+            ->first();
+
+        if (! $bill) {
+            return response()->json(['message' => 'Nenhuma fatura encontrada para o período atual.']);
+        }
 
         if ($bill->status === BillStatus::Open) {
             $this->billService->closeBill($bill);

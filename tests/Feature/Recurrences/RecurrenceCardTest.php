@@ -119,10 +119,21 @@ class RecurrenceCardTest extends TestCase
 
     public function test_card_recurrence_rejected_when_paid_bill_collision(): void
     {
+        // Use a card with closing_day=15 so that a start_date on the 6th
+        // falls within the same calendar month's billing period.
+        $card = CreditCard::factory()->create([
+            'workspace_id' => $this->workspace->id,
+            'created_by' => $this->user->id,
+            'closing_day' => 15,
+            'due_day' => 20,
+            'credit_limit' => 5000,
+            'available_limit' => 5000,
+        ]);
+
         // Create a bill in the past, close it, and pay it
         $pastDate = Carbon::now()->subMonthsNoOverflow(3);
         $bill = CreditCardBill::factory()->closed()->create([
-            'credit_card_id' => $this->card->id,
+            'credit_card_id' => $card->id,
             'workspace_id' => $this->workspace->id,
             'created_by' => $this->user->id,
             'period_year' => $pastDate->year,
@@ -148,7 +159,7 @@ class RecurrenceCardTest extends TestCase
                 'description' => 'Recorrência colisão',
                 'value' => 50,
                 'date' => $startDate,
-                'credit_card_id' => $this->card->uuid,
+                'credit_card_id' => $card->uuid,
                 'category_id' => $this->category->uuid,
                 'is_recurring' => true,
                 'frequency' => 'monthly',

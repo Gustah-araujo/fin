@@ -1387,15 +1387,23 @@ class RecurrenceService
 
     /**
      * Validate that no occurrence between start_date and today falls on a PAID bill.
+     * Uses billing periods (based on closing_day) instead of raw calendar months.
      *
      * @throws ValidationException
      */
     protected function validatePaidBillCollision(CreditCard $card, Carbon $startDate): void
     {
-        $period = Carbon::parse($startDate)->startOfMonth();
         $today = Carbon::today();
 
-        while ($period->lte($today)) {
+        // Compute the actual billing periods for start_date and today,
+        // since closing_day logic may shift dates to different months.
+        $startPeriod = $this->billService->computeBillPeriod($card, $startDate);
+        $endPeriod = $this->billService->computeBillPeriod($card, $today);
+
+        $period = Carbon::createFromDate($startPeriod['year'], $startPeriod['month'], 1);
+        $end = Carbon::createFromDate($endPeriod['year'], $endPeriod['month'], 1);
+
+        while ($period->lte($end)) {
             $bill = $card->bills()
                 ->where('period_year', $period->year)
                 ->where('period_month', $period->month)

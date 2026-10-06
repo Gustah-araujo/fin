@@ -27,6 +27,17 @@ describe('Card Expense Pay Guard', () => {
     beforeEach(() => {
         cy.loginViaSession('card-expense-guard-session');
         cy.visit(`/w/${workspaceUuid}`);
+
+        // Clear persisted datatable filters to prevent bleed from previous tests
+        cy.get('meta[name="csrf-token"]').then((meta) => {
+            cy.request({
+                method: 'DELETE',
+                url: `/w/${workspaceUuid}/datatable/transactions/state`,
+                headers: {
+                    'X-CSRF-TOKEN': meta.attr('content'),
+                },
+            });
+        });
     });
 
     // ── Smoke test ──────────────────────────────────────────────
