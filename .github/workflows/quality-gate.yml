@@ -105,6 +105,10 @@ jobs:
       - name: Prepare Application Environment
         run: |
           cp .env.example .env
+          sed -i 's/^APP_ENV=.*/APP_ENV=testing/' .env
+          sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
+          sed -i 's/^DB_DATABASE=.*/DB_DATABASE=fin_test/' .env
+          sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=fin_secret/' .env
           php artisan config:clear
           php artisan migrate --force
 
@@ -203,6 +207,12 @@ jobs:
         run: |
           cp .env.example .env
           sed -i 's/^APP_ENV=.*/APP_ENV=testing/' .env
+          sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
+          sed -i 's/^DB_DATABASE=.*/DB_DATABASE=fin_test/' .env
+          sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=fin_secret/' .env
+          sed -i 's/^MAIL_MAILER=.*/MAIL_MAILER=smtp/' .env
+          sed -i 's/^MAIL_HOST=.*/MAIL_HOST=127.0.0.1/' .env
+          sed -i 's/^MAIL_PORT=.*/MAIL_PORT=1025/' .env
           php artisan config:clear
           php artisan migrate --force --seed
 
