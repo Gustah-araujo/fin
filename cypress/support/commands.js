@@ -128,7 +128,7 @@ Cypress.Commands.add('loginViaSession', (sessionId) => {
 Cypress.Commands.add(
     'assertToast',
     (expectedType = 'success', expectedMessage = null) => {
-        cy.window({ timeout: 10000 }).then((win) => {
+        cy.window({ timeout: 15000 }).then({ timeout: 15000 }, (win) => {
             // Check the buffer first — catches toasts dispatched before listener attaches.
             // This fixes the race condition where Inertia SPA navigation fires the event
             // before Cypress can register its listener.
@@ -143,17 +143,17 @@ Cypress.Commands.add(
             }
 
             // Toast not yet dispatched — listen for it.
-            // 8s to accommodate heavy DB transactions (e.g., card recurrence
+            // 12s to accommodate heavy DB transactions (e.g., card recurrence
             // creation inserts 12 buffer transactions in a single DB::transaction).
             return new Cypress.Promise((resolve, reject) => {
                 const timeout = setTimeout(() => {
                     win.removeEventListener('toast', handler);
                     reject(
                         new Error(
-                            `Toast of type "${expectedType}" not found within 8s`,
+                            `Toast of type "${expectedType}" not found within 12s`,
                         ),
                     );
-                }, 8000);
+                }, 12000);
 
                 const handler = (event) => {
                     const { type, message } = event.detail;

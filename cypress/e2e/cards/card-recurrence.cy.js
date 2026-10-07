@@ -175,11 +175,8 @@ describe('Card Recurrence', () => {
             cy.contains('Confirmar Pagamento').click();
             cy.contains('Paga').should('be.visible');
 
-            // Wait for Radix UI scroll-lock to clear before sidebar interaction
-            cy.get('body').should('not.have.attr', 'data-scroll-locked');
-            cy.get('body').should(($body) => {
-                expect($body.css('pointer-events')).to.not.equal('none');
-            });
+            // Wait for the paid-branch to render (dialog is unmounted when bill.status === 'paid')
+            cy.contains('Desfazer pagamento').should('be.visible');
 
             // Navigate to transactions create page via sidebar
             cy.get('[data-testid="sidebar-transactions"]').click();

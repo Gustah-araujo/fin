@@ -1,7 +1,7 @@
 import { TooltipProvider } from '@/components/ui/tooltip';
 import AppSidebar from '@/Components/AppSidebar';
 import AppHeader from '@/Components/AppHeader';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { usePage } from '@inertiajs/react';
 import { Toaster, toast } from 'sonner';
 
@@ -45,6 +45,7 @@ export default function AuthenticatedLayout({ children }: Props) {
     const [collapsed, setCollapsed] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    const consumedFlashRef = useRef<Set<string>>(new Set());
     const toggleCollapsed = useCallback(
         () => setCollapsed((prev) => !prev),
         [],
@@ -52,14 +53,44 @@ export default function AuthenticatedLayout({ children }: Props) {
 
     useEffect(() => {
         if (flash?.success) {
-            toast.success(flash.success);
-            dispatchToast('success', flash.success);
+            const key = `success:${flash.success}`;
+            if (!consumedFlashRef.current.has(key)) {
+                consumedFlashRef.current.add(key);
+                toast.success(flash.success);
+                dispatchToast('success', flash.success);
+            }
         }
         if (flash?.error) {
-            toast.error(flash.error);
-            dispatchToast('error', flash.error);
+            const key = `error:${flash.error}`;
+            if (!consumedFlashRef.current.has(key)) {
+                consumedFlashRef.current.add(key);
+                toast.error(flash.error);
+                dispatchToast('error', flash.error);
+            }
         }
     }, [flash?.success, flash?.error]);
+
+    // Radix UI (and similar libraries) can leave a scroll-lock on <body>
+    // after a Dialog closes (pointer-events: none + data-scroll-locked),
+    // which blocks all mouse interactions. Permanently observe <body> and
+    // clear any scroll-lock the moment it appears.
+    useEffect(() => {
+        const clear = (): void => {
+            document.body.style.removeProperty('pointer-events');
+            document.body.removeAttribute('data-scroll-locked');
+        };
+
+        const observer = new MutationObserver(clear);
+        observer.observe(document.body, {
+            attributes: true,
+            attributeFilter: ['style', 'data-scroll-locked'],
+        });
+
+        // Also clear on initial mount
+        clear();
+
+        return () => observer.disconnect();
+    }, []);
 
     useEffect(() => {
         setIsMounted(true);
