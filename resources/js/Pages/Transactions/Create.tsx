@@ -101,10 +101,18 @@ export default function Create({ accounts, cards, categories, tags }: Props) {
         e.preventDefault();
 
         const isCard = data.payment_method === 'card';
+        const isInstallment =
+            isCard && !data.is_recurring && data.installments > 1;
+
+        // When installment purchase, compute per-installment value from total_value
+        // because the #value field is hidden and data.value stays empty
+        const payloadValue = isInstallment
+            ? (parseFloat(data.total_value) / data.installments).toFixed(2)
+            : data.value;
 
         const payload: Record<string, unknown> = {
             description: data.description,
-            value: data.value,
+            value: payloadValue,
             date: data.date,
             category_id: data.category_id,
             tags: data.tags,
