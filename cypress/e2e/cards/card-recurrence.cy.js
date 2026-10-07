@@ -175,9 +175,16 @@ describe('Card Recurrence', () => {
             cy.contains('Confirmar Pagamento').click();
             cy.contains('Paga').should('be.visible');
 
-            // Navigate directly to transactions create page.
-            // (Sidebar click after Radix dialog is unreliable due to scroll-lock leak)
-            cy.visit(`/w/${workspaceUuid}/transactions/create`);
+            // Wait for Radix UI scroll-lock to clear before sidebar interaction
+            cy.get('body').should('not.have.attr', 'data-scroll-locked');
+            cy.get('body').should(($body) => {
+                expect($body.css('pointer-events')).to.not.equal('none');
+            });
+
+            // Navigate to transactions create page via sidebar
+            cy.get('[data-testid="sidebar-transactions"]').click();
+            cy.contains('Nova Despesa').click({ force: true });
+            cy.url().should('include', '/transactions/create');
 
             // Select card payment method
             cy.contains('button', 'Cartão de crédito').click();

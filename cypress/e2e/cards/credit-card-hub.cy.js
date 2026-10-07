@@ -138,10 +138,10 @@ describe('Credit Card Hub', () => {
         cy.contains('[role="option"]', 'Sem Categoria').click();
 
         cy.contains('Criar Despesa').click({ force: true });
-        cy.assertToast('success', 'criada');
 
-        // Should redirect to transactions index
+        // Verify redirect happened (catches 422/500 before vague toast timeout)
         cy.url().should('include', '/transactions');
+        cy.assertToast('success', 'criada');
     });
 
     // ── Pay a closed bill ───────────────────────────────────────

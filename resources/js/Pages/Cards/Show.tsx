@@ -29,7 +29,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Link } from '@inertiajs/react';
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -120,10 +120,19 @@ function formatDate(dateStr: string): string {
  * Radix UI leaks `pointer-events: none` / `data-scroll-locked` onto <body> when
  * a Dialog closes while another Radix layer (e.g. Select) is open. Clear the
  * inline lock so subsequent interactions (and Cypress clicks) keep working.
+ *
+ * Polls for 600ms because Radix's react-remove-scroll can re-apply the lock
+ * during its close animation, especially when a nested Select was open.
  */
 function resetBodyScrollLock(): void {
-    document.body.style.removeProperty('pointer-events');
-    document.body.removeAttribute('data-scroll-locked');
+    const clear = () => {
+        document.body.style.removeProperty('pointer-events');
+        document.body.removeAttribute('data-scroll-locked');
+    };
+
+    clear();
+    const interval = setInterval(clear, 50);
+    setTimeout(() => clearInterval(interval), 600);
 }
 
 // ---------------------------------------------------------------------------
@@ -223,6 +232,33 @@ function BillPaymentForm({ bill, accounts, isViewer }: BillPaymentFormProps) {
     const workspace = useWorkspace();
     const [showDialog, setShowDialog] = useState(false);
     const form = useForm({ account_id: '' });
+
+    // After dialog closes, Radix's react-remove-scroll can leave
+    // pointer-events:none / data-scroll-locked on <body>. Use a
+    // MutationObserver to clear any residual lock for 2 seconds.
+    useEffect(() => {
+        if (showDialog) return;
+
+        const clear = () => {
+            document.body.style.removeProperty('pointer-events');
+            document.body.removeAttribute('data-scroll-locked');
+        };
+
+        clear();
+
+        const observer = new MutationObserver(clear);
+        observer.observe(document.body, {
+            attributes: true,
+            attributeFilter: ['style', 'data-scroll-locked'],
+        });
+
+        const timeout = setTimeout(() => observer.disconnect(), 2000);
+
+        return () => {
+            observer.disconnect();
+            clearTimeout(timeout);
+        };
+    }, [showDialog]);
 
     function handleDialogOpenChange(open: boolean) {
         if (!open) {
