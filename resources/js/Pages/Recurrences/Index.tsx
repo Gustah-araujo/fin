@@ -30,6 +30,10 @@ interface RecurrenceItem {
     next_date: string | null;
     status: string;
     account: AccountItem | null;
+    credit_card?: {
+        uuid: string;
+        name: string;
+    } | null;
     category: CategoryItem | null;
     period_consumed: boolean;
 }
@@ -287,6 +291,11 @@ export default function Index({ accounts, categories, initialState }: Props) {
                 header: 'Conta',
                 filter: { type: 'select', options: accountOptions },
                 cell: (row) => row.account?.name ?? '—',
+            },
+            {
+                key: 'credit_card',
+                header: 'Cartão',
+                cell: (row) => row.credit_card?.name ?? '—',
             },
             {
                 key: 'category',

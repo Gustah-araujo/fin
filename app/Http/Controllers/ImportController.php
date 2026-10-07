@@ -101,6 +101,10 @@ class ImportController extends Controller
 
         $route = $type === 'income' ? 'incomes.index' : 'transactions.index';
 
-        return redirect()->route($route, $workspace);
+        $month = ! empty($items) ? substr($items[0]['date'], 0, 7) : null;
+
+        return $month
+            ? redirect()->route($route, ['workspace' => $workspace, 'month' => $month])
+            : redirect()->route($route, $workspace);
     }
 }

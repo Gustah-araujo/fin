@@ -268,7 +268,7 @@ class ImportControllerTest extends TestCase
                 'items' => $items,
             ]);
 
-        $response->assertRedirect(route('transactions.index', $workspace));
+        $response->assertRedirect(route('transactions.index', ['workspace' => $workspace, 'month' => '2026-09']));
     }
 
     public function test_confirm_redirects_to_incomes_index(): void
@@ -294,7 +294,7 @@ class ImportControllerTest extends TestCase
                 'items' => $items,
             ]);
 
-        $response->assertRedirect(route('incomes.index', $workspace));
+        $response->assertRedirect(route('incomes.index', ['workspace' => $workspace, 'month' => '2026-09']));
     }
 
     public function test_confirm_requires_items(): void

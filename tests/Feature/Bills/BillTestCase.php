@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature\CardExpenses;
+namespace Tests\Feature\Bills;
 
 use App\Enums\TransactionType;
 use App\Models\Account;
@@ -13,7 +13,7 @@ use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-abstract class CardExpenseTestCase extends TestCase
+abstract class BillTestCase extends TestCase
 {
     use RefreshDatabase;
 

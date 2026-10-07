@@ -24,7 +24,8 @@ class UpdateRecurrenceRequest extends FormRequest
         return [
             'description' => ['sometimes', 'required', 'string', 'max:255'],
             'value' => ['sometimes', 'required', 'numeric', 'gt:0', 'max:999999999.99'],
-            'account_id' => ['sometimes', 'required', 'exists:accounts,uuid'],
+            'account_id' => ['sometimes', 'nullable', 'exists:accounts,uuid'],
+            'credit_card_id' => ['sometimes', 'nullable', 'exists:credit_cards,uuid'],
             'category_id' => ['sometimes', 'required', 'exists:categories,uuid'],
             'frequency' => ['sometimes', new Enum(RecurrenceFrequency::class)],
             'frequency_day' => ['sometimes', 'integer'],

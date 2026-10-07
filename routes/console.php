@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\CloseBillsJob;
+use App\Jobs\PreCreateBillsJob;
 use App\Jobs\ProcessRecurrencesJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -11,4 +12,5 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::job(new CloseBillsJob)->dailyAt('00:00');
+Schedule::job(new PreCreateBillsJob)->dailyAt('00:00');
 Schedule::job(new ProcessRecurrencesJob)->dailyAt('00:00');

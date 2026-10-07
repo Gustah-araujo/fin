@@ -21,6 +21,9 @@ describe('DataTable State Persistence', () => {
             cy.get('#initial_balance').type('5000');
             cy.contains('Criar Conta').click({ force: true });
             cy.assertToast('success', 'criada');
+            cy.window().then((win) => {
+                win.__toastBuffer = [];
+            });
 
             // Create a category for filtering
             cy.url().should('include', '/accounts');
@@ -55,7 +58,7 @@ describe('DataTable State Persistence', () => {
         cy.wait('@datatable');
 
         // Apply category filter (2nd select trigger: account, category, status)
-        cy.get('[data-slot="select-trigger"]').eq(1).click();
+        cy.get('table thead tr').eq(1).find('[data-slot="select-trigger"]').eq(3).click();
         cy.contains('[role="option"]', 'Alimentação').click();
 
         // Wait for the filtered fetch to finish so the session is saved
@@ -82,7 +85,7 @@ describe('DataTable State Persistence', () => {
         cy.contains('Despesas').should('be.visible');
 
         // Apply category filter (2nd select trigger: account, category, status)
-        cy.get('[data-slot="select-trigger"]').eq(1).click();
+        cy.get('table thead tr').eq(1).find('[data-slot="select-trigger"]').eq(3).click();
         cy.contains('[role="option"]', 'Alimentação').click();
 
         // Wait for badge to appear
@@ -101,7 +104,7 @@ describe('DataTable State Persistence', () => {
         cy.contains('Despesas').should('be.visible');
 
         // Apply category filter (2nd select trigger: account, category, status)
-        cy.get('[data-slot="select-trigger"]').eq(1).click();
+        cy.get('table thead tr').eq(1).find('[data-slot="select-trigger"]').eq(3).click();
         cy.contains('[role="option"]', 'Alimentação').click();
 
         // Wait for badge
@@ -122,7 +125,7 @@ describe('DataTable State Persistence', () => {
         cy.contains('Despesas').should('be.visible');
 
         // Apply filter in transactions (2nd select trigger: account, category, status)
-        cy.get('[data-slot="select-trigger"]').eq(1).click();
+        cy.get('table thead tr').eq(1).find('[data-slot="select-trigger"]').eq(3).click();
         cy.contains('[role="option"]', 'Alimentação').click();
         cy.contains('Categoria: Alimentação').should('be.visible');
 

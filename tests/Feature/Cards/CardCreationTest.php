@@ -3,6 +3,7 @@
 namespace Tests\Feature\Cards;
 
 use App\Enums\WorkspaceRole;
+use App\Models\CreditCard;
 use App\Models\User;
 use App\Models\Workspace;
 use Tests\TestCase;
@@ -23,8 +24,6 @@ class CardCreationTest extends TestCase
                 'due_day' => 10,
             ]);
 
-        $response->assertRedirect(route('cards.index', $workspace));
-
         $this->assertDatabaseHas('credit_cards', [
             'workspace_id' => $workspace->id,
             'name' => 'Nubank Mastercard',
@@ -32,6 +31,9 @@ class CardCreationTest extends TestCase
             'closing_day' => 1,
             'due_day' => 10,
         ]);
+
+        $card = CreditCard::where('name', 'Nubank Mastercard')->first();
+        $response->assertRedirect(route('cards.show', [$workspace, $card]));
     }
 
     public function test_available_limit_equals_credit_limit_on_create(): void

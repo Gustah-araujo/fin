@@ -98,7 +98,8 @@ class CardAuthorizationTest extends TestCase
                 'due_day' => 10,
             ]);
 
-        $response->assertRedirect(route('cards.index', $workspace));
+        $card = CreditCard::where('name', 'Editor Card')->first();
+        $response->assertRedirect(route('cards.show', [$workspace, $card]));
     }
 
     public function test_editor_can_update_card(): void

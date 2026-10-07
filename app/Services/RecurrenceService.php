@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\BillStatus;
 use App\Enums\RecurrenceFrequency;
 use App\Enums\RecurrenceStatus;
 use App\Enums\TransactionType;
@@ -11,6 +12,8 @@ use App\Exceptions\RecurrenceGenerationException;
 use App\Jobs\ApplyRecurrenceScopeChangeJob;
 use App\Models\Account;
 use App\Models\Category;
+use App\Models\CreditCard;
+use App\Models\CreditCardBill;
 use App\Models\Recurrence;
 use App\Models\Tag;
 use App\Models\Transaction;
@@ -27,6 +30,8 @@ class RecurrenceService
 {
     public function __construct(
         private readonly AccountService $accountService,
+        private readonly BillService $billService,
+        private readonly CreditCardService $creditCardService,
     ) {}
 
     /**
@@ -167,7 +172,6 @@ class RecurrenceService
     public function createWithBuffer(Workspace $workspace, array $data, User $user): Recurrence
     {
         return DB::transaction(function () use ($workspace, $data, $user) {
-            $accountId = $this->resolveAccountId($workspace, $data['account_id']);
             $categoryId = $this->resolveCategoryId($workspace, $data['category_id']);
 
             $startDate = Carbon::parse($data['start_date']);
@@ -181,12 +185,15 @@ class RecurrenceService
             $type = $data['type'] ?? TransactionType::Income;
             $typeValue = $type instanceof TransactionType ? $type->value : (string) $type;
 
+            [$accountId, $card] = $this->resolveRecurrenceTarget($workspace, $data, $startDate);
+
             $dates = $this->computeBufferDates($startDate, $frequency, $frequencyDay, $bufferAhead, $untilDate);
 
             $recurrence = Recurrence::create([
                 'uuid' => Str::orderedUuid()->toString(),
                 'workspace_id' => $workspace->id,
                 'account_id' => $accountId,
+                'credit_card_id' => $card?->uuid,
                 'category_id' => $categoryId,
                 'type' => $type,
                 'description' => $data['description'],
@@ -201,7 +208,7 @@ class RecurrenceService
                 'created_by' => $user->id,
             ]);
 
-            $this->insertBufferTransactions($recurrence, $typeValue, $dates);
+            $this->insertBufferForRecurrence($recurrence, $card, $typeValue, $dates);
 
             if (! empty($data['tags'])) {
                 $this->syncTags($recurrence, $workspace, $data['tags']);
@@ -238,46 +245,80 @@ class RecurrenceService
             ? $recurrence->frequency
             : RecurrenceFrequency::from($recurrence->frequency);
 
-        $frequencyDay = $recurrence->frequency_day;
+        $card = $this->resolveBufferCard($recurrence);
+        if ($card === null && $recurrence->credit_card_id) {
+            // Card-based recurrence but card is archived — skip
+            return;
+        }
 
+        $startDate = $this->computeBufferStartDate($recurrence);
+        $date = $this->nextOccurrenceOnOrAfter($startDate, $frequency, $recurrence->frequency_day);
+
+        $this->fillBufferInstances($recurrence, $card, $frequency, $date, $needed);
+
+        $this->updateNextDateFromToday($recurrence, $frequency, $recurrence->frequency_day);
+    }
+
+    /**
+     * Resolve the credit card for buffer generation. Returns null for account-based or if card is archived.
+     */
+    private function resolveBufferCard(Recurrence $recurrence): ?CreditCard
+    {
+        if (! $recurrence->credit_card_id) {
+            return null;
+        }
+
+        $card = CreditCard::withTrashed()->where('uuid', $recurrence->credit_card_id)->first();
+
+        if (! $card || $card->trashed()) {
+            return null;
+        }
+
+        return $card;
+    }
+
+    /**
+     * Compute the start date for buffer generation.
+     */
+    private function computeBufferStartDate(Recurrence $recurrence): Carbon
+    {
         $latestDate = Transaction::where('recurrence_id', $recurrence->id)
             ->whereNull('deleted_at')
             ->whereDate('date', '>=', today())
             ->max('date');
 
-        $startDate = $latestDate
+        return $latestDate
             ? Carbon::parse($latestDate)->addDay()
             : Carbon::today();
+    }
 
-        $date = $this->nextOccurrenceOnOrAfter($startDate, $frequency, $frequencyDay);
-
+    /**
+     * Fill the buffer with new instances up to the needed count.
+     */
+    private function fillBufferInstances(Recurrence $recurrence, ?CreditCard $card, RecurrenceFrequency $frequency, Carbon $date, int $needed): void
+    {
         $tagIds = $recurrence->tags()->pluck('tags.id')->toArray();
+        $affectedBillIds = [];
 
         for ($i = 0; $i < $needed; $i++) {
             if ($recurrence->until_date && $date->gt($recurrence->until_date)) {
                 break;
             }
 
-            $transaction = Transaction::create([
-                'uuid' => Str::orderedUuid()->toString(),
-                'workspace_id' => $recurrence->workspace_id,
-                'account_id' => $recurrence->account_id,
-                'category_id' => $recurrence->category_id,
-                'type' => $recurrence->type->value,
-                'description' => $recurrence->description,
-                'value' => $recurrence->value,
-                'date' => $date->toDateString(),
-                'paid_at' => null,
-                'recurrence_id' => $recurrence->id,
-                'created_by' => $recurrence->created_by,
-            ]);
-
+            $transaction = $this->createBufferTransaction($recurrence, $date, $card ?: null);
             $transaction->tags()->sync($tagIds);
 
-            $date = $this->nextOccurrenceAfter($date, $frequency, $frequencyDay);
+            if ($transaction->credit_card_bill_id) {
+                $affectedBillIds[] = $transaction->credit_card_bill_id;
+            }
+
+            $date = $this->nextOccurrenceAfter($date, $frequency, $recurrence->frequency_day);
         }
 
-        $this->updateNextDateFromToday($recurrence, $frequency, $frequencyDay);
+        if (! empty($affectedBillIds)) {
+            $this->recalculateAffectedBills(array_unique($affectedBillIds));
+            $this->creditCardService->recalculateAvailableLimit($card->fresh());
+        }
     }
 
     /**
@@ -472,6 +513,8 @@ class RecurrenceService
     public function updateRule(Recurrence $recurrence, array $data): Recurrence
     {
         $data = $this->resolveForeignKeyIds($recurrence, $data);
+
+        $this->validateUpdatePaidBillCollision($recurrence, $data);
 
         $this->applyStartDate($recurrence, $data);
 
@@ -790,13 +833,44 @@ class RecurrenceService
             return;
         }
 
+        $newStartDate = Carbon::parse($data['start_date']);
+
+        if ($recurrence->start_date && $recurrence->start_date->isSameDay($newStartDate)) {
+            return;
+        }
+
         if ($recurrence->transactions()->exists()) {
             throw ValidationException::withMessages([
                 'start_date' => 'A data de início não pode ser alterada pois já existem transações geradas.',
             ]);
         }
 
-        $recurrence->start_date = Carbon::parse($data['start_date']);
+        $recurrence->start_date = $newStartDate;
+    }
+
+    /**
+     * Reject changing a card recurrence's start_date when any occurrence between
+     * the new start_date and today would fall on a bill that is already PAID.
+     */
+    private function validateUpdatePaidBillCollision(Recurrence $recurrence, array $data): void
+    {
+        if (! isset($data['start_date']) || ! $recurrence->credit_card_id) {
+            return;
+        }
+
+        $newStartDate = Carbon::parse($data['start_date']);
+
+        if ($recurrence->start_date && $recurrence->start_date->isSameDay($newStartDate)) {
+            return;
+        }
+
+        $card = CreditCard::where('uuid', $recurrence->credit_card_id)->first();
+
+        if (! $card) {
+            return;
+        }
+
+        $this->validatePaidBillCollision($card, $newStartDate);
     }
 
     private function applyEditableFields(Recurrence $recurrence, array $data): void
@@ -1092,6 +1166,157 @@ class RecurrenceService
     }
 
     /**
+     * Bulk insert card-based buffer transactions, each linked to the appropriate bill.
+     *
+     * @param  array<int, Carbon>  $dates
+     */
+    private function insertCardBufferTransactions(Recurrence $recurrence, CreditCard $card, string $type, array $dates): void
+    {
+        if (empty($dates)) {
+            return;
+        }
+
+        $now = now();
+        $rows = [];
+
+        foreach ($dates as $date) {
+            $bill = $this->resolveCardBill($card, $date);
+
+            $rows[] = [
+                'uuid' => Str::orderedUuid()->toString(),
+                'workspace_id' => $recurrence->workspace_id,
+                'account_id' => null,
+                'credit_card_id' => $card->id,
+                'credit_card_bill_id' => $bill->id,
+                'category_id' => $recurrence->category_id,
+                'type' => $type,
+                'description' => $recurrence->description,
+                'value' => $recurrence->value,
+                'date' => $date->toDateString(),
+                'paid_at' => null,
+                'recurrence_id' => $recurrence->id,
+                'created_by' => $recurrence->created_by,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        Transaction::insert($rows);
+    }
+
+    /**
+     * Resolve whether this recurrence targets an account or a credit card.
+     *
+     * @return array{int|null, CreditCard|null}
+     */
+    private function resolveRecurrenceTarget(Workspace $workspace, array $data, Carbon $startDate): array
+    {
+        $creditCardId = $data['credit_card_id'] ?? null;
+
+        if (! $creditCardId) {
+            return [$this->resolveAccountId($workspace, $data['account_id']), null];
+        }
+
+        if (! empty($data['account_id'])) {
+            throw ValidationException::withMessages([
+                'account_id' => 'Não é possível vincular uma conta e um cartão de crédito simultaneamente.',
+            ]);
+        }
+
+        $installments = isset($data['installments']) ? (int) $data['installments'] : 1;
+        if ($installments > 1) {
+            throw ValidationException::withMessages([
+                'installments' => 'Despesas recorrentes em cartão não podem ser parceladas.',
+            ]);
+        }
+
+        $card = CreditCard::where('uuid', $creditCardId)
+            ->where('workspace_id', $workspace->id)
+            ->firstOrFail();
+
+        $this->validatePaidBillCollision($card, $startDate);
+
+        return [null, $card];
+    }
+
+    /**
+     * Insert buffer transactions using the appropriate strategy for the recurrence type.
+     *
+     * @param  array<int, Carbon>  $dates
+     */
+    private function insertBufferForRecurrence(Recurrence $recurrence, ?CreditCard $card, string $type, array $dates): void
+    {
+        if ($card) {
+            $this->insertCardBufferTransactions($recurrence, $card, $type, $dates);
+            $this->recalculateAffectedBills(
+                Transaction::where('recurrence_id', $recurrence->id)
+                    ->whereNotNull('credit_card_bill_id')
+                    ->distinct()
+                    ->pluck('credit_card_bill_id')
+                    ->toArray()
+            );
+            $this->creditCardService->recalculateAvailableLimit($card->fresh());
+        } else {
+            $this->insertBufferTransactions($recurrence, $type, $dates);
+        }
+    }
+
+    /**
+     * Create a single buffer transaction for a recurrence instance.
+     */
+    private function createBufferTransaction(Recurrence $recurrence, Carbon $date, ?CreditCard $card): Transaction
+    {
+        if ($card) {
+            $bill = $this->resolveCardBill($card, $date);
+
+            return Transaction::create([
+                'uuid' => Str::orderedUuid()->toString(),
+                'workspace_id' => $recurrence->workspace_id,
+                'account_id' => null,
+                'credit_card_id' => $card->id,
+                'credit_card_bill_id' => $bill->id,
+                'category_id' => $recurrence->category_id,
+                'type' => $recurrence->type->value,
+                'description' => $recurrence->description,
+                'value' => $recurrence->value,
+                'date' => $date->toDateString(),
+                'paid_at' => null,
+                'recurrence_id' => $recurrence->id,
+                'created_by' => $recurrence->created_by,
+            ]);
+        }
+
+        return Transaction::create([
+            'uuid' => Str::orderedUuid()->toString(),
+            'workspace_id' => $recurrence->workspace_id,
+            'account_id' => $recurrence->account_id,
+            'category_id' => $recurrence->category_id,
+            'type' => $recurrence->type->value,
+            'description' => $recurrence->description,
+            'value' => $recurrence->value,
+            'date' => $date->toDateString(),
+            'paid_at' => null,
+            'recurrence_id' => $recurrence->id,
+            'created_by' => $recurrence->created_by,
+        ]);
+    }
+
+    /**
+     * Recalculate bill totals for the given bill IDs.
+     *
+     * @param  array<int>  $billIds
+     */
+    private function recalculateAffectedBills(array $billIds): void
+    {
+        foreach ($billIds as $billId) {
+            $bill = CreditCardBill::find($billId);
+            if ($bill) {
+                $this->billService->recalculateBillTotal($bill);
+            }
+        }
+    }
+
+    /**
      * Sync the given tags to every instance of the recurrence.
      */
     private function syncTagsToInstances(Recurrence $recurrence, Workspace $workspace, array $tagUuids): void
@@ -1191,5 +1416,48 @@ class RecurrenceService
                 return $prev;
             })(),
         };
+    }
+
+    /**
+     * Validate that no occurrence between start_date and today falls on a PAID bill.
+     * Uses billing periods (based on closing_day) instead of raw calendar months.
+     *
+     * @throws ValidationException
+     */
+    protected function validatePaidBillCollision(CreditCard $card, Carbon $startDate): void
+    {
+        $today = Carbon::today();
+
+        // Compute the actual billing periods for start_date and today,
+        // since closing_day logic may shift dates to different months.
+        $startPeriod = $this->billService->computeBillPeriod($card, $startDate);
+        $endPeriod = $this->billService->computeBillPeriod($card, $today);
+
+        $period = Carbon::createFromDate($startPeriod['year'], $startPeriod['month'], 1);
+        $end = Carbon::createFromDate($endPeriod['year'], $endPeriod['month'], 1);
+
+        while ($period->lte($end)) {
+            $bill = $card->bills()
+                ->where('period_year', $period->year)
+                ->where('period_month', $period->month)
+                ->where('status', BillStatus::Paid)
+                ->first();
+
+            if ($bill) {
+                throw ValidationException::withMessages([
+                    'start_date' => 'A data de início colide com faturas já pagas do cartão.',
+                ]);
+            }
+
+            $period->addMonth();
+        }
+    }
+
+    /**
+     * Find or create the bill for a card + date.
+     */
+    protected function resolveCardBill(CreditCard $card, Carbon $date): CreditCardBill
+    {
+        return $this->billService->findOrCreateBill($card, $date, $card->created_by);
     }
 }

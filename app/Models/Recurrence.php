@@ -25,6 +25,7 @@ class Recurrence extends Model
         'uuid',
         'workspace_id',
         'account_id',
+        'credit_card_id',
         'category_id',
         'type',
         'description',
@@ -71,6 +72,11 @@ class Recurrence extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    public function creditCard(): BelongsTo
+    {
+        return $this->belongsTo(CreditCard::class, 'credit_card_id', 'uuid');
     }
 
     public function category(): BelongsTo

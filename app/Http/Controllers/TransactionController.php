@@ -10,8 +10,12 @@ use App\Http\Requests\StoreTransactionRequest;
 use App\Http\Requests\UpdateTransactionRequest;
 use App\Http\Resources\AccountResource;
 use App\Http\Resources\CategoryResource;
+use App\Http\Resources\CreditCardBillResource;
+use App\Http\Resources\CreditCardResource;
 use App\Http\Resources\TagResource;
 use App\Http\Resources\TransactionResource;
+use App\Models\CreditCard;
+use App\Models\CreditCardBill;
 use App\Models\Transaction;
 use App\Models\Workspace;
 use App\Services\Datatable\DatatableConfig;
@@ -41,8 +45,10 @@ class TransactionController extends Controller
 
         return inertia('Transactions/Index', [
             'accounts' => AccountResource::collection($workspace->accounts()->orderBy('name')->get()),
+            'cards' => CreditCardResource::collection($workspace->creditCards()->whereNull('deleted_at')->orderBy('name')->get()),
             'categories' => CategoryResource::collection($workspace->categories()->orderBy('name')->get()),
             'tags' => TagResource::collection($workspace->tags()->orderBy('name')->get()),
+            'bills' => CreditCardBillResource::collection($workspace->creditCardBills()->with('creditCard')->get()),
             'initialState' => $state,
         ]);
     }
@@ -60,16 +66,20 @@ class TransactionController extends Controller
         ]);
 
         $query = $workspace->transactions()
+            ->with(['account', 'creditCard', 'bill', 'category', 'tags'])
             ->where('type', TransactionType::Expense);
 
-        $month = $request->input('month');
-        if (is_string($month) && preg_match('/^\d{4}-\d{2}$/', $month)) {
-            [$year, $monthNum] = explode('-', $month);
-            $query->whereYear('date', (int) $year)
-                ->whereMonth('date', (int) $monthNum);
-        }
+        $filters = $state['filters'];
 
-        $query->with(['account', 'category', 'tags']);
+        // Bill filter overrides month scoping
+        if (empty($filters['credit_card_bill_id'])) {
+            $month = $request->input('month');
+            if (is_string($month) && preg_match('/^\d{4}-\d{2}$/', $month)) {
+                [$year, $monthNum] = explode('-', $month);
+                $query->whereYear('date', (int) $year)
+                    ->whereMonth('date', (int) $monthNum);
+            }
+        }
 
         return app(DatatableService::class)->paginate($query, $request, $this->datatableConfig());
     }
@@ -83,6 +93,8 @@ class TransactionController extends Controller
             ->filter('category', Filter::relation('category', 'uuid'))
             ->filter('account', Filter::relation('account', 'uuid'))
             ->filter('status', Filter::select(fn (Builder $q, string $v) => $v === 'paid' ? $q->whereNotNull('paid_at') : $q->whereNull('paid_at')))
+            ->filter('credit_card_id', Filter::select(fn (Builder $q, string $v) => $q->where('credit_card_id', CreditCard::where('uuid', $v)->value('id'))))
+            ->filter('credit_card_bill_id', Filter::select(fn (Builder $q, string $v) => $q->where('credit_card_bill_id', CreditCardBill::where('uuid', $v)->value('id'))))
             ->sortable(['date', 'value', 'description'])
             ->defaultSort('date', 'desc')
             ->perPage(25);
@@ -94,6 +106,7 @@ class TransactionController extends Controller
 
         return inertia('Transactions/Create', [
             'accounts' => AccountResource::collection($workspace->accounts()->orderBy('name')->get()),
+            'cards' => CreditCardResource::collection($workspace->creditCards()->whereNull('deleted_at')->orderBy('name')->get()),
             'categories' => CategoryResource::collection(
                 $workspace->categories()
                     ->whereIn('type', [TransactionType::Expense->value, TransactionType::Both->value])
@@ -114,22 +127,42 @@ class TransactionController extends Controller
 
         $data = $request->validated();
 
-        if ($request->boolean('is_recurring')) {
-            $data['start_date'] = $data['date'];
-            $data['type'] = TransactionType::Expense->value;
-            $recurrenceService->createWithBuffer($workspace, $data, $request->user());
+        if (! empty($data['credit_card_id'])) {
+            // Card expense path
+            if ($request->boolean('is_recurring')) {
+                $data['start_date'] = $data['date'];
+                $data['type'] = TransactionType::Expense->value;
+                $recurrenceService->createWithBuffer($workspace, $data, $request->user());
 
-            Toast::success('Recorrência criada com sucesso.');
+                Toast::success('Recorrência criada com sucesso.');
+            } elseif (! empty($data['installments']) && $data['installments'] > 1) {
+                // Card installment purchase
+                $transactionService->createCardInstallment($workspace, $request->user(), $data);
 
-            return redirect()->route('transactions.index', $workspace);
+                Toast::success('Despesa parcelada criada com sucesso.');
+            } else {
+                // Single card expense
+                $transactionService->createCardExpense($workspace, $request->user(), $data);
+
+                Toast::success('Despesa criada com sucesso.');
+            }
         } else {
-            $data['type'] = TransactionType::Expense->value;
-            $transactionService->create($workspace, $request->user(), $data);
+            // Account-based expense path
+            if ($request->boolean('is_recurring')) {
+                $data['start_date'] = $data['date'];
+                $data['type'] = TransactionType::Expense->value;
+                $recurrenceService->createWithBuffer($workspace, $data, $request->user());
 
-            Toast::success('Despesa criada com sucesso.');
+                Toast::success('Recorrência criada com sucesso.');
+            } else {
+                $data['type'] = TransactionType::Expense->value;
+                $transactionService->create($workspace, $request->user(), $data);
 
-            return redirect()->route('transactions.index', $workspace);
+                Toast::success('Despesa criada com sucesso.');
+            }
         }
+
+        return redirect()->route('transactions.index', $workspace);
     }
 
     public function edit(Workspace $workspace, Transaction $transaction): Response
@@ -138,11 +171,12 @@ class TransactionController extends Controller
 
         $this->authorize('update', [$transaction, $workspace]);
 
-        $transaction->load(['account', 'category', 'tags']);
+        $transaction->load(['account', 'category', 'tags', 'creditCard']);
 
         return inertia('Transactions/Edit', [
             'transaction' => new TransactionResource($transaction),
             'accounts' => AccountResource::collection($workspace->accounts()->orderBy('name')->get()),
+            'cards' => CreditCardResource::collection($workspace->creditCards()->whereNull('deleted_at')->orderBy('name')->get()),
             'categories' => CategoryResource::collection(
                 $workspace->categories()
                     ->whereIn('type', [TransactionType::Expense->value, TransactionType::Both->value])
@@ -159,7 +193,18 @@ class TransactionController extends Controller
 
         $this->authorize('update', [$transaction, $workspace]);
 
-        $transactionService->update($transaction, $request->validated());
+        $data = $request->validated();
+
+        if ($transaction->credit_card_id !== null) {
+            $scope = $data['scope'] ?? 'single';
+            if ($scope === 'group' && $transaction->installment_group_id) {
+                $transactionService->updateCardGroup($transaction, $data);
+            } else {
+                $transactionService->updateCardSingle($transaction, $data);
+            }
+        } else {
+            $transactionService->update($transaction, $data);
+        }
 
         Toast::success('Despesa atualizada com sucesso.');
 
@@ -172,7 +217,13 @@ class TransactionController extends Controller
 
         $this->authorize('delete', [$transaction, $workspace]);
 
-        $transactionService->archive($transaction);
+        if ($transaction->credit_card_id !== null && $transaction->installment_group_id) {
+            $transactionService->deleteCardGroup($transaction);
+        } elseif ($transaction->credit_card_id !== null) {
+            $transactionService->deleteCardSingle($transaction);
+        } else {
+            $transactionService->archive($transaction);
+        }
 
         Toast::success('Despesa arquivada com sucesso.');
 

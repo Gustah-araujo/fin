@@ -13,6 +13,7 @@ use App\Http\Resources\AccountResource;
 use App\Http\Resources\CategoryResource;
 use App\Http\Resources\RecurrenceResource;
 use App\Http\Resources\TagResource;
+use App\Models\CreditCard;
 use App\Models\Recurrence;
 use App\Models\Workspace;
 use App\Services\Datatable\DatatableConfig;
@@ -59,7 +60,7 @@ class RecurrenceController extends Controller
         ]);
 
         $query = $workspace->recurrences()
-            ->with(['account', 'category', 'tags'])
+            ->with(['account', 'creditCard', 'category', 'tags'])
             ->orderByRaw('next_date IS NULL');
 
         return app(DatatableService::class)->paginate($query, $request, $this->datatableConfig());
@@ -77,6 +78,7 @@ class RecurrenceController extends Controller
             ->filter('value', Filter::numberRange('value'))
             ->filter('next_date', Filter::dateRange('next_date'))
             ->filter('account', Filter::relation('account', 'uuid'))
+            ->filter('credit_card_id', Filter::select(fn (Builder $q, string $v) => $q->where('credit_card_id', CreditCard::where('uuid', $v)->value('uuid'))))
             ->filter('category', Filter::relation('category', 'uuid'))
             ->filter('status', Filter::select(fn (Builder $q, string $v) => match ($v) {
                 'paused' => $q->where('status', RecurrenceStatus::Paused),
@@ -95,7 +97,7 @@ class RecurrenceController extends Controller
 
         $this->authorize('update', [$recurrence, $workspace]);
 
-        $recurrence->load(['account', 'category', 'tags']);
+        $recurrence->load(['account', 'creditCard', 'category', 'tags']);
 
         return inertia('Recurrences/Edit', [
             'recurrence' => new RecurrenceResource($recurrence),

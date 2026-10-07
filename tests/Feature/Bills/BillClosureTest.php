@@ -8,9 +8,8 @@ use App\Enums\BillStatus;
 use App\Models\CreditCardBill;
 use App\Models\Transaction;
 use App\Services\BillService;
-use Tests\Feature\CardExpenses\CardExpenseTestCase;
 
-class BillClosureTest extends CardExpenseTestCase
+class BillClosureTest extends BillTestCase
 {
     public function test_close_bills_before_closes_eligible_bills(): void
     {
@@ -89,7 +88,7 @@ class BillClosureTest extends CardExpenseTestCase
         app(BillService::class)->closeBill($bill);
 
         $this->actingAs($user)
-            ->post(route('card-expenses.store', [$workspace, $card]), [
+            ->post(route('transactions.store', [$workspace]), [
                 'description' => 'After Close',
                 'value' => 100,
                 'date' => '2026-03-05',

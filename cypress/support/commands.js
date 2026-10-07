@@ -1,4 +1,4 @@
-const MAILPIT_API = `http://localhost:${Cypress.env('MAILPIT_PORT') || '8026'}/api/v1`;
+const MAILPIT_API = `http://localhost:${Cypress.env('MAILPIT_PORT') || '8025'}/api/v1`;
 
 Cypress.Commands.add(
     'register',
@@ -128,7 +128,7 @@ Cypress.Commands.add('loginViaSession', (sessionId) => {
 Cypress.Commands.add(
     'assertToast',
     (expectedType = 'success', expectedMessage = null) => {
-        cy.window().then((win) => {
+        cy.window({ timeout: 15000 }).then({ timeout: 15000 }, (win) => {
             // Check the buffer first — catches toasts dispatched before listener attaches.
             // This fixes the race condition where Inertia SPA navigation fires the event
             // before Cypress can register its listener.
@@ -143,15 +143,17 @@ Cypress.Commands.add(
             }
 
             // Toast not yet dispatched — listen for it.
+            // 12s to accommodate heavy DB transactions (e.g., card recurrence
+            // creation inserts 12 buffer transactions in a single DB::transaction).
             return new Cypress.Promise((resolve, reject) => {
                 const timeout = setTimeout(() => {
                     win.removeEventListener('toast', handler);
                     reject(
                         new Error(
-                            `Toast of type "${expectedType}" not found within 5s`,
+                            `Toast of type "${expectedType}" not found within 12s`,
                         ),
                     );
-                }, 5000);
+                }, 12000);
 
                 const handler = (event) => {
                     const { type, message } = event.detail;

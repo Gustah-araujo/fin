@@ -62,6 +62,8 @@ describe('CSV Import', () => {
         cy.contains('button', 'Importar').click({ force: true });
 
         cy.contains('Revise os dados antes de confirmar a importação').should('be.visible');
+        cy.get('table tbody tr').should('have.length', 3);
+        cy.contains('3 de 3 selecionadas').should('be.visible');
         cy.contains('button', 'Confirmar Importação').click({ force: true });
         cy.assertToast('success', 'importadas');
 
@@ -79,6 +81,8 @@ describe('CSV Import', () => {
         cy.contains('button', 'Importar').click({ force: true });
 
         cy.contains('Revise os dados antes de confirmar a importação').should('be.visible');
+        cy.get('table tbody tr').should('have.length', 3);
+        cy.contains('3 de 3 selecionadas').should('be.visible');
 
         // shadcn Input renders without type attribute when type is undefined
         cy.get('table tbody tr')
@@ -103,6 +107,8 @@ describe('CSV Import', () => {
         cy.contains('button', 'Importar').click({ force: true });
 
         cy.contains('Revise os dados antes de confirmar a importação').should('be.visible');
+        cy.get('table tbody tr').should('have.length', 3);
+        cy.contains('3 de 3 selecionadas').should('be.visible');
 
         // shadcn Checkbox renders as <button role="checkbox">
         cy.get('table tbody tr').first().find('[role="checkbox"]').click();
