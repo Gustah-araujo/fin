@@ -95,7 +95,7 @@ export default function Create({ accounts, cards, categories, tags }: Props) {
             'account' | 'card',
     });
 
-    const { data, setData, post, processing, errors } = form;
+    const { data, setData, processing, errors } = form;
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -106,44 +106,15 @@ export default function Create({ accounts, cards, categories, tags }: Props) {
 
         // When installment purchase, compute per-installment value from total_value
         // because the #value field is hidden and data.value stays empty
-        const payloadValue = isInstallment
-            ? (parseFloat(data.total_value) / data.installments).toFixed(2)
-            : data.value;
+        if (isInstallment) {
+            const payloadValue = (
+                parseFloat(data.total_value) / data.installments
+            ).toFixed(2);
 
-        const payload: Record<string, unknown> = {
-            description: data.description,
-            value: payloadValue,
-            date: data.date,
-            category_id: data.category_id,
-            tags: data.tags,
-            is_recurring: data.is_recurring,
-        };
-
-        if (isCard) {
-            payload.credit_card_id = data.credit_card_id;
-            if (!data.is_recurring) {
-                payload.installments = data.installments;
-                if (data.installments > 1) {
-                    payload.total_value = data.total_value;
-                }
-            }
-        } else {
-            payload.account_id = data.account_id;
+            form.setData('value', payloadValue);
         }
 
-        if (data.is_recurring) {
-            payload.frequency = data.frequency;
-            payload.frequency_day = data.frequency_day;
-            payload.buffer_ahead = data.buffer_ahead;
-            if (data.has_until_date) {
-                payload.until_date = data.until_date;
-            }
-        }
-
-        post(
-            route('transactions.store', { workspace: workspace.uuid }),
-            payload,
-        );
+        form.post(route('transactions.store', { workspace: workspace.uuid }));
     }
 
     function toggleTag(uuid: string) {

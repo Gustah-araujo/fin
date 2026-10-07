@@ -124,7 +124,7 @@ describe('Credit Card Hub', () => {
         cy.contains('[role="option"]', 'Nubank Installments').click();
 
         // Set installments to 12
-        cy.get('#installments').clear().type('12');
+        cy.get('#installments').type('{selectall}12');
 
         // Set total value (installments > 1 replaces "Valor" with "Valor total")
         cy.get('#value').should('not.exist');

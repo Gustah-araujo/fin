@@ -1,4 +1,4 @@
-const MAILPIT_API = `http://localhost:${Cypress.env('MAILPIT_PORT') || '8026'}/api/v1`;
+const MAILPIT_API = `http://localhost:${Cypress.env('MAILPIT_PORT') || '8025'}/api/v1`;
 
 Cypress.Commands.add(
     'register',

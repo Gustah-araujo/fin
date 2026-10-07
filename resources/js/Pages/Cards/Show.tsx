@@ -116,6 +116,16 @@ function formatDate(dateStr: string): string {
     return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR');
 }
 
+/**
+ * Radix UI leaks `pointer-events: none` / `data-scroll-locked` onto <body> when
+ * a Dialog closes while another Radix layer (e.g. Select) is open. Clear the
+ * inline lock so subsequent interactions (and Cypress clicks) keep working.
+ */
+function resetBodyScrollLock(): void {
+    document.body.style.removeProperty('pointer-events');
+    document.body.removeAttribute('data-scroll-locked');
+}
+
 // ---------------------------------------------------------------------------
 // PaymentConfirmDialog
 // ---------------------------------------------------------------------------
@@ -146,7 +156,12 @@ function PaymentConfirmDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent>
+            <DialogContent
+                onCloseAutoFocus={(e) => {
+                    e.preventDefault();
+                    resetBodyScrollLock();
+                }}
+            >
                 <DialogHeader>
                     <DialogTitle>Marcar fatura como paga</DialogTitle>
                     <DialogDescription>
@@ -209,6 +224,13 @@ function BillPaymentForm({ bill, accounts, isViewer }: BillPaymentFormProps) {
     const [showDialog, setShowDialog] = useState(false);
     const form = useForm({ account_id: '' });
 
+    function handleDialogOpenChange(open: boolean) {
+        if (!open) {
+            resetBodyScrollLock();
+        }
+        setShowDialog(open);
+    }
+
     function handlePay(accountId: string) {
         form.setData('account_id', accountId);
         form.post(
@@ -217,7 +239,11 @@ function BillPaymentForm({ bill, accounts, isViewer }: BillPaymentFormProps) {
                 bill: bill.uuid,
             }),
             {
-                onSuccess: () => window.location.reload(),
+                onSuccess: () => {
+                    setShowDialog(false);
+                    resetBodyScrollLock();
+                    window.location.reload();
+                },
             },
         );
     }
@@ -244,7 +270,7 @@ function BillPaymentForm({ bill, accounts, isViewer }: BillPaymentFormProps) {
                 )}
                 <PaymentConfirmDialog
                     open={showDialog}
-                    onOpenChange={setShowDialog}
+                    onOpenChange={handleDialogOpenChange}
                     accounts={accounts}
                     onSubmit={handlePay}
                     processing={form.processing}

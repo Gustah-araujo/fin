@@ -10,6 +10,6 @@ export default defineConfig({
         viewportHeight: 800,
     },
     env: {
-        MAILPIT_PORT: process.env.CYPRESS_MAILPIT_PORT || '8026',
+        MAILPIT_PORT: process.env.CYPRESS_MAILPIT_PORT || '8025',
     },
 });
