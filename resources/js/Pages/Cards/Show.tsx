@@ -211,6 +211,12 @@ function BillPaymentForm({ bill, accounts, isViewer }: BillPaymentFormProps) {
 
     function handleDialogOpenChange(open: boolean) {
         setShowDialog(open);
+        if (!open) {
+            setTimeout(() => {
+                document.body.style.removeProperty('pointer-events');
+                document.body.removeAttribute('data-scroll-locked');
+            }, 150);
+        }
     }
 
     function handlePay(accountId: string) {
@@ -223,6 +229,12 @@ function BillPaymentForm({ bill, accounts, isViewer }: BillPaymentFormProps) {
             {
                 onSuccess: () => {
                     setShowDialog(false);
+                    // Radix Dialog cleanup may not run during SPA re-render.
+                    // Explicitly clear scroll-lock after a short delay for the close animation.
+                    setTimeout(() => {
+                        document.body.style.removeProperty('pointer-events');
+                        document.body.removeAttribute('data-scroll-locked');
+                    }, 150);
                 },
             },
         );

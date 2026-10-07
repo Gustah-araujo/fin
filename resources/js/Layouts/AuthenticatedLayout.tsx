@@ -2,7 +2,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import AppSidebar from '@/Components/AppSidebar';
 import AppHeader from '@/Components/AppHeader';
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { usePage } from '@inertiajs/react';
+import { usePage, router } from '@inertiajs/react';
 import { Toaster, toast } from 'sonner';
 
 interface Props {
@@ -70,14 +70,34 @@ export default function AuthenticatedLayout({ children }: Props) {
         }
     }, [flash?.success, flash?.error]);
 
+    // Dismiss sonner toasts on SPA navigation — prevents toasts from persisting
+    // across Inertia visits (flash messages would otherwise re-show on every
+    // navigation since the Toaster component stays mounted).
+    useEffect(() => {
+        const handleNavigate = (): void => {
+            toast.dismiss();
+        };
+        // Inertia's router.on() returns the unsubscribe function.
+        const unsubscribe = router.on('before', handleNavigate);
+        return () => {
+            unsubscribe();
+        };
+    }, []);
+
     // Radix UI (and similar libraries) can leave a scroll-lock on <body>
     // after a Dialog closes (pointer-events: none + data-scroll-locked),
     // which blocks all mouse interactions. Permanently observe <body> and
     // clear any scroll-lock the moment it appears.
     useEffect(() => {
         const clear = (): void => {
-            document.body.style.removeProperty('pointer-events');
-            document.body.removeAttribute('data-scroll-locked');
+            // Only clear pointer-events when Radix reports no open dialogs.
+            // Radix uses data-scroll-locked as a counter (absent/0 = no dialogs).
+            // We must NOT remove data-scroll-locked itself — Radix manages it.
+            const scrollLocked =
+                document.body.getAttribute('data-scroll-locked');
+            if (!scrollLocked || scrollLocked === '0') {
+                document.body.style.removeProperty('pointer-events');
+            }
         };
 
         const observer = new MutationObserver(clear);

@@ -150,6 +150,15 @@ describe('Card Recurrence', () => {
         cy.url().then((url) => {
             const cardUuid = url.match(/\/cards\/([a-f0-9-]+)$/)[1];
 
+            // Create an expense on this card (bill must have total > 0 to be payable)
+            cy.contains('a, button', 'Nova despesa neste cartão').click();
+            cy.get('#description').type('Despesa para Fatura');
+            cy.get('#value').type('200');
+            cy.get('#category_id').click();
+            cy.contains('[role="option"]', 'Sem Categoria').click();
+            cy.contains('Criar Despesa').click({ force: true });
+            cy.assertToast('success', 'criada');
+
             // Close the current bill via API
             cy.get('meta[name="csrf-token"]').then((meta) => {
                 cy.request({
@@ -177,6 +186,12 @@ describe('Card Recurrence', () => {
 
             // Wait for the paid-branch to render (dialog is unmounted when bill.status === 'paid')
             cy.contains('Desfazer pagamento').should('be.visible');
+
+            // Wait for Radix UI scroll-lock to clear after dialog close animation
+            cy.get('body', { timeout: 10000 }).should(
+                'not.have.attr',
+                'data-scroll-locked',
+            );
 
             // Navigate to transactions create page via sidebar
             cy.get('[data-testid="sidebar-transactions"]').click();
