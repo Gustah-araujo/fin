@@ -175,12 +175,9 @@ describe('Card Recurrence', () => {
             cy.contains('Confirmar Pagamento').click();
             cy.contains('Paga').should('be.visible');
 
-            // Now try to create a card recurrence with start_date in the paid period
-            // force:true because Radix UI dialog may leave pointer-events:none on body
-            cy.get('[data-testid="sidebar-transactions"]').click({
-                force: true,
-            });
-            cy.contains('Nova Despesa').click({ force: true });
+            // Navigate directly to transactions create page.
+            // (Sidebar click after Radix dialog is unreliable due to scroll-lock leak)
+            cy.visit(`/w/${workspaceUuid}/transactions/create`);
 
             // Select card payment method
             cy.contains('button', 'Cartão de crédito').click();
