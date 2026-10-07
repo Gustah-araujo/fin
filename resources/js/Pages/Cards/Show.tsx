@@ -242,7 +242,6 @@ function BillPaymentForm({ bill, accounts, isViewer }: BillPaymentFormProps) {
                 onSuccess: () => {
                     setShowDialog(false);
                     resetBodyScrollLock();
-                    window.location.reload();
                 },
             },
         );
@@ -255,7 +254,9 @@ function BillPaymentForm({ bill, accounts, isViewer }: BillPaymentFormProps) {
                 bill: bill.uuid,
             }),
             {
-                onSuccess: () => window.location.reload(),
+                onSuccess: () => {
+                    resetBodyScrollLock();
+                },
             },
         );
     }

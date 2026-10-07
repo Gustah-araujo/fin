@@ -105,13 +105,17 @@ export default function Create({ accounts, cards, categories, tags }: Props) {
             isCard && !data.is_recurring && data.installments > 1;
 
         // When installment purchase, compute per-installment value from total_value
-        // because the #value field is hidden and data.value stays empty
+        // because the #value field is hidden and data.value stays empty.
+        // Use transform() to ensure the value is set in the POST payload synchronously.
         if (isInstallment) {
             const payloadValue = (
                 parseFloat(data.total_value) / data.installments
             ).toFixed(2);
 
-            form.setData('value', payloadValue);
+            form.transform((submitData) => ({
+                ...submitData,
+                value: payloadValue,
+            }));
         }
 
         form.post(route('transactions.store', { workspace: workspace.uuid }));
