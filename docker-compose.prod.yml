@@ -11,6 +11,9 @@ services:
       - .:/var/www/html
     env_file:
       - .env
+    depends_on:
+      database:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "cgi-fcgi", "-bind", "-connect", "127.0.0.1:9000"]
       interval: 10s
@@ -34,6 +37,11 @@ services:
       - .:/var/www/html
     env_file:
       - .env
+    depends_on:
+      database:
+        condition: service_healthy
+      app:
+        condition: service_started
     healthcheck:
       test: ["CMD", "pgrep", "-f", "queue:work"]
       interval: 30s
@@ -56,6 +64,11 @@ services:
       - .:/var/www/html
     env_file:
       - .env
+    depends_on:
+      database:
+        condition: service_healthy
+      app:
+        condition: service_started
     healthcheck:
       test: ["CMD", "pgrep", "-f", "schedule:work"]
       interval: 30s
