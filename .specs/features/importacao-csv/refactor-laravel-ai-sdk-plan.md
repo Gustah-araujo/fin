@@ -1,7 +1,7 @@
 # Refatoração: Importação com IA — Laravel AI SDK
 
 **Issue**: Refactor rotina de importação de receitas/despesas
-**Data**: 2026-10-15
+**Data**: 2026-10-15 (atualizado)
 **Status**: Planejamento completo, aguardando execução
 
 ---
@@ -14,6 +14,21 @@ O plano anterior propunha o uso de `openai-php/client` + HTTP bruto para integra
 - ✅ Suporte multimodal: PDF, imagem, HTML, CSV
 - ✅ Detectação de duplicatas
 - ✅ Provider: opencode go via driver `openai-compatible`
+
+---
+
+## Atualização Chave (2026-10-15)
+
+**glm-5.3-flash tem suporte nativo a PDF.** Portanto:
+
+| Tipo | Estratégia |
+|---|---|
+| **PDF** | Enviado como **attachment** (mesmo mecanismo de imagens) |
+| **Imagem** (png, jpg, jpeg, webp) | Enviado como **attachment** via SDK |
+| **CSV / TXT** | Conteúdo como **texto no prompt** |
+| **HTML** | `strip_tags()` → **texto no prompt** |
+
+**Consequência**: `smalot/pdfparser` **não é mais necessário**. O SDK monta o attachment para ambos os formatos binários (PDF + imagem). Isso simplifica o `AiService` e remove uma dependência.
 
 ---
 
@@ -44,7 +59,7 @@ O plano anterior propunha o uso de `openai-php/client` + HTTP bruto para integra
 │    → $parsed = Ai::parseFile($file, $type)                  │
 │    → detectDuplicates + preview                             │
 └──────────────────┬──────────────────────────────────────────┘
-                   │
+                    │
 ┌──────────────────▼──────────────────────────────────────────┐
 │  Ai::parseFile(UploadedFile $file, string $type): array     │
 │  (Facade → AiService)                                       │
@@ -54,12 +69,12 @@ O plano anterior propunha o uso de `openai-php/client` + HTTP bruto para integra
 │  3. Por tipo:                                               │
 │     • CSV/TXT  → conteúdo como texto no prompt              │
 │     • HTML     → strip_tags → texto no prompt               │
-│     • PDF      → extrai texto (smalot/pdfparser) → prompt   │
+│     • PDF      → Files\Document::fromPath() → attachment    │
 │     • Imagem   → Files\Image::fromPath() → attachment       │
 │  4. Agent->prompt($userMessage, attachments: [...])         │
 │  5. Retorna $response['transactions'] (structured output)  │
 └──────────────────┬──────────────────────────────────────────┘
-                   │
+                    │
 ┌──────────────────▼──────────────────────────────────────────┐
 │  TransactionParser Agent (App\Ai\Agents\TransactionParser)   │
 │  ┌─────────────────────────────────────────────────────┐    │
@@ -76,16 +91,18 @@ O plano anterior propunha o uso de `openai-php/client` + HTTP bruto para integra
 │  │       {description, value, date, type, category}]   │    │
 │  │                                                     │    │
 │  │  provider: 'opencode' (openai-compatible)           │    │
-│  │  model: glm-5.3-flash (multimodal nativo)           │    │
+│  │  model: glm-5.3-flash (multimodal nativo: PDF +     │    │
+│  │         imagem)                                     │    │
 │  └─────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
-                   │
-                   ▼
+                    │
+                    ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  opencode go inference API                                  │
 │  POST https://opencode.ai/inference/openai/v1/chat/...      │
-│  model: glm-5.3-flash (multimodal nativo)                   │
+│  model: glm-5.3-flash (multimodal nativo: PDF + imagem)     │
 │  Auth: Bearer OPENCODE_API_KEY                              │
+│  Attachments: PDF e imagem enviados como arquivos binários  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -97,7 +114,7 @@ O plano anterior propunha o uso de `openai-php/client` + HTTP bruto para integra
 |---|---|---|
 | **Dependência** | `composer require openai-php/client` | `composer require laravel/ai` |
 | **Custom Agent** | Classe manual `AiAgent` com HTTP | `php artisan make:agent TransactionParser --structured` |
-| **Multimodal** | Montagem manual de content array (base64) | `Laravel\Ai\Files\Image::fromPath()` / `Files\Document::fromPath()` |
+| **Multimodal** | Montagem manual de content array (base64) | `Laravel\Ai\Files\Image::fromPath()` (imagens) + `Files\Document::fromPath()` (PDFs) |
 | **Structured Output** | `response_format: json_object` manual | `HasStructuredOutput` + `schema()` method → SDK garante parsing |
 | **Config** | `config/ai.php` flat (deepseek_key, model, base_url) | `config/ai.php` do SDK com `providers.opencode` array |
 | **Provider Driver** | `OpenAI::factory()->withBaseUrl()` | `'driver' => 'openai-compatible', 'url' => '...'` |
@@ -267,9 +284,10 @@ class TransactionParser implements Agent, HasStructuredOutput
 
 **Pontos importante:**
 - `provider()` retorna `'opencode'` — aponta para o provider configurado em `config/ai.php`
-- `glm-5.3-flash` é o modelo padrão do provider, multimodal nativo
-- Para imagens, o SDK codifica em base64 e monta o content array automaticamente
-- Para PDFs extraídos como texto, vai como texto no prompt (não como attachment)
+- `glm-5.3-flash` é o modelo padrão do provider, multimodal nativo (suporta PDF + imagem)
+- PDFs são enviados como attachment via `Laravel\Ai\Files\Document::fromPath()`
+- Imagens são enviadas como attachment via `Laravel\Ai\Files\Image::fromPath()`
+- Ambos (PDF + imagem) vão no mesmo array `attachments` — o SDK monta a chamada multimodal
 
 ### 6. Refatorar `AiService.php`
 
@@ -283,8 +301,9 @@ namespace App\Services;
 use App\Ai\Agents\TransactionParser;
 use App\Contracts\AiParserInterface;
 use Illuminate\Http\UploadedFile;
+use Laravel\Ai\Files\Document;
+use Laravel\Ai\Files\Image;
 use RuntimeException;
-use Smalot\PdfParser\PdfParser;
 
 class AiService implements AiParserInterface
 {
@@ -300,15 +319,14 @@ class AiService implements AiParserInterface
         $agent = new TransactionParser;
         $extension = strtolower($file->getClientOriginalExtension());
 
-        // Prepare content based on file type
         $userMessage = "Tipo esperado: {$type}. Extraia as transações financeiras.";
         $attachments = [];
 
         match ($extension) {
             'csv', 'txt' => $userMessage .= "\n\nConteúdo:\n" . file_get_contents($file->getRealPath()),
             'html' => $userMessage .= "\n\nConteúdo:\n" . strip_tags(file_get_contents($file->getRealPath())),
-            'pdf' => $userMessage .= "\n\nConteúdo extraído:\n" . $this->extractPdfText($file),
-            'png', 'jpg', 'jpeg', 'webp' => $attachments[] = \Laravel\Ai\Files\Image::fromPath($file->getRealPath()),
+            'pdf' => $attachments[] = Document::fromPath($file->getRealPath()),
+            'png', 'jpg', 'jpeg', 'webp' => $attachments[] = Image::fromPath($file->getRealPath()),
             default => throw new RuntimeException("Formato de arquivo não suportado: {$extension}."),
         };
 
@@ -319,17 +337,6 @@ class AiService implements AiParserInterface
         }
 
         return $this->normalizeTransactions($response['transactions']);
-    }
-
-    /**
-     * Extract text from PDF using smalot/pdfparser.
-     */
-    private function extractPdfText(UploadedFile $file): string
-    {
-        $parser = new PdfParser;
-        $pdf = $parser->parseFile($file->getRealPath());
-
-        return $pdf->getText();
     }
 
     /**
@@ -350,6 +357,11 @@ class AiService implements AiParserInterface
     }
 }
 ```
+
+**Mudanças vs. versão anterior:**
+- **PDF**: agora enviado como attachment (`Document::fromPath`) — não extraímos texto localmente
+- **Sem `smalot/pdfparser`**: dependência removida; glm-5.3-flash processa PDF nativamente
+- Attachments (PDF + imagem) vão juntos no mesmo array `$attachments`
 
 ### 7. Refatorar `FakeAiService.php`
 
@@ -459,15 +471,7 @@ public function register(): void
 - Interface em vez de string key — type-safe, mockable
 - AiService não precisa mais receber config no constructor (SDK gerencia isso)
 
-### 10. Instalar dependência PDF (se não existir)
-
-```bash
-composer require smalot/pdfparser
-```
-
-Verificar se já está no `composer.json`. Se não, adicionar.
-
-### 11. Renomear `UploadCsvRequest` → `UploadFileRequest`
+### 10. Renomear `UploadCsvRequest` → `UploadFileRequest`
 
 ```php
 <?php
@@ -513,7 +517,7 @@ class UploadFileRequest extends FormRequest
 }
 ```
 
-### 12. Atualizar `ImportController.php`
+### 11. Atualizar `ImportController.php`
 
 ```php
 public function store(UploadFileRequest $request, Workspace $workspace): Response
@@ -537,7 +541,7 @@ public function store(UploadFileRequest $request, Workspace $workspace): Respons
 }
 ```
 
-### 13. Atualizar `ImportService.php`
+### 12. Atualizar `ImportService.php`
 
 ```php
 public function parseFile(UploadedFile $file, string $type): array
@@ -548,7 +552,7 @@ public function parseFile(UploadedFile $file, string $type): array
 
 Renomear `parseCsv()` → `parseFile()`. Resto (duplicatas, criação) inalterado.
 
-### 14. Atualizar Frontend `resources/js/Pages/Imports/Index.tsx`
+### 13. Atualizar Frontend `resources/js/Pages/Imports/Index.tsx`
 
 Apenas ampliar `accept` do input:
 
@@ -558,7 +562,7 @@ accept=".csv,.txt,.pdf,.html,.htm,.png,.jpg,.jpeg,.webp"
 
 E texto descritivo: "Aceita CSV, PDF, HTML e imagens".
 
-### 15. Atualizar/criar Testes
+### 14. Atualizar/criar Testes
 
 #### `tests/Feature/Import/AiServiceTest.php` — Reescrever
 
@@ -657,12 +661,11 @@ class ImportSmokeTest extends TestCase
 
 | Risco | Mitigação |
 |---|---|
-| **glm-5.3-flash pode não aceitar PDF nativo** | Extrair texto via smalot/pdfparser antes de enviar. Attachment só para imagens. |
+| **glm-5.3-flash multimodal: PDF + imagem como attachment** | Confirmado: glm-5.3-flash suporta PDF nativo. Enviado via `Document::fromPath()`. |
 | **SDK migrations criam tabelas não usadas** | Harmless — TransactionParser não é Conversacional. Tabelas ficam vazias. |
 | **FakeAiService: imagens/PDF lançam exceção** | Fake apenas para CSV/TXT. Para testes de imagem/PDF, mockar `Ai::parseFile`. |
 | **Breaking change: `Ai::parse()` removido** | Nenhum outro código usa além de ImportService (já atualizado). |
-| **Timeout em arquivos grandes** | Configurado `OPENCODE_TIMEOUT=120` (2 min). PDFs grandes: extração local é rápida, prompt pode ser longo. |
-| **smalot/pdfparser dependência nova** | Adicionado ao composer.json. Alternativa: usar `Laravel\Ai\Files\Document` se opencode aceitar PDF nativo. |
+| **Timeout em arquivos grandes** | Configurado `OPENCODE_TIMEOUT=120` (2 min). PDFs/imagens grandes enviados como attachment — sem extração local. |
 
 ---
 
@@ -696,7 +699,7 @@ class ImportSmokeTest extends TestCase
 | **Atualizar** | `app/Http/Controllers/ImportController.php` |
 | **Renomear** | `UploadCsvRequest.php` → `UploadFileRequest.php` |
 | **Atualizar** | `.env.example` |
-| **Atualizar** | `composer.json` (laravel/ai + smalot/pdfparser) |
+| **Atualizar** | `composer.json` (laravel/ai) |
 | **Atualizar** | `resources/js/Pages/Imports/Index.tsx` (aceitar) |
 | **Reescrever** | `tests/Feature/Import/AiServiceTest.php` |
 | **Atualizar** | `tests/Feature/Import/ImportServiceTest.php` |
