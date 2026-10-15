@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Import;
 
 use App\Ai\Agents\TransactionParser;
-use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\JsonSchema\JsonSchemaTypeFactory;
 use Tests\TestCase;
 
 class TransactionParserAgentTest extends TestCase
@@ -22,7 +22,7 @@ class TransactionParserAgentTest extends TestCase
     public function test_agent_schema_returns_expected_structure(): void
     {
         $agent = new TransactionParser;
-        $schema = $agent->schema(app(JsonSchema::class));
+        $schema = $agent->schema(new JsonSchemaTypeFactory);
 
         $this->assertArrayHasKey('transactions', $schema);
     }
