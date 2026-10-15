@@ -74,8 +74,8 @@ class ImportControllerTest extends TestCase
         $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $csv = "description,value,date,category\n"
-            . "Supermercado XYZ,150.00,2026-09-01,Alimentação\n"
-            . "Farmácia ABC,45.90,2026-09-02,Saúde";
+            ."Supermercado XYZ,150.00,2026-09-01,Alimentação\n"
+            .'Farmácia ABC,45.90,2026-09-02,Saúde';
 
         $file = UploadedFile::fake()->createWithContent('test.csv', $csv);
 

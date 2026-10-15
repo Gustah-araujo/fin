@@ -98,8 +98,8 @@ export default function Index({ type, preview, flash }: ImportPageProps) {
                             Importar {label}
                         </h1>
                         <p className="text-sm text-muted-foreground mt-1">
-                            Envie um arquivo CSV, PDF, HTML ou imagem para importar{' '}
-                            {label.toLowerCase()} automaticamente.
+                            Envie um arquivo CSV, PDF, HTML ou imagem para
+                            importar {label.toLowerCase()} automaticamente.
                         </p>
                     </div>
 

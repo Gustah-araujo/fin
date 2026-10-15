@@ -29,8 +29,8 @@ class AiService implements AiParserInterface
         $attachments = [];
 
         match ($extension) {
-            'csv', 'txt' => $userMessage .= "\n\nConteúdo:\n" . file_get_contents($file->getRealPath()),
-            'html' => $userMessage .= "\n\nConteúdo:\n" . strip_tags(file_get_contents($file->getRealPath())),
+            'csv', 'txt' => $userMessage .= "\n\nConteúdo:\n".file_get_contents($file->getRealPath()),
+            'html' => $userMessage .= "\n\nConteúdo:\n".strip_tags(file_get_contents($file->getRealPath())),
             'pdf' => $attachments[] = Document::fromPath($file->getRealPath()),
             'png', 'jpg', 'jpeg', 'webp' => $attachments[] = Image::fromPath($file->getRealPath()),
             default => throw new RuntimeException("Formato de arquivo não suportado: {$extension}."),
@@ -39,7 +39,7 @@ class AiService implements AiParserInterface
         try {
             $response = $agent->prompt($userMessage, attachments: $attachments);
         } catch (\Throwable $e) {
-            throw new RuntimeException('AI parsing failed: ' . $e->getMessage(), 0, $e);
+            throw new RuntimeException('AI parsing failed: '.$e->getMessage(), 0, $e);
         }
 
         return $this->normalizeTransactions($response['transactions']);

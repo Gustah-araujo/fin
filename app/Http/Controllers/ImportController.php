@@ -52,7 +52,7 @@ class ImportController extends Controller
             return inertia('Imports/Index', [
                 'type' => $type,
                 'preview' => [],
-                'flash' => ['error' => 'Erro ao processar arquivo: ' . $e->getMessage()],
+                'flash' => ['error' => 'Erro ao processar arquivo: '.$e->getMessage()],
             ]);
         }
 

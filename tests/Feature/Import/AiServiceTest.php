@@ -22,8 +22,8 @@ class AiServiceTest extends TestCase
     public function test_parse_file_returns_structured_transactions_from_csv(): void
     {
         $csv = "description,value,date,category\n"
-            . "Supermercado XYZ,150.00,2026-09-01,Alimentação\n"
-            . "Farmácia ABC,45.90,2026-09-02,Saúde";
+            ."Supermercado XYZ,150.00,2026-09-01,Alimentação\n"
+            .'Farmácia ABC,45.90,2026-09-02,Saúde';
 
         $file = UploadedFile::fake()->createWithContent('test.csv', $csv);
         $result = Ai::parseFile($file, 'expense');
@@ -60,7 +60,7 @@ class AiServiceTest extends TestCase
     public function test_parse_file_sets_credit_type_for_income(): void
     {
         $csv = "description,value,date,category\n"
-            . "Salário,5000.00,2026-09-05,Trabalho";
+            .'Salário,5000.00,2026-09-05,Trabalho';
 
         $file = UploadedFile::fake()->createWithContent('test.csv', $csv);
         $result = Ai::parseFile($file, 'income');
@@ -72,7 +72,7 @@ class AiServiceTest extends TestCase
     public function test_parse_file_handles_missing_category_gracefully(): void
     {
         $csv = "description,value,date\n"
-            . "Transação Sem Categoria,99.90,2026-09-10";
+            .'Transação Sem Categoria,99.90,2026-09-10';
 
         $file = UploadedFile::fake()->createWithContent('test.csv', $csv);
         $result = Ai::parseFile($file, 'expense');
