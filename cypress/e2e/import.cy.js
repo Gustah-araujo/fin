@@ -176,10 +176,15 @@ describe('CSV Import', () => {
         cy.get('[data-testid="sidebar-transactions"]').click();
         cy.contains('Importar Despesas').click();
 
-        // Use a .exe file — not in the accepted mimes list
+        // Use a .exe file — not in the accepted mimes list.
+        // Binary content with null bytes so finfo detects it as
+        // application/octet-stream (not text/plain, which would pass the mimes rule).
         cy.get('#file').selectFile(
             {
-                contents: Cypress.Buffer.from('fake-binary-content'),
+                contents: Cypress.Buffer.from([
+                    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
+                    0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+                ]),
                 fileName: 'malware.exe',
                 mimeType: 'application/octet-stream',
             },
