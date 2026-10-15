@@ -8,7 +8,7 @@ use App\Services\AiService;
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @method static array parse(string $csvContent, string $type)
+ * @method static array parseFile(\Illuminate\Http\UploadedFile $file, string $type)
  *
  * @see AiService
  */
@@ -16,6 +16,6 @@ class Ai extends Facade
 {
     protected static function getFacadeAccessor(): string
     {
-        return 'ai';
+        return AiService::class;
     }
 }

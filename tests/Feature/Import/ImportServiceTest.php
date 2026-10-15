@@ -5,33 +5,30 @@ declare(strict_types=1);
 namespace Tests\Feature\Import;
 
 use App\Enums\WorkspaceRole;
-use App\Facades\Ai;
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\ImportService;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class ImportServiceTest extends TestCase
 {
-    public function test_parse_csv_delegates_to_ai_facade(): void
+    public function test_parse_file_delegates_to_ai_service(): void
     {
-        $parsed = [
-            ['description' => 'Supermercado XYZ', 'value' => 150.00, 'date' => '2026-09-01', 'type' => 'debit', 'category_name' => 'Alimentação'],
-        ];
+        $csv = "description,value,date,category\n"
+            .'Supermercado XYZ,150.00,2026-09-01,Alimentação';
 
-        Ai::shouldReceive('parse')
-            ->once()
-            ->with('conteúdo-do-csv', 'expense')
-            ->andReturn($parsed);
+        $file = UploadedFile::fake()->createWithContent('test.csv', $csv);
 
         $service = app(ImportService::class);
 
-        $result = $service->parseCsv('conteúdo-do-csv', 'expense');
+        $result = $service->parseFile($file, 'expense');
 
-        $this->assertSame($parsed, $result);
+        $this->assertCount(1, $result);
+        $this->assertSame('Supermercado XYZ', $result[0]['description']);
     }
 
     public function test_detect_duplicates_flags_matching_transactions(): void
