@@ -7,7 +7,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class UploadCsvRequest extends FormRequest
+class UploadFileRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -18,7 +18,12 @@ class UploadCsvRequest extends FormRequest
     {
         return [
             'type' => ['required', Rule::in(['expense', 'income'])],
-            'file' => ['required', 'file', 'mimes:csv,txt', 'max:10240'],
+            'file' => [
+                'required',
+                'file',
+                'mimes:csv,txt,pdf,html,png,jpg,jpeg,webp',
+                'max:10240', // 10MB
+            ],
         ];
     }
 
@@ -29,7 +34,7 @@ class UploadCsvRequest extends FormRequest
             'type.in' => 'Tipo inválido.',
             'file.required' => 'O arquivo é obrigatório.',
             'file.file' => 'O arquivo enviado é inválido.',
-            'file.mimes' => 'O arquivo deve ser um CSV.',
+            'file.mimes' => 'O arquivo deve ser CSV, PDF, HTML, imagem ou texto.',
             'file.max' => 'O arquivo não pode exceder 10MB.',
         ];
     }

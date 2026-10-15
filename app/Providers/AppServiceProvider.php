@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Contracts\AiParserInterface;
 use App\Models\Recurrence;
 use App\Models\Workspace;
 use App\Policies\RecurrencePolicy;
@@ -19,23 +20,19 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         JsonResource::withoutWrapping();
+
+        $this->app->bind(AiParserInterface::class, function () {
+            if (app()->environment('testing')) {
+                return new FakeAiService;
+            }
+
+            return new AiService;
+        });
     }
 
     public function boot(): void
     {
         Gate::policy(Workspace::class, WorkspacePolicy::class);
         Gate::policy(Recurrence::class, RecurrencePolicy::class);
-
-        $this->app->singleton('ai', function () {
-            if (app()->environment('testing')) {
-                return new FakeAiService;
-            }
-
-            return new AiService(
-                apiKey: config('ai.deepseek_key'),
-                baseUrl: config('ai.base_url'),
-                model: config('ai.model'),
-            );
-        });
     }
 }

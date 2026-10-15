@@ -98,14 +98,14 @@ export default function Index({ type, preview, flash }: ImportPageProps) {
                             Importar {label}
                         </h1>
                         <p className="text-sm text-muted-foreground mt-1">
-                            Envie um arquivo CSV para importar{' '}
+                            Envie um arquivo CSV, PDF, HTML ou imagem para importar{' '}
                             {label.toLowerCase()} automaticamente.
                         </p>
                     </div>
 
                     <Card className="max-w-lg">
                         <CardHeader>
-                            <CardTitle>Arquivo CSV</CardTitle>
+                            <CardTitle>Arquivo</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={handleUpload} className="space-y-4">
@@ -114,7 +114,7 @@ export default function Index({ type, preview, flash }: ImportPageProps) {
                                     <Input
                                         id="file"
                                         type="file"
-                                        accept=".csv,text/csv"
+                                        accept=".csv,.txt,.pdf,.html,.htm,.png,.jpg,.jpeg,.webp"
                                         onChange={(e) =>
                                             uploadForm.setData(
                                                 'file',

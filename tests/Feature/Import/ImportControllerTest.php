@@ -74,8 +74,8 @@ class ImportControllerTest extends TestCase
         $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $csv = "description,value,date,category\n"
-            ."Supermercado XYZ,150.00,2026-09-01,Alimentação\n"
-            .'Farmácia ABC,45.90,2026-09-02,Saúde';
+            . "Supermercado XYZ,150.00,2026-09-01,Alimentação\n"
+            . "Farmácia ABC,45.90,2026-09-02,Saúde";
 
         $file = UploadedFile::fake()->createWithContent('test.csv', $csv);
 
@@ -167,7 +167,7 @@ class ImportControllerTest extends TestCase
         );
     }
 
-    public function test_store_requires_valid_csv_file(): void
+    public function test_store_requires_valid_file(): void
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
@@ -180,6 +180,51 @@ class ImportControllerTest extends TestCase
             ]);
 
         $response->assertSessionHasErrors(['file']);
+    }
+
+    public function test_store_accepts_pdf_file(): void
+    {
+        $user = User::factory()->create();
+        $workspace = Workspace::factory()->create();
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
+
+        // FakeAiService throws for PDF — controller catches and returns error
+        $file = UploadedFile::fake()->create('test.pdf', 100, 'application/pdf');
+
+        $response = $this->actingAs($user)
+            ->post(route('transactions.import.store', $workspace), [
+                'type' => 'expense',
+                'file' => $file,
+            ]);
+
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->component('Imports/Index')
+            ->has('preview', 0)
+            ->where('flash.error', fn ($error) => str_contains($error, 'Erro ao processar arquivo'))
+        );
+    }
+
+    public function test_store_handles_ai_parse_error_gracefully(): void
+    {
+        $user = User::factory()->create();
+        $workspace = Workspace::factory()->create();
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
+
+        // Upload a JPG — FakeAiService throws RuntimeException for non-CSV/TXT
+        $file = UploadedFile::fake()->create('receipt.jpg', 100, 'image/jpeg');
+
+        $response = $this->actingAs($user)
+            ->post(route('transactions.import.store', $workspace), [
+                'type' => 'expense',
+                'file' => $file,
+            ]);
+
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->component('Imports/Index')
+            ->has('preview', 0)
+        );
     }
 
     public function test_store_requires_valid_type(): void

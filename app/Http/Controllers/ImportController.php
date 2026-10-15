@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ConfirmImportRequest;
-use App\Http\Requests\UploadCsvRequest;
+use App\Http\Requests\UploadFileRequest;
 use App\Models\Transaction;
 use App\Models\Workspace;
 use App\Services\ImportService;
@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Response;
+use RuntimeException;
 
 class ImportController extends Controller
 {
@@ -36,17 +37,24 @@ class ImportController extends Controller
     }
 
     /**
-     * Parse CSV and show preview.
+     * Parse the uploaded file and show preview.
      */
-    public function store(UploadCsvRequest $request, Workspace $workspace): Response
+    public function store(UploadFileRequest $request, Workspace $workspace): Response
     {
         $this->authorize('create', [Transaction::class, $workspace]);
 
         $type = (string) $request->validated('type');
         $file = $request->file('file');
-        $csvContent = file_get_contents($file->getRealPath());
 
-        $parsed = $this->importService->parseCsv($csvContent, $type);
+        try {
+            $parsed = $this->importService->parseFile($file, $type);
+        } catch (RuntimeException $e) {
+            return inertia('Imports/Index', [
+                'type' => $type,
+                'preview' => [],
+                'flash' => ['error' => 'Erro ao processar arquivo: ' . $e->getMessage()],
+            ]);
+        }
 
         if (empty($parsed)) {
             return inertia('Imports/Index', [
