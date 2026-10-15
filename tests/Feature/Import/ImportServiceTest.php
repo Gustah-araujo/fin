@@ -12,24 +12,27 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\ImportService;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class ImportServiceTest extends TestCase
 {
-    public function test_parse_csv_delegates_to_ai_facade(): void
+    public function test_parse_file_delegates_to_ai_parser(): void
     {
         $parsed = [
             ['description' => 'Supermercado XYZ', 'value' => 150.00, 'date' => '2026-09-01', 'type' => 'debit', 'category_name' => 'Alimentação'],
         ];
 
-        Ai::shouldReceive('parse')
+        $file = UploadedFile::fake()->createWithContent('test.csv', 'csv content');
+
+        Ai::shouldReceive('parseFile')
             ->once()
-            ->with('conteúdo-do-csv', 'expense')
+            ->with($file, 'expense')
             ->andReturn($parsed);
 
         $service = app(ImportService::class);
 
-        $result = $service->parseCsv('conteúdo-do-csv', 'expense');
+        $result = $service->parseFile($file, 'expense');
 
         $this->assertSame($parsed, $result);
     }

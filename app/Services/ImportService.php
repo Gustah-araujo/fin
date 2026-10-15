@@ -10,18 +10,19 @@ use App\Models\Account;
 use App\Models\Category;
 use App\Models\User;
 use App\Models\Workspace;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 
 class ImportService
 {
     /**
-     * Parse CSV content into structured transactions via AI Facade.
+     * Parse an uploaded file into structured transactions via AI Facade.
      *
      * @return array<int, array{description: string, value: float, date: string, type: string, category_name: string}>
      */
-    public function parseCsv(string $csvContent, string $type): array
+    public function parseFile(UploadedFile $file, string $type): array
     {
-        return Ai::parse($csvContent, $type);
+        return Ai::parseFile($file, $type);
     }
 
     /**

@@ -76,6 +76,11 @@ export default function AuthenticatedLayout({ children }: Props) {
     useEffect(() => {
         const handleNavigate = (): void => {
             toast.dismiss();
+            // Clear consumed flash keys so that a new page visit with the
+            // same flash message (e.g. "Conta criada com sucesso.") can
+            // dispatch its toast again. Without this, the ref persists
+            // across SPA navigations and blocks legitimate re-dispatches.
+            consumedFlashRef.current.clear();
         };
         // Inertia's router.on() returns the unsubscribe function.
         const unsubscribe = router.on('before', handleNavigate);
