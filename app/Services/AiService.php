@@ -4,69 +4,49 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
+use App\Ai\Agents\TransactionParser;
+use App\Contracts\AiParserInterface;
+use Illuminate\Http\UploadedFile;
+use Laravel\Ai\Files\Document;
+use Laravel\Ai\Files\Image;
 use RuntimeException;
 
-class AiService
+class AiService implements AiParserInterface
 {
-    public function __construct(
-        private readonly string $apiKey,
-        private readonly string $baseUrl = 'https://api.deepseek.com',
-        private readonly string $model = 'deepseek-chat',
-    ) {}
-
     /**
-     * Parse CSV content into structured transactions via AI.
+     * Parse an uploaded file into structured transactions via AI.
      *
      * @return array<int, array{description: string, value: float, date: string, type: string, category_name: string}>
      *
-     * @throws RuntimeException When the API returns an error or invalid response.
+     * @throws RuntimeException When parsing fails.
      */
-    public function parse(string $csvContent, string $type): array
+    public function parseFile(UploadedFile $file, string $type): array
     {
-        $response = Http::timeout(config('ai.timeout', 120))
-            ->withHeaders([
-                'Authorization' => "Bearer {$this->apiKey}",
-                'Content-Type' => 'application/json',
-            ])
-            ->post("{$this->baseUrl}/v1/chat/completions", [
-                'model' => $this->model,
-                'messages' => [
-                    [
-                        'role' => 'system',
-                        'content' => 'Você é um extrator de transações financeiras. Retorne JSON array com objetos {description, value, date (Y-m-d), type (debit/credit), category_name}. Não inclua markdown ou texto adicional.',
-                    ],
-                    [
-                        'role' => 'user',
-                        'content' => "Tipo esperado: {$type}\n\nCSV:\n{$csvContent}",
-                    ],
-                ],
-                'response_format' => ['type' => 'json_object'],
-            ]);
+        $agent = new TransactionParser;
+        $extension = strtolower($file->getClientOriginalExtension());
 
-        if ($response->failed()) {
-            throw new RuntimeException(
-                "AI API request failed: {$response->status()} {$response->body()}"
-            );
+        $userMessage = "Tipo esperado: {$type}. Extraia as transações financeiras.";
+        $attachments = [];
+
+        match ($extension) {
+            'csv', 'txt' => $userMessage .= "\n\nConteúdo:\n" . file_get_contents($file->getRealPath()),
+            'html' => $userMessage .= "\n\nConteúdo:\n" . strip_tags(file_get_contents($file->getRealPath())),
+            'pdf' => $attachments[] = Document::fromPath($file->getRealPath()),
+            'png', 'jpg', 'jpeg', 'webp' => $attachments[] = Image::fromPath($file->getRealPath()),
+            default => throw new RuntimeException("Formato de arquivo não suportado: {$extension}."),
+        };
+
+        try {
+            $response = $agent->prompt($userMessage, attachments: $attachments);
+        } catch (\Throwable $e) {
+            throw new RuntimeException('AI parsing failed: ' . $e->getMessage(), 0, $e);
         }
 
-        $content = $response->json('choices.0.message.content');
-
-        if (! is_string($content)) {
-            throw new RuntimeException('AI API returned invalid response structure.');
-        }
-
-        $data = json_decode($content, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new RuntimeException('AI API returned invalid JSON: '.json_last_error_msg());
-        }
-
-        return $this->normalizeTransactions($data['transactions'] ?? []);
+        return $this->normalizeTransactions($response['transactions']);
     }
 
     /**
-     * Normalize raw AI output into consistent transaction structure.
+     * Normalize structured output into consistent transaction structure.
      *
      * @param  array<int, array>  $transactions
      * @return array<int, array{description: string, value: float, date: string, type: string, category_name: string}>

@@ -4,18 +4,19 @@ declare(strict_types=1);
 
 namespace App\Facades;
 
-use App\Services\AiService;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @method static array parse(string $csvContent, string $type)
+ * @method static array parseFile(UploadedFile $file, string $type)
  *
- * @see AiService
+ * @see \App\Services\AiService
+ * @see \App\Contracts\AiParserInterface
  */
 class Ai extends Facade
 {
     protected static function getFacadeAccessor(): string
     {
-        return 'ai';
+        return \App\Contracts\AiParserInterface::class;
     }
 }
