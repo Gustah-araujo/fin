@@ -23,6 +23,9 @@ class ConfirmImportRequest extends FormRequest
             'items.*.value' => ['required', 'numeric', 'gt:0', 'max:999999999.99'],
             'items.*.date' => ['required', 'date_format:Y-m-d'],
             'items.*.category_name' => ['sometimes', 'string', 'max:255'],
+            'items.*.category_uuid' => ['sometimes', 'string'],
+            'items.*.tags' => ['sometimes', 'array'],
+            'items.*.tags.*' => ['string', 'max:100'],
             'items.*.is_duplicate' => ['sometimes', 'boolean'],
             'items.*.confirm_duplicate' => ['sometimes', 'boolean'],
         ];

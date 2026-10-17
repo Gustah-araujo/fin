@@ -16,50 +16,13 @@ use Illuminate\Support\Str;
 class ImportService
 {
     /**
-     * Parse an uploaded file into structured transactions via AI Facade.
+     * Parse an uploaded file into structured transactions via AI.
      *
-     * @return array<int, array{description: string, value: float, date: string, type: string, category_name: string}>
+     * @return array<int, array{uuid: string, description: string, value: float, date: string, type: string, category_name: string, category_uuid: string|null, tags: list<string>, is_duplicate: bool}>
      */
-    public function parseFile(UploadedFile $file, string $type): array
+    public function parseFile(Workspace $workspace, UploadedFile $file, string $type): array
     {
-        return Ai::parseFile($file, $type);
-    }
-
-    /**
-     * Detect potential duplicates by comparing against existing transactions.
-     * Match criteria: same value AND date within ±2 days.
-     *
-     * @param  array<int, array{description: string, value: float, date: string, type: string, category_name: string}>  $transactions
-     * @return array<int, array{original: array<string, mixed>, is_duplicate: bool}>
-     */
-    public function detectDuplicates(Workspace $workspace, array $transactions, string $type): array
-    {
-        $transactionType = TransactionType::tryFrom($type);
-        if ($transactionType === null) {
-            return array_map(fn (array $t): array => ['original' => $t, 'is_duplicate' => false], $transactions);
-        }
-
-        $existing = $workspace->transactions()
-            ->where('type', $transactionType)
-            ->select('value', 'date')
-            ->get();
-
-        return array_map(function (array $t) use ($existing): array {
-            $isDuplicate = $existing->contains(function ($e) use ($t): bool {
-                $sameValue = (float) $e->value === (float) $t['value'];
-                if (! $sameValue) {
-                    return false;
-                }
-
-                $existingDate = $e->date->format('Y-m-d');
-                $newDate = (string) $t['date'];
-                $daysDiff = abs(strtotime($existingDate) - strtotime($newDate)) / 86400;
-
-                return $daysDiff <= 2;
-            });
-
-            return ['original' => $t, 'is_duplicate' => $isDuplicate];
-        }, $transactions);
+        return Ai::parseFile($workspace, $file, $type);
     }
 
     /**
@@ -81,13 +44,19 @@ class ImportService
                 continue;
             }
 
+            $categoryId = $item['category_uuid'] ?? null;
+
+            if ($categoryId === null) {
+                $categoryId = $this->resolveCategoryByName($workspace, $item['category_name'] ?? 'Outros', $transactionType)?->uuid;
+            }
+
             $data = [
                 'description' => $item['description'],
                 'value' => $item['value'],
                 'date' => $item['date'],
                 'type' => $transactionType->value,
                 'account_id' => $account->uuid,
-                'category_id' => $category->uuid,
+                'category_id' => $categoryId ?? $category->uuid,
             ];
 
             app(TransactionService::class)->create($workspace, $user, $data);
@@ -95,6 +64,17 @@ class ImportService
         }
 
         return $count;
+    }
+
+    /**
+     * Resolve an existing category by name, or return null.
+     */
+    private function resolveCategoryByName(Workspace $workspace, string $name, TransactionType $type): ?Category
+    {
+        return $workspace->categories()
+            ->where('name', $name)
+            ->where('type', $type)
+            ->first();
     }
 
     private function getOrCreateImportAccount(Workspace $workspace): Account

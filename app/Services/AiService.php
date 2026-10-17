@@ -6,7 +6,9 @@ namespace App\Services;
 
 use App\Ai\Agents\TransactionParser;
 use App\Contracts\AiParserInterface;
+use App\Models\Workspace;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Str;
 use Laravel\Ai\Files\Document;
 use Laravel\Ai\Files\Image;
 use RuntimeException;
@@ -16,13 +18,13 @@ class AiService implements AiParserInterface
     /**
      * Parse an uploaded file into structured transactions via AI.
      *
-     * @return array<int, array{description: string, value: float, date: string, type: string, category_name: string}>
+     * @return array<int, array{uuid: string, description: string, value: float, date: string, type: string, category_name: string, category_uuid: string|null, tags: list<string>, is_duplicate: bool}>
      *
      * @throws RuntimeException When parsing fails.
      */
-    public function parseFile(UploadedFile $file, string $type): array
+    public function parseFile(Workspace $workspace, UploadedFile $file, string $type): array
     {
-        $agent = new TransactionParser;
+        $agent = new TransactionParser($workspace);
         $extension = strtolower($file->getClientOriginalExtension());
 
         $userMessage = "Tipo esperado: {$type}. Extraia as transações financeiras.";
@@ -49,16 +51,24 @@ class AiService implements AiParserInterface
      * Normalize structured output into consistent transaction structure.
      *
      * @param  array<int, array>  $transactions
-     * @return array<int, array{description: string, value: float, date: string, type: string, category_name: string}>
+     * @return array<int, array{uuid: string, description: string, value: float, date: string, type: string, category_name: string, category_uuid: string|null, tags: list<string>, is_duplicate: bool}>
      */
     private function normalizeTransactions(array $transactions): array
     {
         return array_map(fn (array $t): array => [
+            'uuid' => Str::uuid()->toString(),
             'description' => (string) ($t['description'] ?? ''),
             'value' => (float) ($t['value'] ?? 0),
             'date' => (string) ($t['date'] ?? now()->format('Y-m-d')),
             'type' => (string) ($t['type'] ?? 'debit'),
             'category_name' => (string) ($t['category_name'] ?? 'Outros'),
+            'category_uuid' => isset($t['category_uuid']) && is_string($t['category_uuid']) && $t['category_uuid'] !== ''
+                ? $t['category_uuid']
+                : null,
+            'tags' => isset($t['tags']) && is_array($t['tags'])
+                ? array_values(array_filter(array_map('strval', $t['tags']), fn (string $tag): bool => $tag !== ''))
+                : [],
+            'is_duplicate' => (bool) ($t['is_duplicate'] ?? false),
         ], $transactions);
     }
 }

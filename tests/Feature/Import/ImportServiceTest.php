@@ -8,7 +8,6 @@ use App\Enums\WorkspaceRole;
 use App\Facades\Ai;
 use App\Models\Account;
 use App\Models\Category;
-use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\ImportService;
@@ -19,96 +18,26 @@ class ImportServiceTest extends TestCase
 {
     public function test_parse_file_delegates_to_ai_parser(): void
     {
+        $user = User::factory()->create();
+        $workspace = Workspace::factory()->create();
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
+
         $parsed = [
-            ['description' => 'Supermercado XYZ', 'value' => 150.00, 'date' => '2026-09-01', 'type' => 'debit', 'category_name' => 'Alimentação'],
+            ['uuid' => 'test-uuid', 'description' => 'Supermercado XYZ', 'value' => 150.00, 'date' => '2026-09-01', 'type' => 'debit', 'category_name' => 'Alimentação', 'category_uuid' => null, 'tags' => [], 'is_duplicate' => false],
         ];
 
         $file = UploadedFile::fake()->createWithContent('test.csv', 'csv content');
 
         Ai::shouldReceive('parseFile')
             ->once()
-            ->with($file, 'expense')
+            ->with($workspace, $file, 'expense')
             ->andReturn($parsed);
 
         $service = app(ImportService::class);
 
-        $result = $service->parseFile($file, 'expense');
+        $result = $service->parseFile($workspace, $file, 'expense');
 
         $this->assertSame($parsed, $result);
-    }
-
-    public function test_detect_duplicates_flags_matching_transactions(): void
-    {
-        $user = User::factory()->create();
-        $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
-
-        $account = Account::factory()->create([
-            'workspace_id' => $workspace->id,
-            'created_by' => $user->id,
-        ]);
-        $category = Category::factory()->create([
-            'workspace_id' => $workspace->id,
-            'created_by' => $user->id,
-            'type' => 'expense',
-        ]);
-
-        Transaction::factory()->create([
-            'workspace_id' => $workspace->id,
-            'account_id' => $account->id,
-            'category_id' => $category->id,
-            'created_by' => $user->id,
-            'type' => 'expense',
-            'value' => 150.00,
-            'date' => '2026-09-01',
-        ]);
-
-        $transactions = [
-            ['description' => 'Supermercado XYZ', 'value' => 150.00, 'date' => '2026-09-01', 'type' => 'debit', 'category_name' => 'Alimentação'],
-        ];
-
-        $service = app(ImportService::class);
-
-        $result = $service->detectDuplicates($workspace, $transactions, 'expense');
-
-        $this->assertTrue($result[0]['is_duplicate']);
-    }
-
-    public function test_detect_duplicates_does_not_flag_different_values(): void
-    {
-        $user = User::factory()->create();
-        $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
-
-        $account = Account::factory()->create([
-            'workspace_id' => $workspace->id,
-            'created_by' => $user->id,
-        ]);
-        $category = Category::factory()->create([
-            'workspace_id' => $workspace->id,
-            'created_by' => $user->id,
-            'type' => 'expense',
-        ]);
-
-        Transaction::factory()->create([
-            'workspace_id' => $workspace->id,
-            'account_id' => $account->id,
-            'category_id' => $category->id,
-            'created_by' => $user->id,
-            'type' => 'expense',
-            'value' => 150.00,
-            'date' => '2026-09-01',
-        ]);
-
-        $transactions = [
-            ['description' => 'Farmácia ABC', 'value' => 45.90, 'date' => '2026-09-02', 'type' => 'debit', 'category_name' => 'Saúde'],
-        ];
-
-        $service = app(ImportService::class);
-
-        $result = $service->detectDuplicates($workspace, $transactions, 'expense');
-
-        $this->assertFalse($result[0]['is_duplicate']);
     }
 
     public function test_create_transactions_creates_transactions_with_import_account_and_category(): void

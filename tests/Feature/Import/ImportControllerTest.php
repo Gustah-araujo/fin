@@ -5,9 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Import;
 
 use App\Enums\WorkspaceRole;
-use App\Models\Account;
-use App\Models\Category;
-use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Http\UploadedFile;
@@ -121,49 +118,6 @@ class ImportControllerTest extends TestCase
             ->component('Imports/Index')
             ->has('preview', 0)
             ->where('flash.error', 'Nenhuma transação encontrada no arquivo.')
-        );
-    }
-
-    public function test_store_detects_duplicates_in_preview(): void
-    {
-        $user = User::factory()->create();
-        $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
-
-        $account = Account::factory()->create([
-            'workspace_id' => $workspace->id,
-            'created_by' => $user->id,
-        ]);
-        $category = Category::factory()->create([
-            'workspace_id' => $workspace->id,
-            'created_by' => $user->id,
-            'type' => 'expense',
-        ]);
-
-        Transaction::factory()->create([
-            'workspace_id' => $workspace->id,
-            'account_id' => $account->id,
-            'category_id' => $category->id,
-            'created_by' => $user->id,
-            'type' => 'expense',
-            'value' => 150.00,
-            'date' => '2026-09-01',
-        ]);
-
-        $csv = "description,value,date,category\nSupermercado XYZ,150.00,2026-09-01,Alimentação";
-
-        $file = UploadedFile::fake()->createWithContent('test.csv', $csv);
-
-        $response = $this->actingAs($user)
-            ->post(route('transactions.import.store', $workspace), [
-                'type' => 'expense',
-                'file' => $file,
-            ]);
-
-        $response->assertOk();
-        $response->assertInertia(fn ($page) => $page
-            ->has('preview', 1)
-            ->where('preview.0.is_duplicate', true)
         );
     }
 

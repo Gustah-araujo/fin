@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Contracts\AiParserInterface;
+use App\Models\Workspace;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Str;
 
 class FakeAiService implements AiParserInterface
 {
@@ -13,9 +15,9 @@ class FakeAiService implements AiParserInterface
      * Deterministic parse — returns structured transactions from CSV content.
      * No HTTP calls, no API key needed.
      *
-     * @return array<int, array{description: string, value: float, date: string, type: string, category_name: string}>
+     * @return array<int, array{uuid: string, description: string, value: float, date: string, type: string, category_name: string, category_uuid: string|null, tags: list<string>, is_duplicate: bool}>
      */
-    public function parseFile(UploadedFile $file, string $type): array
+    public function parseFile(Workspace $workspace, UploadedFile $file, string $type): array
     {
         $extension = strtolower($file->getClientOriginalExtension());
 
@@ -39,11 +41,15 @@ class FakeAiService implements AiParserInterface
             $columns = str_getcsv($line);
 
             return [
+                'uuid' => Str::uuid()->toString(),
                 'description' => $columns[0] ?? 'Transação Importada',
                 'value' => (float) ($columns[1] ?? 0),
                 'date' => $columns[2] ?? now()->format('Y-m-d'),
                 'type' => $type === 'income' ? 'credit' : 'debit',
                 'category_name' => $columns[3] ?? 'Outros',
+                'category_uuid' => null,
+                'tags' => [],
+                'is_duplicate' => false,
             ];
         }, $lines);
     }

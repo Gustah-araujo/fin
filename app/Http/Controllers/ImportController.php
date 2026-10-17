@@ -12,7 +12,6 @@ use App\Services\ImportService;
 use App\Support\Toast;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Inertia\Response;
 use RuntimeException;
 
@@ -47,7 +46,7 @@ class ImportController extends Controller
         $file = $request->file('file');
 
         try {
-            $parsed = $this->importService->parseFile($file, $type);
+            $parsed = $this->importService->parseFile($workspace, $file, $type);
         } catch (RuntimeException $e) {
             return inertia('Imports/Index', [
                 'type' => $type,
@@ -64,20 +63,20 @@ class ImportController extends Controller
             ]);
         }
 
-        $withDuplicates = $this->importService->detectDuplicates($workspace, $parsed, $type);
-
         $preview = array_map(function (array $item): array {
             return [
-                'id' => Str::uuid()->toString(),
-                'description' => $item['original']['description'],
-                'value' => $item['original']['value'],
-                'date' => $item['original']['date'],
-                'type' => $item['original']['type'],
-                'category_name' => $item['original']['category_name'],
+                'id' => $item['uuid'],
+                'description' => $item['description'],
+                'value' => $item['value'],
+                'date' => $item['date'],
+                'type' => $item['type'],
+                'category_name' => $item['category_name'],
+                'category_uuid' => $item['category_uuid'],
+                'tags' => $item['tags'],
                 'is_duplicate' => $item['is_duplicate'],
                 'confirm_duplicate' => false,
             ];
-        }, $withDuplicates);
+        }, $parsed);
 
         return inertia('Imports/Index', [
             'type' => $type,
