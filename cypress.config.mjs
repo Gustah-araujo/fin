@@ -4,6 +4,9 @@ import { defineConfig } from 'cypress';
 dotenv.config();
 
 export default defineConfig({
+    hosts: {
+        'fin.localhost': '127.0.0.1'
+    },
     e2e: {
         baseUrl: process.env.CYPRESS_BASE_URL || 'http://localhost:8000',
         supportFile: 'cypress/support/e2e.js',
