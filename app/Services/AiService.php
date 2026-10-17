@@ -9,7 +9,6 @@ use App\Contracts\AiParserInterface;
 use App\Models\Workspace;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
-use Laravel\Ai\Files\Document;
 use Laravel\Ai\Files\Image;
 use RuntimeException;
 
@@ -33,7 +32,7 @@ class AiService implements AiParserInterface
         match ($extension) {
             'csv', 'txt' => $userMessage .= "\n\nConteúdo:\n".file_get_contents($file->getRealPath()),
             'html' => $userMessage .= "\n\nConteúdo:\n".strip_tags(file_get_contents($file->getRealPath())),
-            'pdf' => $attachments[] = Document::fromPath($file->getRealPath()),
+            'pdf' => $attachments[] = $file,
             'png', 'jpg', 'jpeg', 'webp' => $attachments[] = Image::fromPath($file->getRealPath()),
             default => throw new RuntimeException("Formato de arquivo não suportado: {$extension}."),
         };
