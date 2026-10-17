@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Import;
 
+use App\Ai\Agents\TransactionParser;
 use App\Contracts\AiParserInterface;
 use App\Enums\WorkspaceRole;
 use App\Facades\Ai;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Services\AiService;
 use App\Services\FakeAiService;
 use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
@@ -104,5 +106,55 @@ class AiServiceTest extends TestCase
 
         $this->assertCount(1, $result);
         $this->assertSame('Outros', $result[0]['category_name']);
+    }
+
+    public function test_full_pipeline_with_sdk_fake(): void
+    {
+        TransactionParser::fake([
+            [
+                'transactions' => [
+                    [
+                        'description' => 'Compra Fake',
+                        'value' => 250.00,
+                        'date' => '2026-10-01',
+                        'type' => 'debit',
+                        'category_name' => 'Eletrônicos',
+                        'category_uuid' => null,
+                        'tags' => ['importado'],
+                        'is_duplicate' => false,
+                    ],
+                    [
+                        'description' => 'Salário Fake',
+                        'value' => 5000.00,
+                        'date' => '2026-10-05',
+                        'type' => 'credit',
+                        'category_name' => 'Trabalho',
+                        'category_uuid' => null,
+                        'tags' => [],
+                        'is_duplicate' => false,
+                    ],
+                ],
+            ],
+        ]);
+
+        $workspace = $this->createWorkspace();
+
+        $file = UploadedFile::fake()->createWithContent('test.csv', 'any content');
+
+        // Use real AiService instead of FakeAiService to exercise the SDK
+        $service = new AiService;
+        $result = $service->parseFile($workspace, $file, 'expense');
+
+        $this->assertCount(2, $result);
+        $this->assertSame('Compra Fake', $result[0]['description']);
+        $this->assertSame(250.00, $result[0]['value']);
+        $this->assertSame('debit', $result[0]['type']);
+        $this->assertSame(['importado'], $result[0]['tags']);
+        $this->assertFalse($result[0]['is_duplicate']);
+        $this->assertNotNull($result[0]['uuid']);
+
+        $this->assertSame('Salário Fake', $result[1]['description']);
+        $this->assertSame(5000.00, $result[1]['value']);
+        $this->assertSame('credit', $result[1]['type']);
     }
 }
