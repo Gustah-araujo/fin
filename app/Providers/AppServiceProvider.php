@@ -22,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
         JsonResource::withoutWrapping();
 
         $this->app->bind(AiParserInterface::class, function () {
-            if (app()->environment('testing')) {
+            if (! app()->environment('production')) {
                 return new FakeAiService;
             }
 
