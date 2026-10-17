@@ -125,7 +125,7 @@ $workspace->members()->attach($user, ["role" => WorkspaceRole::Admin->value]);
 
 ### E2E Tests (Cypress)
 
-**Approach:** Browser-level tests hitting the real application at `http://localhost:8090` (app container). Tests use real Mailpit (`http://localhost:8026`) for email verification flows.
+**Approach:** Browser-level tests hitting the real application at `http://localhost:8000` (`php artisan serve`). Tests use Mailpit for email verification flows (run separately or via CI).
 
 **Session management:** `cy.session()` via `loginViaSession` command — registers a new user, verifies email via Mailpit API, caches the session for reuse across tests in the same spec file.
 
@@ -170,44 +170,43 @@ it('creates an account', () => {
 
 ### Backend Feature Tests
 
-**Run inside Docker container:**
+**Run natively (SQLite in-memory, no DB server needed):**
 ```bash
-docker compose exec app php artisan test
+php artisan test
 ```
 
 **Run specific domain:**
 ```bash
-docker compose exec app php artisan test --filter=Account
+php artisan test --filter=Account
 ```
 
 **Run specific test class:**
 ```bash
-docker compose exec app php artisan test --filter=AccountCreationTest
+php artisan test --filter=AccountCreationTest
 ```
 
 **Run specific test method:**
 ```bash
-docker compose exec app php artisan test --filter=test_user_can_create_account
+php artisan test --filter=test_user_can_create_account
 ```
 
 **Run all feature tests:**
 ```bash
-docker compose exec app php artisan test --testsuite=Feature
+php artisan test --testsuite=Feature
 ```
 
 **Configuration:** `phpunit.xml` at project root. Uses SQLite in-memory, array drivers for cache/session/mail.
 
 ### E2E Cypress Tests
 
-**Run headless (Docker profile):**
+**Run headless:**
 ```bash
 npm run cypress:run
-# which runs: docker compose --profile testing run --rm cypress npx cypress run
 ```
 
 **Run specific spec:**
 ```bash
-docker compose --profile testing run --rm cypress npx cypress run --spec "cypress/e2e/accounts/crud.cy.js"
+npx cypress run --spec "cypress/e2e/accounts/crud.cy.js"
 ```
 
 **Open Cypress UI (requires DISPLAY):**
@@ -215,34 +214,34 @@ docker compose --profile testing run --rm cypress npx cypress run --spec "cypres
 npm run cypress:open
 ```
 
-**Configuration:** `cypress.config.mjs` — baseUrl `http://localhost:8090`, viewport 1280x800.
+**Configuration:** `cypress.config.mjs` — baseUrl `http://localhost:8000`, viewport 1280x800.
 
 ### Prerequisites for E2E
 
-1. **All Docker containers running:** `docker compose up -d` (app + db + mailpit must be up)
-2. **App container accessible at port 8090**
-3. **Mailpit accessible at port 8026** (for email verification flow)
+1. **App running:** `php artisan serve` (accessible at `http://localhost:8000`)
+2. **Database configured** (local MariaDB or `.env` DB connection)
+3. **Mailpit running** (for email verification flow — run separately or use CI)
 
 ## Test Coverage Matrix
 
 | Code Layer | Required Test Type | Location Pattern | Run Command |
 | ---------- | ------------------- | ---------------- | ----------- |
-| Controllers (Http/Controllers) | Feature (PHPUnit) | `tests/Feature/{Domain}/{Entity}{Action}Test.php` | `docker compose exec app php artisan test --filter={Domain}` |
-| FormRequests (Http/Requests) | Feature (validation assertions) | `tests/Feature/{Domain}/{Entity}CreationTest.php` (and Update variants) | `docker compose exec app php artisan test --filter={Entity}` |
-| Policies (app/Policies) | Feature (authorization assertions) | `tests/Feature/{Domain}/{Entity}AuthorizationTest.php` | `docker compose exec app php artisan test --filter=Authorization` |
-| Services (app/Services) | Feature (indirectly via controller tests) | tests/Feature/{Domain}/{Entity}{Action}Test.php | `docker compose exec app php artisan test --filter={Domain}` |
-| Models + Migrations | Feature (assertDatabaseHas/Has) | tests/Feature/{Domain}/{Entity}CreationTest.php | `docker compose exec app php artisan test --filter={Domain}` |
-| Enums (app/Enums) | Feature (via role assignment) | `tests/Feature/{Domain}/{Entity}AuthorizationTest.php` | `docker compose exec app php artisan test --filter=Authorization` |
+| Controllers (Http/Controllers) | Feature (PHPUnit) | `tests/Feature/{Domain}/{Entity}{Action}Test.php` | `php artisan test --filter={Domain}` |
+| FormRequests (Http/Requests) | Feature (validation assertions) | `tests/Feature/{Domain}/{Entity}CreationTest.php` (and Update variants) | `php artisan test --filter={Entity}` |
+| Policies (app/Policies) | Feature (authorization assertions) | `tests/Feature/{Domain}/{Entity}AuthorizationTest.php` | `php artisan test --filter=Authorization` |
+| Services (app/Services) | Feature (indirectly via controller tests) | tests/Feature/{Domain}/{Entity}{Action}Test.php | `php artisan test --filter={Domain}` |
+| Models + Migrations | Feature (assertDatabaseHas/Has) | tests/Feature/{Domain}/{Entity}CreationTest.php | `php artisan test --filter={Domain}` |
+| Enums (app/Enums) | Feature (via role assignment) | `tests/Feature/{Domain}/{Entity}AuthorizationTest.php` | `php artisan test --filter=Authorization` |
 | React Pages (resources/js/Pages) | E2E (Cypress) | `cypress/e2e/{domain}/crud.cy.js` | `npm run cypress:run -- --spec "cypress/e2e/{domain}/crud.cy.js"` |
 | InertiaJS rendering | Feature (assertInertia) + E2E (UI) | `tests/Feature/{Domain}/{Entity}CreationTest.php` + `cypress/e2e/{domain}/*.cy.js` | Both commands above |
-| Middleware (auth, workspace guard) | Feature (redirects, forbidden) | `tests/Feature/Auth/AuthenticationTest.php` + `tests/Feature/Workspace/WorkspaceCreationTest.php` | `docker compose exec app php artisan test --filter=Auth` |
+| Middleware (auth, workspace guard) | Feature (redirects, forbidden) | `tests/Feature/Auth/AuthenticationTest.php` + `tests/Feature/Workspace/WorkspaceCreationTest.php` | `php artisan test --filter=Auth` |
 
 ## Parallelism Assessment
 
 | Test Type | Parallel-Safe? | Isolation Model | Evidence |
 | --------- | -------------- | ---------------- | -------- |
 | PHPUnit Feature | Yes (within same run) | SQLite in-memory + `RefreshDatabase` trait (fresh DB per test method) | `tests/TestCase.php` uses `RefreshDatabase`; `phpunit.xml` sets `DB_DATABASE=:memory:` |
-| Cypress E2E | No (by default) | Shared app instance on port 8090; tests use `cy.session()` for auth isolation but share the same DB state | `cypress.config.mjs` has no `parallel` config; `network_mode: host` shares app instance |
+| Cypress E2E | No (by default) | Shared app instance on port 8000; tests use `cy.session()` for auth isolation but share the same DB state | `cypress.config.mjs` has no `parallel` config |
 
 *Cypress tests are NOT parallel-safe because they share a single running application instance with a persistent MariaDB database. `cy.session()` isolates auth cookies but not database state. Test isolation relies on creating fresh workspaces per spec file via `before()` hooks.*
 
@@ -250,12 +249,12 @@ npm run cypress:open
 
 | Gate Level | When to Use | Command |
 | ---------- | ----------- | ------- |
-| Quick | After a single feature test file change | `docker compose exec app php artisan test --filter={EntityName}` |
-| Domain | After completing all tests for one domain (e.g., all Account tests) | `docker compose exec app php artisan test --filter={Domain}` |
-| Full Backend | After completing a milestone feature | `docker compose exec app php artisan test` |
+| Quick | After a single feature test file change | `php artisan test --filter={EntityName}` |
+| Domain | After completing all tests for one domain (e.g., all Account tests) | `php artisan test --filter={Domain}` |
+| Full Backend | After completing a milestone feature | `php artisan test` |
 | E2E (single spec) | After implementing a React page for a domain | `npm run cypress:run -- --spec "cypress/e2e/{domain}/crud.cy.js"` |
 | E2E (full) | Before declaring a milestone complete | `npm run cypress:run` |
-| Complete Gate | Milestone completion — all tests pass | `docker compose exec app php artisan test && npm run cypress:run` |
+| Complete Gate | Milestone completion — all tests pass | `php artisan test && npm run cypress:run` |
 
 ## Testing Conventions Summary
 

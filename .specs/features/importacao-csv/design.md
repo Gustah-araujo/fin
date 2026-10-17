@@ -95,7 +95,7 @@ O processamento do CSV (parse + IA + duplicatas) acontece em background via `Pro
 - Processamento síncrono causaria timeout em requisições HTTP (limite típico 30s)
 - Pooling é mais simples que websockets para v1 (sem necessidade de Laravel Reverb/Pusher)
 - Infraestrutura de jobs já existe no projeto (`ProcessRecurrencesJob`, `ApplyRecurrenceScopeChangeJob`)
-- `QUEUE_CONNECTION=database` já configurado, worker em produção via docker-compose
+- `QUEUE_CONNECTION=database` já configurado, worker em produção via docker-compose.prod.yml
 
 ### D-68: "Sem Categoria" como categoria padrão
 Criar categoria sistema "Sem Categoria" (is_system=true) auto-criada por workspace. Usada quando IA não retorna categoria ou categoria não existe no workspace.

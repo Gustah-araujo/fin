@@ -8,47 +8,39 @@ git clone <repo-url> fin
 cd fin
 cp .env.example .env
 
+# Install dependencies
+composer install
+npm install
+
 # Generate APP_KEY
 php artisan key:generate
 
-# Start all services
-docker compose up -d
+# Run migrations (requires local MariaDB or update .env for your DB)
+php artisan migrate
 
-# Run migrations
-docker compose exec app php artisan migrate
+# Start dev server (terminal 1)
+php artisan serve  # http://localhost:8000
 
-# Install dependencies (first time)
-docker compose exec app composer install
-docker compose exec app npm install
-docker compose exec app npm run build
+# Start Vite hot reload (terminal 2)
+npm run build
+# or for hot reload:
+npm run dev
 ```
-
-Access: http://localhost:8090
-
-### Dev Services
-
-| Service | URL |
-|---------|-----|
-| App | http://localhost:8090 |
-| phpMyAdmin | http://localhost:8091 |
-| Mailpit | http://localhost:8026 |
 
 ### Dev Commands
 
 ```bash
 # Artisan
-docker compose exec app php artisan tinker
-docker compose exec app php artisan migrate:fresh --seed
+php artisan tinker
+php artisan migrate:fresh --seed
 
-# NPM (hot reload)
-docker compose exec app npm run dev
-
-# Database CLI
-docker compose exec db mariadb -u fin -p fin
-
-# Cypress (E2E)
-docker compose --profile testing run --rm cypress
+# Cypress (E2E) — requires php artisan serve running
+npm run cypress:run
+# or with UI:
+npm run cypress:open
 ```
+
+> **Note:** Feature tests (`php artisan test`) use SQLite in-memory — no database server needed.
 
 ---
 

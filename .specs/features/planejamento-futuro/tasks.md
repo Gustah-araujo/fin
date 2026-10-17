@@ -79,7 +79,7 @@ T6, T7 complete, then:
 
 **Verify:**
 ```bash
-docker compose exec app php artisan test --filter=PlanningServiceTest
+php php artisan test --filter=PlanningServiceTest
 ```
 Expected: ≥12 tests, all passing
 
@@ -108,7 +108,7 @@ Expected: ≥12 tests, all passing
 
 **Verify:**
 ```bash
-docker compose exec app php artisan test --filter=PlanningControllerTest
+php php artisan test --filter=PlanningControllerTest
 ```
 Expected: ≥8 tests, all FAIL (controller not yet created)
 
@@ -138,7 +138,7 @@ Expected: ≥8 tests, all FAIL (controller not yet created)
 
 **Verify:**
 ```bash
-docker compose exec app php artisan test --filter=Planning
+php php artisan test --filter=Planning
 ```
 Expected: ≥20 tests passing (T1 + T2 combined)
 
@@ -321,7 +321,7 @@ Expected: All scenarios pass
 **Verify:**
 ```bash
 cd /home/gustavo/Projects/fin && composer quality && npm run quality
-docker compose exec app php artisan test --filter=Planning
+php php artisan test --filter=Planning
 npm run build
 npx cypress run --spec cypress/e2e/planning.cy.ts
 ```

@@ -519,8 +519,8 @@ Parallelization: T1–T6 can run in parallel after brownfield context; T7–T9 d
 **Done when:**
 - E2E tests cover the 5 journeys defined in design.md section 4.2.
 - All tests use `data-testid` selectors.
-- Tests run against `http://localhost:8090` (Fin app service).
-- Cypress profile is started with `docker compose --profile testing up cypress`.
+- Tests run against `http://localhost:8000` (php artisan serve).
+- Cypress runs natively via `npx cypress run`.
 
 **Tests to Add:**
 
@@ -539,10 +539,9 @@ Parallelization: T1–T6 can run in parallel after brownfield context; T7–T9 d
 **Gate Commands:**
 
 ```bash
-docker compose up -d app db
-docker compose exec app php artisan migrate:fresh --seed
-# or run Cypress container
-docker compose --profile testing run --rm cypress
+php artisan serve &
+php artisan migrate:fresh --seed
+npm run cypress:run
 ```
 
 **Output:**

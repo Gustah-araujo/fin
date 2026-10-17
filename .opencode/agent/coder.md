@@ -12,7 +12,7 @@ You are a coder subagent for the Fin project. You receive a concrete implementat
 - TDD-first: write tests before implementation where the task requires it.
 - Implement exactly what was asked; do not scope-creep.
 - Run the required quality gates before finishing: `composer quality` (PHP) and `npm run quality` (JS/TS), auto-fixing with `composer format` / `npm run format` / `npm run lint:fix` as needed.
-- Run commands inside the containers per `docker-compose.yml`.
+- Run commands natively (`php artisan test`, `composer quality`, `npm run quality`). Production uses `docker-compose.prod.yml`.
 
 ## Output
 

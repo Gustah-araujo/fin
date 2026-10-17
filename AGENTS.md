@@ -8,7 +8,7 @@ For visual work (layouts, components, styling), **also load `fin-design-system`*
 
 ## Environment
 
-- All commands must be run inside the containers on `docker-compose.yml`
+- Development runs natively (PHP built-in server, `php artisan test` uses SQLite in-memory). Production uses `docker-compose.prod.yml`
 
 ## Project Context
 
@@ -66,15 +66,16 @@ Route::middleware(['auth', 'verified'])->prefix('w/{workspace}')->group(function
 
 A global middleware redirects users with zero workspaces to the creation screen.
 
-## After Scaffolding
-
-Once `laravel new` is run, typical dev commands will be:
+## Development Setup
 
 ```bash
-php artisan serve
-npm run dev
-php artisan make:model Account -mrcR --policy
-php artisan test --filter=AccountTest
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+php artisan serve      # http://localhost:8000
+npm run dev            # Vite hot reload
+php artisan test       # SQLite in-memory, no DB server needed
 ```
 
-Update this section with the actual npm/packager commands from package.json.
+Production deployment uses `docker-compose.prod.yml` (see `DEPLOY.md`).

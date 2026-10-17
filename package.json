@@ -9,8 +9,8 @@
     "lint": "eslint \"resources/js\"",
     "lint:fix": "eslint \"resources/js\" --fix",
     "quality": "eslint \"resources/js\" && prettier --check \"resources/js/**/*.{ts,tsx}\"",
-    "cypress:run": "docker compose --profile testing run --rm cypress npx cypress run",
-    "cypress:open": "docker compose --profile testing run --rm -e DISPLAY cypress npx cypress open"
+    "cypress:run": "npx cypress run",
+    "cypress:open": "npx cypress open"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
@@ -19,6 +19,7 @@
     "@typescript/native": "npm:typescript@^7.0.2",
     "concurrently": "^9.0.1",
     "cypress": "^15.18.1",
+    "dotenv": "^18.0.8",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",

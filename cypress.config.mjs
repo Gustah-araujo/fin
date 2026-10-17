@@ -1,4 +1,7 @@
+import dotenv from 'dotenv';
 import { defineConfig } from 'cypress';
+
+dotenv.config();
 
 export default defineConfig({
     e2e: {

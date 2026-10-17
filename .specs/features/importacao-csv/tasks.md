@@ -80,7 +80,7 @@ T11, T12 complete, then:
 
 **Verify:**
 ```bash
-docker compose exec app php artisan test --filter=AiServiceTest
+php php artisan test --filter=AiServiceTest
 ```
 Expected: ≥5 tests, all passing
 
@@ -106,7 +106,7 @@ Expected: ≥5 tests, all passing
 
 **Verify:**
 ```bash
-docker compose exec app php artisan test --filter=AiServiceTest
+php php artisan test --filter=AiServiceTest
 ```
 Expected: all tests still passing
 
@@ -133,7 +133,7 @@ Expected: all tests still passing
 
 **Verify:**
 ```bash
-docker compose exec app php artisan test --filter=Workspace
+php php artisan test --filter=Workspace
 ```
 Expected: all workspace tests passing + new assertion
 
@@ -185,7 +185,7 @@ Expected: all workspace tests passing + new assertion
 
 **Verify:**
 ```bash
-docker compose exec app php artisan test --filter=ImportServiceTest
+php php artisan test --filter=ImportServiceTest
 ```
 Expected: ≥10 tests, all passing
 
@@ -231,7 +231,7 @@ Expected: ≥10 tests, all passing
 
 **Verify:**
 ```bash
-docker compose exec app php artisan test --filter=ProcessImportCsvJob
+php php artisan test --filter=ProcessImportCsvJob
 ```
 Expected: ≥6 tests, all passing
 
@@ -261,7 +261,7 @@ Expected: ≥6 tests, all passing
 
 **Verify:**
 ```bash
-docker compose exec app php artisan test --filter=Import
+php php artisan test --filter=Import
 ```
 Expected: all import tests passing
 
@@ -313,7 +313,7 @@ Expected: all import tests passing
 
 **Verify:**
 ```bash
-docker compose exec app php artisan test --filter=ImportControllerTest
+php php artisan test --filter=ImportControllerTest
 ```
 Expected: ≥15 tests, all FAIL (controller not yet created)
 
@@ -354,7 +354,7 @@ Expected: ≥15 tests, all FAIL (controller not yet created)
 
 **Verify:**
 ```bash
-docker compose exec app php artisan test --filter=ImportControllerTest
+php php artisan test --filter=ImportControllerTest
 ```
 Expected: ≥15 tests passing
 
@@ -385,7 +385,7 @@ Expected: ≥15 tests passing
 
 **Verify:**
 ```bash
-docker compose exec app php artisan route:list --name=import
+php php artisan route:list --name=import
 ```
 Expected: 8 routes listed with correct controller bindings
 
@@ -554,7 +554,7 @@ Expected: No errors
 
 **Verify:**
 ```bash
-docker compose exec app php artisan test --filter=ImportSmokeTest
+php php artisan test --filter=ImportSmokeTest
 ```
 Expected: ≥3 tests passing
 
@@ -615,7 +615,7 @@ Expected: All scenarios pass
 **Verify:**
 ```bash
 composer quality && npm run quality
-docker compose exec app php artisan test --filter=Import
+php php artisan test --filter=Import
 npm run build
 npx cypress run --spec cypress/e2e/import.cy.ts
 ```
