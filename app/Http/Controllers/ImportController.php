@@ -64,14 +64,15 @@ class ImportController extends Controller
             ]);
         }
 
-        // Detect duplicates by matching description + value + date against existing transactions
+        // Detect duplicates by matching description + value + date against existing transactions.
+        // Normalize value to 2 decimal places so float (150.0) and decimal:2 cast ("150.00") match.
         $existingSignatures = Transaction::where('workspace_id', $workspace->id)
             ->get()
-            ->map(fn (Transaction $t) => $t->description.'|'.$t->value.'|'.$t->date->format('Y-m-d'))
+            ->map(fn (Transaction $t) => $t->description.'|'.number_format((float) $t->value, 2, '.', '').'|'.$t->date->format('Y-m-d'))
             ->flip();
 
         $preview = array_map(function (array $item) use ($existingSignatures): array {
-            $signature = $item['description'].'|'.$item['value'].'|'.$item['date'];
+            $signature = $item['description'].'|'.number_format((float) $item['value'], 2, '.', '').'|'.$item['date'];
             $isDuplicate = $existingSignatures->has($signature);
 
             return [
