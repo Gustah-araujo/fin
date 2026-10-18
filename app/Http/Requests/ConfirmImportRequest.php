@@ -23,7 +23,7 @@ class ConfirmImportRequest extends FormRequest
             'items.*.date' => ['required', 'date_format:Y-m-d'],
             'items.*.type' => ['required', Rule::in(['debit', 'credit'])],
             'items.*.category_name' => ['sometimes', 'string', 'max:255'],
-            'items.*.category_uuid' => ['sometimes', 'string'],
+            'items.*.category_uuid' => ['sometimes', 'nullable', 'string'],
             'items.*.tags' => ['sometimes', 'array'],
             'items.*.tags.*' => ['string', 'max:100'],
             'items.*.is_duplicate' => ['sometimes', 'boolean'],
