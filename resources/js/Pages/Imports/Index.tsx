@@ -10,38 +10,27 @@ import { Label } from '@/components/ui/label';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import type { ImportPageProps, ImportPreviewItem } from '@/types/import';
 
-type ImportType = 'expense' | 'income';
-
 interface UploadFormData {
-    type: ImportType;
     file: File | null;
 }
 
 interface ConfirmFormData {
-    type: ImportType;
     items: ImportPreviewItem[];
 }
 
-export default function Index({ type, preview, flash }: ImportPageProps) {
+export default function Index({
+    categories,
+    tags,
+    preview,
+    flash,
+}: ImportPageProps) {
     const workspace = useWorkspace();
 
-    const isIncome = type === 'income';
-    const label = isIncome ? 'Receitas' : 'Despesas';
-    const storeRoute = isIncome
-        ? 'incomes.import.store'
-        : 'transactions.import.store';
-    const confirmRoute = isIncome
-        ? 'incomes.import.confirm'
-        : 'transactions.import.confirm';
-    const indexRoute = isIncome ? 'incomes.index' : 'transactions.index';
-
     const uploadForm = useForm<UploadFormData>({
-        type,
         file: null,
     });
 
     const confirmForm = useForm<ConfirmFormData>({
-        type,
         items: [],
     });
 
@@ -65,7 +54,7 @@ export default function Index({ type, preview, flash }: ImportPageProps) {
 
     function handleUpload(e: React.FormEvent): void {
         e.preventDefault();
-        uploadForm.post(route(storeRoute, { workspace: workspace.uuid }), {
+        uploadForm.post(route('import.store', { workspace: workspace.uuid }), {
             forceFormData: true,
         });
     }
@@ -77,17 +66,25 @@ export default function Index({ type, preview, flash }: ImportPageProps) {
             (item) => item.confirm_duplicate,
         );
 
-        confirmForm.transform((data) => ({
-            type: data.type,
+        confirmForm.transform(() => ({
             items: selectedItems,
         }));
 
-        confirmForm.post(route(confirmRoute, { workspace: workspace.uuid }));
+        confirmForm.post(
+            route('import.confirm', { workspace: workspace.uuid }),
+        );
     }
 
     function handleItemsChange(items: ImportPreviewItem[]): void {
         setConfirmData('items', items);
     }
+
+    const expenseCount = confirmForm.data.items.filter(
+        (item) => item.type !== 'credit' && item.confirm_duplicate,
+    ).length;
+    const incomeCount = confirmForm.data.items.filter(
+        (item) => item.type === 'credit' && item.confirm_duplicate,
+    ).length;
 
     if (!preview) {
         return (
@@ -95,11 +92,11 @@ export default function Index({ type, preview, flash }: ImportPageProps) {
                 <div className="space-y-6">
                     <div>
                         <h1 className="text-2xl font-semibold tracking-tight">
-                            Importar {label}
+                            Importar
                         </h1>
                         <p className="text-sm text-muted-foreground mt-1">
                             Envie um arquivo CSV, PDF, HTML ou imagem para
-                            importar {label.toLowerCase()} automaticamente.
+                            importar transações automaticamente.
                         </p>
                     </div>
 
@@ -147,7 +144,7 @@ export default function Index({ type, preview, flash }: ImportPageProps) {
                                     </Button>
                                     <Button variant="outline" asChild>
                                         <Link
-                                            href={route(indexRoute, {
+                                            href={route('dashboard', {
                                                 workspace: workspace.uuid,
                                             })}
                                         >
@@ -169,7 +166,7 @@ export default function Index({ type, preview, flash }: ImportPageProps) {
                 <div className="space-y-6">
                     <div>
                         <h1 className="text-2xl font-semibold tracking-tight">
-                            Importar {label}
+                            Importar
                         </h1>
                     </div>
 
@@ -181,11 +178,11 @@ export default function Index({ type, preview, flash }: ImportPageProps) {
                             </p>
                             <Button variant="outline" asChild>
                                 <Link
-                                    href={route(indexRoute, {
+                                    href={route('dashboard', {
                                         workspace: workspace.uuid,
                                     })}
                                 >
-                                    Voltar para {label}
+                                    Voltar
                                 </Link>
                             </Button>
                         </CardContent>
@@ -195,24 +192,20 @@ export default function Index({ type, preview, flash }: ImportPageProps) {
         );
     }
 
-    const selectedCount = confirmForm.data.items.filter(
-        (item) => item.confirm_duplicate,
-    ).length;
-
     return (
         <AuthenticatedLayout>
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold tracking-tight">
-                            Importar {label}
+                            Importar
                         </h1>
                         <p className="text-sm text-muted-foreground mt-1">
                             Revise os dados antes de confirmar a importação.
                         </p>
                     </div>
                     <Badge variant="secondary">
-                        {selectedCount} de {confirmForm.data.items.length}{' '}
+                        {expenseCount} despesas + {incomeCount} receitas
                         selecionadas
                     </Badge>
                 </div>
@@ -222,7 +215,8 @@ export default function Index({ type, preview, flash }: ImportPageProps) {
                         <ImportPreviewTable
                             items={confirmForm.data.items}
                             onItemsChange={handleItemsChange}
-                            type={type}
+                            categories={categories ?? []}
+                            tags={tags ?? []}
                         />
                     </CardContent>
                 </Card>
@@ -233,13 +227,16 @@ export default function Index({ type, preview, flash }: ImportPageProps) {
                 >
                     <Button
                         type="submit"
-                        disabled={confirmForm.processing || selectedCount === 0}
+                        disabled={
+                            confirmForm.processing ||
+                            expenseCount + incomeCount === 0
+                        }
                     >
                         Confirmar Importação
                     </Button>
                     <Button variant="outline" asChild>
                         <Link
-                            href={route(indexRoute, {
+                            href={route('dashboard', {
                                 workspace: workspace.uuid,
                             })}
                         >

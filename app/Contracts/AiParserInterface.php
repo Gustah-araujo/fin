@@ -16,5 +16,5 @@ interface AiParserInterface
      *
      * @throws \RuntimeException When parsing fails.
      */
-    public function parseFile(Workspace $workspace, UploadedFile $file, string $type): array;
+    public function parseFile(Workspace $workspace, UploadedFile $file): array;
 }

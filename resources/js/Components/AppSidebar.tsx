@@ -12,6 +12,7 @@ import {
     ChevronRight,
     Tags,
     Folders,
+    FileUp,
     type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -102,6 +103,14 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
                     }),
                     icon: Repeat,
                     testId: 'sidebar-recurrences',
+                },
+                {
+                    label: 'Importações',
+                    href: route('import.create', {
+                        workspace: workspaceUuid,
+                    }),
+                    icon: FileUp,
+                    testId: 'sidebar-imports',
                 },
             ],
         },

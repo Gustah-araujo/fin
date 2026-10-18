@@ -392,7 +392,7 @@ class TransactionService
         return $groupId;
     }
 
-    protected function syncTags(Transaction $transaction, array $tagUuids): void
+    public function syncTags(Transaction $transaction, array $tagUuids): void
     {
         if (empty($tagUuids)) {
             return;

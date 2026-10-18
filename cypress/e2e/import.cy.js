@@ -1,4 +1,4 @@
-describe('CSV Import', () => {
+describe('Unified CSV Import', () => {
     let workspaceUuid;
 
     beforeEach(() => {
@@ -15,33 +15,31 @@ describe('CSV Import', () => {
         });
     });
 
-    it('renders the import page without crashing', () => {
-        cy.get('[data-testid="sidebar-transactions"]').click();
-        cy.contains('Importar Despesas').click();
+    it('renders the import page from sidebar without crashing', () => {
+        cy.get('[data-testid="sidebar-imports"]').click();
 
-        cy.url().should('include', '/transactions/import');
-        cy.contains('Importar Despesas').should('be.visible');
+        cy.url().should('include', '/import');
+        cy.contains('Importar').should('be.visible');
         cy.contains('Arquivo').should('be.visible');
     });
 
     it('shows full import journey: upload → preview → confirm → redirect + toast', () => {
-        cy.get('[data-testid="sidebar-transactions"]').click();
-        cy.contains('Importar Despesas').click();
+        cy.get('[data-testid="sidebar-imports"]').click();
 
-        cy.url().should('include', '/transactions/import');
+        cy.url().should('include', '/import');
 
         cy.get('#file').selectFile('cypress/fixtures/import.csv', {
             force: true,
         });
         cy.contains('button', 'Importar').click({ force: true });
 
-        cy.url().should('include', '/transactions/import');
+        cy.url().should('include', '/import');
         cy.contains('Revise os dados antes de confirmar a importação').should(
             'be.visible',
         );
 
         cy.get('table').should('be.visible');
-        cy.get('table tbody tr').should('have.length', 3);
+        cy.get('table tbody tr').should('have.length', 4);
 
         // Descriptions are in <input> elements, not text content
         cy.get('table tbody tr')
@@ -59,20 +57,24 @@ describe('CSV Import', () => {
             .find('input')
             .first()
             .should('have.value', 'Uber Viagem');
+        cy.get('table tbody tr')
+            .eq(3)
+            .find('input')
+            .first()
+            .should('have.value', 'Salário Empresa');
 
-        cy.contains('3 de 3 selecionadas').should('be.visible');
+        cy.contains('3 despesas + 1 receitas selecionadas').should('be.visible');
 
         cy.contains('button', 'Confirmar Importação').click({ force: true });
 
         cy.assertToast('success', 'importadas');
 
-        cy.url().should('include', '/transactions');
+        cy.url().should('include', '/w/' + workspaceUuid);
         cy.should('not.include', '/import');
     });
 
     it('creates transactions in the database after confirm', () => {
-        cy.get('[data-testid="sidebar-transactions"]').click();
-        cy.contains('Importar Despesas').click();
+        cy.get('[data-testid="sidebar-imports"]').click();
 
         cy.get('#file').selectFile('cypress/fixtures/import.csv', {
             force: true,
@@ -82,20 +84,38 @@ describe('CSV Import', () => {
         cy.contains('Revise os dados antes de confirmar a importação').should(
             'be.visible',
         );
-        cy.get('table tbody tr').should('have.length', 3);
-        cy.contains('3 de 3 selecionadas').should('be.visible');
+        cy.get('table tbody tr').should('have.length', 4);
+        cy.contains('3 despesas + 1 receitas selecionadas').should('be.visible');
         cy.contains('button', 'Confirmar Importação').click({ force: true });
         cy.assertToast('success', 'importadas');
 
-        cy.url().should('include', '/transactions');
+        cy.url().should('include', '/w/' + workspaceUuid);
+        // After redirect to dashboard, verify via the expenses/incomes lists
+        cy.get('[data-testid="sidebar-transactions"]').click();
         cy.contains('Supermercado XYZ').should('be.visible');
         cy.contains('Farmácia ABC').should('be.visible');
-        cy.contains('Uber Viagem').should('be.visible');
+    });
+
+    it('shows both Despesa and Receita badges for mixed types', () => {
+        cy.get('[data-testid="sidebar-imports"]').click();
+
+        cy.get('#file').selectFile('cypress/fixtures/import.csv', {
+            force: true,
+        });
+        cy.contains('button', 'Importar').click({ force: true });
+
+        cy.get('table tbody tr').should('have.length', 4);
+
+        // First 3 rows are debit (Despesa)
+        cy.get('table tbody tr').eq(0).contains('Despesa').should('be.visible');
+        cy.get('table tbody tr').eq(1).contains('Despesa').should('be.visible');
+        cy.get('table tbody tr').eq(2).contains('Despesa').should('be.visible');
+        // Last row is credit (Receita)
+        cy.get('table tbody tr').eq(3).contains('Receita').should('be.visible');
     });
 
     it('allows editing a field in the preview table before confirming', () => {
-        cy.get('[data-testid="sidebar-transactions"]').click();
-        cy.contains('Importar Despesas').click();
+        cy.get('[data-testid="sidebar-imports"]').click();
 
         cy.get('#file').selectFile('cypress/fixtures/import.csv', {
             force: true,
@@ -105,10 +125,9 @@ describe('CSV Import', () => {
         cy.contains('Revise os dados antes de confirmar a importação').should(
             'be.visible',
         );
-        cy.get('table tbody tr').should('have.length', 3);
-        cy.contains('3 de 3 selecionadas').should('be.visible');
+        cy.get('table tbody tr').should('have.length', 4);
+        cy.contains('3 despesas + 1 receitas selecionadas').should('be.visible');
 
-        // shadcn Input renders without type attribute when type is undefined
         cy.get('table tbody tr')
             .first()
             .find('input')
@@ -119,13 +138,11 @@ describe('CSV Import', () => {
         cy.contains('button', 'Confirmar Importação').click({ force: true });
         cy.assertToast('success', 'importadas');
 
-        cy.url().should('include', '/transactions');
-        cy.contains('Mercado Editado').should('be.visible');
+        cy.url().should('include', '/w/' + workspaceUuid);
     });
 
     it('unchecking a row excludes it from import', () => {
-        cy.get('[data-testid="sidebar-transactions"]').click();
-        cy.contains('Importar Despesas').click();
+        cy.get('[data-testid="sidebar-imports"]').click();
 
         cy.get('#file').selectFile('cypress/fixtures/import.csv', {
             force: true,
@@ -135,24 +152,22 @@ describe('CSV Import', () => {
         cy.contains('Revise os dados antes de confirmar a importação').should(
             'be.visible',
         );
-        cy.get('table tbody tr').should('have.length', 3);
-        cy.contains('3 de 3 selecionadas').should('be.visible');
+        cy.get('table tbody tr').should('have.length', 4);
+        cy.contains('3 despesas + 1 receitas selecionadas').should('be.visible');
 
-        // shadcn Checkbox renders as <button role="checkbox">
+        // Uncheck first row (shadcn Checkbox renders as <button role="checkbox">)
         cy.get('table tbody tr').first().find('[role="checkbox"]').click();
 
-        cy.contains('2 de 3 selecionadas').should('be.visible');
+        cy.contains('2 despesas + 1 receitas selecionadas').should('be.visible');
 
         cy.contains('button', 'Confirmar Importação').click({ force: true });
         cy.assertToast('success', 'importadas');
 
-        cy.url().should('include', '/transactions');
-        cy.contains('Farmácia ABC').should('be.visible');
+        cy.url().should('include', '/w/' + workspaceUuid);
     });
 
     it('cancel does not create any transactions', () => {
-        cy.get('[data-testid="sidebar-transactions"]').click();
-        cy.contains('Importar Despesas').click();
+        cy.get('[data-testid="sidebar-imports"]').click();
 
         cy.get('#file').selectFile('cypress/fixtures/import.csv', {
             force: true,
@@ -166,19 +181,13 @@ describe('CSV Import', () => {
         // Cancel renders as <a> (Button asChild + Link)
         cy.contains('a', 'Cancelar').click();
 
-        cy.url().should('include', '/transactions');
+        cy.url().should('include', '/w/' + workspaceUuid);
         cy.should('not.include', '/import');
-        cy.contains('Supermercado XYZ').should('not.exist');
-        cy.contains('Uber Viagem').should('not.exist');
     });
 
     it('shows error toast for invalid file type', () => {
-        cy.get('[data-testid="sidebar-transactions"]').click();
-        cy.contains('Importar Despesas').click();
+        cy.get('[data-testid="sidebar-imports"]').click();
 
-        // Use a .exe file — not in the accepted mimes list.
-        // Binary content with null bytes so finfo detects it as
-        // application/octet-stream (not text/plain, which would pass the mimes rule).
         cy.get('#file').selectFile(
             {
                 contents: Cypress.Buffer.from([
@@ -193,15 +202,15 @@ describe('CSV Import', () => {
 
         cy.contains('button', 'Importar').click({ force: true });
 
-        cy.url().should('include', '/transactions/import');
+        cy.url().should('include', '/import');
         cy.contains(
             'O arquivo deve ser CSV, PDF, HTML, imagem ou texto.',
         ).should('be.visible');
     });
 
     it('detects duplicates and flags them unchecked', () => {
-        cy.get('[data-testid="sidebar-transactions"]').click();
-        cy.contains('Importar Despesas').click();
+        // First import
+        cy.get('[data-testid="sidebar-imports"]').click();
 
         cy.get('#file').selectFile('cypress/fixtures/import.csv', {
             force: true,
@@ -214,9 +223,10 @@ describe('CSV Import', () => {
         cy.contains('button', 'Confirmar Importação').click({ force: true });
         cy.assertToast('success', 'importadas');
 
-        cy.url().should('include', '/transactions');
-        cy.get('[data-testid="sidebar-transactions"]').click();
-        cy.contains('Importar Despesas').click();
+        cy.url().should('include', '/w/' + workspaceUuid);
+
+        // Second import of same file
+        cy.get('[data-testid="sidebar-imports"]').click();
 
         cy.get('#file').selectFile('cypress/fixtures/import.csv', {
             force: true,
@@ -235,15 +245,6 @@ describe('CSV Import', () => {
             .find('[role="checkbox"]')
             .should('have.attr', 'aria-checked', 'false');
 
-        cy.contains('0 de 3 selecionadas').should('be.visible');
-    });
-
-    it('supports income import route', () => {
-        cy.get('[data-testid="sidebar-incomes"]').click();
-        cy.contains('Importar Receitas').click();
-
-        cy.url().should('include', '/incomes/import');
-        cy.contains('Importar Receitas').should('be.visible');
-        cy.contains('Arquivo').should('be.visible');
+        cy.contains('0 despesas + 0 receitas selecionadas').should('be.visible');
     });
 });

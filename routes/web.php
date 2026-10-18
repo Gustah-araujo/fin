@@ -106,20 +106,13 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
         Route::delete('datatable/{entity}/state', [DatatableStateController::class, 'destroy'])
             ->name('datatable.state.destroy');
 
-        // Import routes (must be registered before their resource routes)
-        Route::get('transactions/import', [ImportController::class, 'create'])
-            ->name('transactions.import.create');
-        Route::post('transactions/import', [ImportController::class, 'store'])
-            ->name('transactions.import.store');
-        Route::post('transactions/import/confirm', [ImportController::class, 'confirm'])
-            ->name('transactions.import.confirm');
-
-        Route::get('incomes/import', [ImportController::class, 'create'])
-            ->name('incomes.import.create');
-        Route::post('incomes/import', [ImportController::class, 'store'])
-            ->name('incomes.import.store');
-        Route::post('incomes/import/confirm', [ImportController::class, 'confirm'])
-            ->name('incomes.import.confirm');
+        // Unified import routes (must be registered before resource routes)
+        Route::get('import', [ImportController::class, 'create'])
+            ->name('import.create');
+        Route::post('import', [ImportController::class, 'store'])
+            ->name('import.store');
+        Route::post('import/confirm', [ImportController::class, 'confirm'])
+            ->name('import.confirm');
 
         Route::resource('accounts', AccountController::class);
         Route::resource('categories', CategoryController::class);

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UploadFileRequest extends FormRequest
 {
@@ -17,7 +16,6 @@ class UploadFileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'type' => ['required', Rule::in(['expense', 'income'])],
             'file' => [
                 'required',
                 'file',
@@ -30,8 +28,6 @@ class UploadFileRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'type.required' => 'O tipo é obrigatório.',
-            'type.in' => 'Tipo inválido.',
             'file.required' => 'O arquivo é obrigatório.',
             'file.file' => 'O arquivo enviado é inválido.',
             'file.mimes' => 'O arquivo deve ser CSV, PDF, HTML, imagem ou texto.',

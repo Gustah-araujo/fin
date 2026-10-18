@@ -4,43 +4,33 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Import;
 
+use App\Enums\TransactionType;
 use App\Enums\WorkspaceRole;
+use App\Models\Category;
+use App\Models\Tag;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 class ImportControllerTest extends TestCase
 {
-    public function test_import_create_page_renders_for_expenses(): void
+    public function test_import_create_page_renders(): void
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
         $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $response = $this->actingAs($user)
-            ->get(route('transactions.import.create', $workspace));
+            ->get(route('import.create', $workspace));
 
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
             ->component('Imports/Index')
-            ->where('type', 'expense')
-        );
-    }
-
-    public function test_import_create_page_renders_for_incomes(): void
-    {
-        $user = User::factory()->create();
-        $workspace = Workspace::factory()->create();
-        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
-
-        $response = $this->actingAs($user)
-            ->get(route('incomes.import.create', $workspace));
-
-        $response->assertOk();
-        $response->assertInertia(fn ($page) => $page
-            ->component('Imports/Index')
-            ->where('type', 'income')
+            ->has('categories')
+            ->has('tags')
         );
     }
 
@@ -48,7 +38,7 @@ class ImportControllerTest extends TestCase
     {
         $workspace = Workspace::factory()->create();
 
-        $response = $this->get(route('transactions.import.create', $workspace));
+        $response = $this->get(route('import.create', $workspace));
 
         $response->assertRedirect(route('login'));
     }
@@ -59,7 +49,7 @@ class ImportControllerTest extends TestCase
         $workspace = Workspace::factory()->create();
 
         $response = $this->actingAs($user)
-            ->get(route('transactions.import.create', $workspace));
+            ->get(route('import.create', $workspace));
 
         $response->assertForbidden();
     }
@@ -77,8 +67,7 @@ class ImportControllerTest extends TestCase
         $file = UploadedFile::fake()->createWithContent('test.csv', $csv);
 
         $response = $this->actingAs($user)
-            ->post(route('transactions.import.store', $workspace), [
-                'type' => 'expense',
+            ->post(route('import.store', $workspace), [
                 'file' => $file,
             ]);
 
@@ -108,8 +97,7 @@ class ImportControllerTest extends TestCase
         $file = UploadedFile::fake()->createWithContent('test.csv', $csv);
 
         $response = $this->actingAs($user)
-            ->post(route('transactions.import.store', $workspace), [
-                'type' => 'expense',
+            ->post(route('import.store', $workspace), [
                 'file' => $file,
             ]);
 
@@ -128,8 +116,7 @@ class ImportControllerTest extends TestCase
         $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $response = $this->actingAs($user)
-            ->post(route('transactions.import.store', $workspace), [
-                'type' => 'expense',
+            ->post(route('import.store', $workspace), [
                 'file' => 'not-a-file',
             ]);
 
@@ -146,8 +133,7 @@ class ImportControllerTest extends TestCase
         $file = UploadedFile::fake()->create('test.pdf', 100, 'application/pdf');
 
         $response = $this->actingAs($user)
-            ->post(route('transactions.import.store', $workspace), [
-                'type' => 'expense',
+            ->post(route('import.store', $workspace), [
                 'file' => $file,
             ]);
 
@@ -169,8 +155,7 @@ class ImportControllerTest extends TestCase
         $file = UploadedFile::fake()->create('receipt.jpg', 100, 'image/jpeg');
 
         $response = $this->actingAs($user)
-            ->post(route('transactions.import.store', $workspace), [
-                'type' => 'expense',
+            ->post(route('import.store', $workspace), [
                 'file' => $file,
             ]);
 
@@ -181,26 +166,33 @@ class ImportControllerTest extends TestCase
         );
     }
 
-    public function test_store_requires_valid_type(): void
+    public function test_store_accepts_mixed_types_in_items(): void
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
         $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
-        $csv = "description,value,date,category\nTeste,100.00,2026-09-01,Categoria";
+        $csv = "description,value,date,category,type\n"
+            ."Supermercado XYZ,150.00,2026-09-01,Alimentação,debit\n"
+            .'Salário Empresa,5000.00,2026-09-05,Trabalho,credit';
 
         $file = UploadedFile::fake()->createWithContent('test.csv', $csv);
 
         $response = $this->actingAs($user)
-            ->post(route('transactions.import.store', $workspace), [
-                'type' => 'invalid',
+            ->post(route('import.store', $workspace), [
                 'file' => $file,
             ]);
 
-        $response->assertSessionHasErrors(['type']);
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->component('Imports/Index')
+            ->has('preview', 2)
+            ->where('preview.0.type', 'debit')
+            ->where('preview.1.type', 'credit')
+        );
     }
 
-    public function test_confirm_creates_transactions(): void
+    public function test_confirm_creates_mixed_expense_and_income_transactions(): void
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
@@ -211,15 +203,24 @@ class ImportControllerTest extends TestCase
                 'description' => 'Supermercado XYZ',
                 'value' => 150.00,
                 'date' => '2026-09-01',
+                'type' => 'debit',
                 'category_name' => 'Alimentação',
+                'is_duplicate' => false,
+                'confirm_duplicate' => false,
+            ],
+            [
+                'description' => 'Salário Empresa',
+                'value' => 5000.00,
+                'date' => '2026-09-05',
+                'type' => 'credit',
+                'category_name' => 'Trabalho',
                 'is_duplicate' => false,
                 'confirm_duplicate' => false,
             ],
         ];
 
         $response = $this->actingAs($user)
-            ->post(route('transactions.import.confirm', $workspace), [
-                'type' => 'expense',
+            ->post(route('import.confirm', $workspace), [
                 'items' => $items,
             ]);
 
@@ -228,23 +229,17 @@ class ImportControllerTest extends TestCase
         $this->assertDatabaseHas('transactions', [
             'workspace_id' => $workspace->id,
             'description' => 'Supermercado XYZ',
-            'value' => '150.00',
             'type' => 'expense',
         ]);
 
-        $this->assertDatabaseHas('accounts', [
+        $this->assertDatabaseHas('transactions', [
             'workspace_id' => $workspace->id,
-            'name' => 'Importado',
-        ]);
-
-        $this->assertDatabaseHas('categories', [
-            'workspace_id' => $workspace->id,
-            'name' => 'Importadas',
-            'type' => 'expense',
+            'description' => 'Salário Empresa',
+            'type' => 'income',
         ]);
     }
 
-    public function test_confirm_redirects_to_transactions_index(): void
+    public function test_confirm_redirects_to_dashboard(): void
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
@@ -255,6 +250,7 @@ class ImportControllerTest extends TestCase
                 'description' => 'Mercado',
                 'value' => 80.00,
                 'date' => '2026-09-01',
+                'type' => 'debit',
                 'category_name' => 'Alimentação',
                 'is_duplicate' => false,
                 'confirm_duplicate' => false,
@@ -262,15 +258,88 @@ class ImportControllerTest extends TestCase
         ];
 
         $response = $this->actingAs($user)
-            ->post(route('transactions.import.confirm', $workspace), [
-                'type' => 'expense',
+            ->post(route('import.confirm', $workspace), [
                 'items' => $items,
             ]);
 
-        $response->assertRedirect(route('transactions.index', ['workspace' => $workspace, 'month' => '2026-09']));
+        $response->assertRedirect(route('dashboard', $workspace));
     }
 
-    public function test_confirm_redirects_to_incomes_index(): void
+    public function test_confirm_assigns_category_from_uuid(): void
+    {
+        $user = User::factory()->create();
+        $workspace = Workspace::factory()->create();
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
+
+        $category = Category::factory()->create([
+            'workspace_id' => $workspace->id,
+            'type' => TransactionType::Expense,
+        ]);
+
+        $items = [
+            [
+                'description' => 'Compra com Categoria',
+                'value' => 200.00,
+                'date' => '2026-09-01',
+                'type' => 'debit',
+                'category_uuid' => $category->uuid,
+                'is_duplicate' => false,
+                'confirm_duplicate' => false,
+            ],
+        ];
+
+        $response = $this->actingAs($user)
+            ->post(route('import.confirm', $workspace), [
+                'items' => $items,
+            ]);
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('transactions', [
+            'workspace_id' => $workspace->id,
+            'category_id' => $category->id,
+        ]);
+    }
+
+    public function test_confirm_assigns_tags_to_transaction(): void
+    {
+        $user = User::factory()->create();
+        $workspace = Workspace::factory()->create();
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
+
+        $tag = Tag::factory()->create([
+            'workspace_id' => $workspace->id,
+        ]);
+
+        $items = [
+            [
+                'description' => 'Transação com Tag',
+                'value' => 100.00,
+                'date' => '2026-09-01',
+                'type' => 'debit',
+                'category_name' => 'Outros',
+                'tags' => [$tag->uuid],
+                'is_duplicate' => false,
+                'confirm_duplicate' => false,
+            ],
+        ];
+
+        $response = $this->actingAs($user)
+            ->post(route('import.confirm', $workspace), [
+                'items' => $items,
+            ]);
+
+        $response->assertRedirect();
+
+        $transaction = Transaction::where('workspace_id', $workspace->id)
+            ->where('description', 'Transação com Tag')
+            ->first();
+
+        $this->assertNotNull($transaction);
+        $this->assertTrue($transaction->tags->contains($tag));
+    }
+
+    public function test_confirm_creates_category_when_only_name_provided(): void
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
@@ -278,22 +347,28 @@ class ImportControllerTest extends TestCase
 
         $items = [
             [
-                'description' => 'Salário',
-                'value' => 5000.00,
-                'date' => '2026-09-05',
-                'category_name' => 'Trabalho',
+                'description' => 'Nova Categoria Test',
+                'value' => 50.00,
+                'date' => '2026-09-01',
+                'type' => 'debit',
+                'category_name' => 'Categoria Nova',
                 'is_duplicate' => false,
                 'confirm_duplicate' => false,
             ],
         ];
 
         $response = $this->actingAs($user)
-            ->post(route('incomes.import.confirm', $workspace), [
-                'type' => 'income',
+            ->post(route('import.confirm', $workspace), [
                 'items' => $items,
             ]);
 
-        $response->assertRedirect(route('incomes.index', ['workspace' => $workspace, 'month' => '2026-09']));
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('categories', [
+            'workspace_id' => $workspace->id,
+            'name' => 'Categoria Nova',
+            'type' => 'expense',
+        ]);
     }
 
     public function test_confirm_requires_items(): void
@@ -303,8 +378,7 @@ class ImportControllerTest extends TestCase
         $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
         $response = $this->actingAs($user)
-            ->post(route('transactions.import.confirm', $workspace), [
-                'type' => 'expense',
+            ->post(route('import.confirm', $workspace), [
                 'items' => [],
             ]);
 
@@ -322,6 +396,7 @@ class ImportControllerTest extends TestCase
                 'description' => 'Duplicada',
                 'value' => 150.00,
                 'date' => '2026-09-01',
+                'type' => 'debit',
                 'category_name' => 'Alimentação',
                 'is_duplicate' => true,
                 'confirm_duplicate' => false,
@@ -330,6 +405,7 @@ class ImportControllerTest extends TestCase
                 'description' => 'Nova',
                 'value' => 99.00,
                 'date' => '2026-09-02',
+                'type' => 'debit',
                 'category_name' => 'Saúde',
                 'is_duplicate' => false,
                 'confirm_duplicate' => false,
@@ -337,8 +413,7 @@ class ImportControllerTest extends TestCase
         ];
 
         $response = $this->actingAs($user)
-            ->post(route('transactions.import.confirm', $workspace), [
-                'type' => 'expense',
+            ->post(route('import.confirm', $workspace), [
                 'items' => $items,
             ]);
 
@@ -352,5 +427,32 @@ class ImportControllerTest extends TestCase
             'workspace_id' => $workspace->id,
             'description' => 'Duplicada',
         ]);
+    }
+
+    public function test_old_routes_return_404(): void
+    {
+        // The 6 legacy import route names no longer exist
+        $this->assertFalse(Route::has('transactions.import.create'));
+        $this->assertFalse(Route::has('transactions.import.store'));
+        $this->assertFalse(Route::has('transactions.import.confirm'));
+        $this->assertFalse(Route::has('incomes.import.create'));
+        $this->assertFalse(Route::has('incomes.import.store'));
+        $this->assertFalse(Route::has('incomes.import.confirm'));
+
+        $user = User::factory()->create();
+        $workspace = Workspace::factory()->create();
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
+
+        // Legacy GET transactions/import is swallowed by the transactions/{transaction}
+        // resource route, and legacy GET incomes/import matches incomes/{transaction}
+        // (405) — so the definitive check is that the route names are gone and the
+        // old confirm endpoints no longer resolve.
+        $this->actingAs($user)
+            ->post('/w/'.$workspace->uuid.'/transactions/import/confirm', [])
+            ->assertNotFound();
+
+        $this->actingAs($user)
+            ->post('/w/'.$workspace->uuid.'/incomes/import/confirm', [])
+            ->assertNotFound();
     }
 }
