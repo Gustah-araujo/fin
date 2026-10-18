@@ -53,6 +53,12 @@ class ImportController extends Controller
         } catch (RuntimeException $e) {
             return inertia('Imports/Index', [
                 'preview' => [],
+                'categories' => CategoryResource::collection(
+                    $workspace->categories()->orderBy('name')->get()
+                ),
+                'tags' => TagResource::collection(
+                    $workspace->tags()->orderBy('name')->get()
+                ),
                 'flash' => ['error' => 'Erro ao processar arquivo: '.$e->getMessage()],
             ]);
         }
@@ -60,6 +66,12 @@ class ImportController extends Controller
         if (empty($parsed)) {
             return inertia('Imports/Index', [
                 'preview' => [],
+                'categories' => CategoryResource::collection(
+                    $workspace->categories()->orderBy('name')->get()
+                ),
+                'tags' => TagResource::collection(
+                    $workspace->tags()->orderBy('name')->get()
+                ),
                 'flash' => ['error' => 'Nenhuma transação encontrada no arquivo.'],
             ]);
         }
@@ -92,6 +104,12 @@ class ImportController extends Controller
 
         return inertia('Imports/Index', [
             'preview' => $preview,
+            'categories' => CategoryResource::collection(
+                $workspace->categories()->orderBy('name')->get()
+            ),
+            'tags' => TagResource::collection(
+                $workspace->tags()->orderBy('name')->get()
+            ),
         ]);
     }
 
