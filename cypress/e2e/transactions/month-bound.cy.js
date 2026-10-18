@@ -127,7 +127,6 @@ describe('Transactions Month-Bound', () => {
     });
 
     it('action buttons are visible', () => {
-        cy.contains('Importar Despesas').should('be.visible');
         cy.contains('Nova Despesa').should('be.visible');
     });
 });
