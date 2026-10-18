@@ -64,7 +64,16 @@ class ImportController extends Controller
             ]);
         }
 
-        $preview = array_map(function (array $item): array {
+        // Detect duplicates by matching description + value + date against existing transactions
+        $existingSignatures = Transaction::where('workspace_id', $workspace->id)
+            ->get()
+            ->map(fn (Transaction $t) => $t->description.'|'.$t->value.'|'.$t->date->format('Y-m-d'))
+            ->flip();
+
+        $preview = array_map(function (array $item) use ($existingSignatures): array {
+            $signature = $item['description'].'|'.$item['value'].'|'.$item['date'];
+            $isDuplicate = $existingSignatures->has($signature);
+
             return [
                 'id' => $item['uuid'],
                 'description' => $item['description'],
@@ -75,7 +84,7 @@ class ImportController extends Controller
                 'category_uuid' => $item['category_uuid'],
                 'tags' => $item['tags'],
                 'tag_names' => $item['tag_names'] ?? [],
-                'is_duplicate' => $item['is_duplicate'],
+                'is_duplicate' => $isDuplicate || ($item['is_duplicate'] ?? false),
                 'confirm_duplicate' => false,
             ];
         }, $parsed);
