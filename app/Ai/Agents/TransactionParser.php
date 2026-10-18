@@ -88,7 +88,21 @@ class TransactionParser implements Agent, HasStructuredOutput, HasTools
             Antes de produzir o resultado final, use as ferramentas disponíveis para enriquecer a análise:
 
             1. **query_categories** — Consulte as categorias disponíveis para vincular cada transação à categoria mais adequada. Use `category_uuid` no resultado quando encontrar correspondência.
-            2. **query_transactions** — Consulte transações existentes no workspace para detectar duplicatas. Considere duplicata quando houver transação existente com mesma data (±3 dias) E valor igual E descrição similar.
+            2. **query_transactions** — Consulte transações existentes no workspace para detectar duplicatas. Uma transação é potencialmente duplicada quando:
+               - Existe transação existente com valor igual (±1% para arredondamento) E data próxima (±3 dias), E
+               - A descrição refere-se ao mesmo estabelecimento, mesmo que com nomes diferentes entre documentos.
+
+               **Importante sobre variação de nomes:** O mesmo estabelecimento pode aparecer com nomes completamente diferentes dependendo do tipo de documento:
+               - Comprovante/Pedido: "Mercado São João", "Padaria do João", "Farmácia Popular"
+               - Extrato bancário: "SUPERMERCADO SÃO JOÃO LTDA", "PADARIA JOÃO EIRELI", "FARM POPULAR S.A."
+               - Fatura de cartão: "SUPERM SAO JOAO", "SJ MERCADO", "FARMACIA POP"
+
+               Para detectar duplicatas corretamente:
+               - Normalize nomes removendo sufixos jurídicos (LTDA, EIRELI, S.A., MEI, LTDA., etc.)
+               - Ignore maiúsculas/minúsculas
+               - Foque no "nome core" do estabelecimento (ex: "São João" em "SUPERMERCADO SÃO JOÃO LTDA" e "Mercado São João")
+               - Use query_transactions primeiro filtrando por valor e data (±3 dias), depois compare as descrições normalizadas
+               - Considere duplicata quando o nome core coincidir, mesmo que o nome completo seja diferente
             3. **query_recurrences** — Consulte recorrências cadastradas para verificar se a transação faz parte de um padrão recorrente conhecido.
             4. **query_tags** — Consulte tags disponíveis para sugerir tags relevantes para cada transação.
 

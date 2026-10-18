@@ -75,6 +75,8 @@ class ImportControllerTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('Imports/Index')
             ->has('preview', 2)
+            ->has('categories')
+            ->has('tags')
             ->where('preview.0.description', 'Supermercado XYZ')
             ->where('preview.0.value', fn ($value) => (float) $value === 150.00)
             ->where('preview.0.date', '2026-09-01')
@@ -187,8 +189,40 @@ class ImportControllerTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('Imports/Index')
             ->has('preview', 2)
+            ->has('categories')
+            ->has('tags')
             ->where('preview.0.type', 'debit')
             ->where('preview.1.type', 'credit')
+        );
+    }
+
+    public function test_store_returns_categories_and_tags_for_selectors(): void
+    {
+        $user = User::factory()->create();
+        $workspace = Workspace::factory()->create();
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
+
+        $category = Category::factory()->create([
+            'workspace_id' => $workspace->id,
+            'name' => 'Alimentação',
+        ]);
+
+        $csv = "description,value,date,category\n"
+            .'Supermercado XYZ,150.00,2026-09-01,Alimentação';
+
+        $file = UploadedFile::fake()->createWithContent('test.csv', $csv);
+
+        $response = $this->actingAs($user)
+            ->post(route('import.store', $workspace), [
+                'file' => $file,
+            ]);
+
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->component('Imports/Index')
+            ->has('preview', 1)
+            ->has('categories', 1)
+            ->where('categories.0.name', 'Alimentação')
         );
     }
 
