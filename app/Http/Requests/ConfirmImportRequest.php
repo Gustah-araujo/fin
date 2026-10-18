@@ -17,13 +17,13 @@ class ConfirmImportRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'type' => ['required', Rule::in(['expense', 'income'])],
             'items' => ['required', 'array', 'min:1'],
             'items.*.description' => ['required', 'string', 'max:255'],
             'items.*.value' => ['required', 'numeric', 'gt:0', 'max:999999999.99'],
             'items.*.date' => ['required', 'date_format:Y-m-d'],
+            'items.*.type' => ['required', Rule::in(['debit', 'credit'])],
             'items.*.category_name' => ['sometimes', 'string', 'max:255'],
-            'items.*.category_uuid' => ['sometimes', 'string'],
+            'items.*.category_uuid' => ['sometimes', 'nullable', 'string'],
             'items.*.tags' => ['sometimes', 'array'],
             'items.*.tags.*' => ['string', 'max:100'],
             'items.*.is_duplicate' => ['sometimes', 'boolean'],

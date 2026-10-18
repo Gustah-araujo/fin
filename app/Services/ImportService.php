@@ -20,9 +20,9 @@ class ImportService
      *
      * @return array<int, array{uuid: string, description: string, value: float, date: string, type: string, category_name: string, category_uuid: string|null, tags: list<string>, is_duplicate: bool}>
      */
-    public function parseFile(Workspace $workspace, UploadedFile $file, string $type): array
+    public function parseFile(Workspace $workspace, UploadedFile $file): array
     {
-        return Ai::parseFile($workspace, $file, $type);
+        return Ai::parseFile($workspace, $file);
     }
 
     /**
@@ -30,51 +30,90 @@ class ImportService
      *
      * @param  array<int, array<string, mixed>>  $items
      */
-    public function createTransactions(Workspace $workspace, User $user, array $items, string $type): int
+    public function createTransactions(Workspace $workspace, User $user, array $items): int
     {
-        $transactionType = TransactionType::tryFrom($type) ?? TransactionType::Expense;
         $account = $this->getOrCreateImportAccount($workspace);
-        $category = $this->getOrCreateImportCategory($workspace, $transactionType);
-
         $count = 0;
 
         foreach ($items as $item) {
-            // Skip items that are duplicates and not explicitly confirmed
             if (($item['is_duplicate'] ?? false) && ! ($item['confirm_duplicate'] ?? false)) {
                 continue;
             }
 
-            $categoryId = $item['category_uuid'] ?? null;
+            $itemType = match ($item['type']) {
+                'credit' => TransactionType::Income,
+                default => TransactionType::Expense,
+            };
 
-            if ($categoryId === null) {
-                $categoryId = $this->resolveCategoryByName($workspace, $item['category_name'] ?? 'Outros', $transactionType)?->uuid;
-            }
+            $category = $this->resolveOrCreateCategory($workspace, $item, $itemType);
 
             $data = [
                 'description' => $item['description'],
                 'value' => $item['value'],
                 'date' => $item['date'],
-                'type' => $transactionType->value,
+                'type' => $itemType->value,
                 'account_id' => $account->uuid,
-                'category_id' => $categoryId ?? $category->uuid,
+                'category_id' => $category->uuid,
             ];
 
-            app(TransactionService::class)->create($workspace, $user, $data);
+            $transaction = app(TransactionService::class)->create($workspace, $user, $data);
+
+            if (! empty($item['tags'])) {
+                app(TransactionService::class)->syncTags($transaction, $item['tags']);
+            }
+
             $count++;
         }
 
         return $count;
     }
 
-    /**
-     * Resolve an existing category by name, or return null.
-     */
-    private function resolveCategoryByName(Workspace $workspace, string $name, TransactionType $type): ?Category
+    private function resolveOrCreateCategory(Workspace $workspace, array $item, TransactionType $type): Category
     {
-        return $workspace->categories()
-            ->where('name', $name)
-            ->where('type', $type)
-            ->first();
+        // If category_uuid is provided, try to find it
+        if (! empty($item['category_uuid'])) {
+            $existing = Category::where('uuid', $item['category_uuid'])
+                ->where('workspace_id', $workspace->id)
+                ->first();
+
+            if ($existing) {
+                return $existing;
+            }
+        }
+
+        // If category_name is provided, try to find a matching category
+        if (! empty($item['category_name'])) {
+            $existing = $workspace->categories()
+                ->where('name', $item['category_name'])
+                ->whereIn('type', [$type, TransactionType::Both])
+                ->first();
+
+            if ($existing) {
+                return $existing;
+            }
+
+            // Create new category with the given name
+            return Category::create([
+                'uuid' => Str::orderedUuid()->toString(),
+                'workspace_id' => $workspace->id,
+                'name' => $item['category_name'],
+                'type' => $type,
+                'color' => '#6b7280',
+                'icon' => null,
+            ]);
+        }
+
+        // Fallback: get or create default "Importadas" category for this type
+        $categoryType = $type;
+
+        return $workspace->categories()->firstOrCreate(
+            ['name' => 'Importadas', 'type' => $categoryType],
+            [
+                'uuid' => Str::orderedUuid()->toString(),
+                'color' => '#6b7280',
+                'icon' => null,
+            ],
+        );
     }
 
     private function getOrCreateImportAccount(Workspace $workspace): Account
@@ -86,20 +125,6 @@ class ImportService
                 'type' => 'checking',
                 'initial_balance' => 0,
                 'current_balance' => 0,
-            ],
-        );
-    }
-
-    private function getOrCreateImportCategory(Workspace $workspace, TransactionType $type): Category
-    {
-        $categoryType = $type === TransactionType::Expense ? TransactionType::Expense : TransactionType::Income;
-
-        return $workspace->categories()->firstOrCreate(
-            ['name' => 'Importadas', 'type' => $categoryType],
-            [
-                'uuid' => Str::orderedUuid()->toString(),
-                'color' => '#6b7280',
-                'icon' => null,
             ],
         );
     }

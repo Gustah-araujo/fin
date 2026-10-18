@@ -21,12 +21,12 @@ class AiService implements AiParserInterface
      *
      * @throws RuntimeException When parsing fails.
      */
-    public function parseFile(Workspace $workspace, UploadedFile $file, string $type): array
+    public function parseFile(Workspace $workspace, UploadedFile $file): array
     {
         $agent = new TransactionParser($workspace);
         $extension = strtolower($file->getClientOriginalExtension());
 
-        $userMessage = "Tipo esperado: {$type}. Extraia as transações financeiras.";
+        $userMessage = 'Extraia as transações financeiras. Classifique cada transação como debit (saída) ou crédito (entrada) baseado no contexto do documento.';
         $attachments = [];
 
         match ($extension) {

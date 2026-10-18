@@ -10,7 +10,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @method static array parseFile(UploadedFile $file, string $type)
+ * @method static array parseFile(UploadedFile $file)
  *
  * @see AiService
  * @see AiParserInterface

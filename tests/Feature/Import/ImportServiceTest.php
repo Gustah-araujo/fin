@@ -8,6 +8,8 @@ use App\Enums\WorkspaceRole;
 use App\Facades\Ai;
 use App\Models\Account;
 use App\Models\Category;
+use App\Models\Tag;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\ImportService;
@@ -30,12 +32,12 @@ class ImportServiceTest extends TestCase
 
         Ai::shouldReceive('parseFile')
             ->once()
-            ->with($workspace, $file, 'expense')
+            ->with($workspace, $file)
             ->andReturn($parsed);
 
         $service = app(ImportService::class);
 
-        $result = $service->parseFile($workspace, $file, 'expense');
+        $result = $service->parseFile($workspace, $file);
 
         $this->assertSame($parsed, $result);
     }
@@ -52,24 +54,25 @@ class ImportServiceTest extends TestCase
 
         $service = app(ImportService::class);
 
-        $count = $service->createTransactions($workspace, $user, $items, 'expense');
+        $count = $service->createTransactions($workspace, $user, $items);
 
         $this->assertSame(1, $count);
 
         $importAccount = Account::where('workspace_id', $workspace->id)
             ->where('name', 'Importado')
             ->first();
-        $importCategory = Category::where('workspace_id', $workspace->id)
-            ->where('name', 'Importadas')
+        // Unified import resolves/creates the per-item category by name
+        $itemCategory = Category::where('workspace_id', $workspace->id)
+            ->where('name', 'Alimentação')
             ->first();
 
         $this->assertNotNull($importAccount);
-        $this->assertNotNull($importCategory);
+        $this->assertNotNull($itemCategory);
 
         $this->assertDatabaseHas('transactions', [
             'workspace_id' => $workspace->id,
             'account_id' => $importAccount->id,
-            'category_id' => $importCategory->id,
+            'category_id' => $itemCategory->id,
             'description' => 'Supermercado XYZ',
             'value' => '150.00',
             'type' => 'expense',
@@ -89,7 +92,7 @@ class ImportServiceTest extends TestCase
 
         $service = app(ImportService::class);
 
-        $count = $service->createTransactions($workspace, $user, $items, 'expense');
+        $count = $service->createTransactions($workspace, $user, $items);
 
         $this->assertSame(1, $count);
 
@@ -109,13 +112,14 @@ class ImportServiceTest extends TestCase
         $workspace = Workspace::factory()->create();
         $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
 
+        // No category_name — falls back to the default "Importadas" category
         $items = [
-            ['description' => 'Teste', 'value' => 100.00, 'date' => '2026-09-01', 'type' => 'debit', 'category_name' => 'Outros'],
+            ['description' => 'Teste', 'value' => 100.00, 'date' => '2026-09-01', 'type' => 'debit'],
         ];
 
         $service = app(ImportService::class);
 
-        $service->createTransactions($workspace, $user, $items, 'expense');
+        $service->createTransactions($workspace, $user, $items);
 
         $this->assertDatabaseHas('accounts', [
             'workspace_id' => $workspace->id,
@@ -130,5 +134,61 @@ class ImportServiceTest extends TestCase
             'name' => 'Importadas',
             'type' => 'expense',
         ]);
+    }
+
+    public function test_create_transactions_handles_mixed_types(): void
+    {
+        $user = User::factory()->create();
+        $workspace = Workspace::factory()->create();
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
+
+        $items = [
+            ['description' => 'Despesa Test', 'value' => 100.00, 'date' => '2026-09-01', 'type' => 'debit', 'category_name' => 'Alimentação'],
+            ['description' => 'Receita Test', 'value' => 5000.00, 'date' => '2026-09-05', 'type' => 'credit', 'category_name' => 'Trabalho'],
+        ];
+
+        $service = app(ImportService::class);
+
+        $count = $service->createTransactions($workspace, $user, $items);
+
+        $this->assertSame(2, $count);
+
+        $this->assertDatabaseHas('transactions', [
+            'workspace_id' => $workspace->id,
+            'description' => 'Despesa Test',
+            'type' => 'expense',
+        ]);
+
+        $this->assertDatabaseHas('transactions', [
+            'workspace_id' => $workspace->id,
+            'description' => 'Receita Test',
+            'type' => 'income',
+        ]);
+    }
+
+    public function test_create_transactions_syncs_tags(): void
+    {
+        $user = User::factory()->create();
+        $workspace = Workspace::factory()->create();
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
+
+        $tag = Tag::factory()->create([
+            'workspace_id' => $workspace->id,
+        ]);
+
+        $items = [
+            ['description' => 'Com Tag', 'value' => 100.00, 'date' => '2026-09-01', 'type' => 'debit', 'category_name' => 'Outros', 'tags' => [$tag->uuid]],
+        ];
+
+        $service = app(ImportService::class);
+
+        $service->createTransactions($workspace, $user, $items);
+
+        $transaction = Transaction::where('workspace_id', $workspace->id)
+            ->where('description', 'Com Tag')
+            ->first();
+
+        $this->assertNotNull($transaction);
+        $this->assertTrue($transaction->tags->contains($tag));
     }
 }

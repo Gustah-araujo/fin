@@ -17,7 +17,7 @@ class FakeAiService implements AiParserInterface
      *
      * @return array<int, array{uuid: string, description: string, value: float, date: string, type: string, category_name: string, category_uuid: string|null, tags: list<string>, is_duplicate: bool}>
      */
-    public function parseFile(Workspace $workspace, UploadedFile $file, string $type): array
+    public function parseFile(Workspace $workspace, UploadedFile $file): array
     {
         $extension = strtolower($file->getClientOriginalExtension());
 
@@ -37,7 +37,7 @@ class FakeAiService implements AiParserInterface
 
         array_shift($lines); // Remove header
 
-        return array_map(function (string $line) use ($type): array {
+        return array_map(function (string $line): array {
             $columns = str_getcsv($line);
 
             return [
@@ -45,7 +45,7 @@ class FakeAiService implements AiParserInterface
                 'description' => $columns[0] ?? 'Transação Importada',
                 'value' => (float) ($columns[1] ?? 0),
                 'date' => $columns[2] ?? now()->format('Y-m-d'),
-                'type' => $type === 'income' ? 'credit' : 'debit',
+                'type' => ($columns[4] ?? 'debit') === 'credit' ? 'credit' : 'debit',
                 'category_name' => $columns[3] ?? 'Outros',
                 'category_uuid' => null,
                 'tags' => [],

@@ -386,15 +386,6 @@ export default function Index({
                         />
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" asChild>
-                            <Link
-                                href={route('transactions.import.create', {
-                                    workspace: workspace.uuid,
-                                })}
-                            >
-                                Importar Despesas
-                            </Link>
-                        </Button>
                         <Button asChild>
                             <Link
                                 href={route('transactions.create', {

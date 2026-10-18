@@ -121,8 +121,10 @@ class RecurrenceCardTest extends TestCase
             'available_limit' => 5000,
         ]);
 
-        // Create a bill in the past, close it, and pay it
-        $pastDate = Carbon::now()->subMonthsNoOverflow(3);
+        // Create a bill in the past, close it, and pay it.
+        // Use a day before closing_day (15) so the start_date lands in the
+        // same billing period as the paid bill (not shifted to next month).
+        $pastDate = Carbon::now()->subMonthsNoOverflow(3)->day(10);
         $bill = CreditCardBill::factory()->closed()->create([
             'credit_card_id' => $card->id,
             'workspace_id' => $this->workspace->id,
@@ -265,7 +267,9 @@ class RecurrenceCardTest extends TestCase
             'available_limit' => 5000,
         ]);
 
-        $pastDate = Carbon::now()->subMonthsNoOverflow(3);
+        // Use a day before closing_day (15) so the start_date lands in the
+        // same billing period as the paid bill (not shifted to next month).
+        $pastDate = Carbon::now()->subMonthsNoOverflow(3)->day(10);
         $bill = CreditCardBill::factory()->closed()->create([
             'credit_card_id' => $card->id,
             'workspace_id' => $this->workspace->id,

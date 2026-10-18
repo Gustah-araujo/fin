@@ -1,4 +1,5 @@
-description,value,date,category
-Supermercado XYZ,150.00,2026-09-01,Alimentação
-Farmácia ABC,45.90,2026-09-02,Saúde
-Uber Viagem,23.50,2026-09-03,Transporte
+description,value,date,category,type
+Supermercado XYZ,150.00,2026-10-01,Alimentação,debit
+Farmácia ABC,45.90,2026-10-02,Saúde,debit
+Uber Viagem,23.50,2026-10-03,Transporte,debit
+Salário Empresa,5000.00,2026-10-05,Trabalho,credit

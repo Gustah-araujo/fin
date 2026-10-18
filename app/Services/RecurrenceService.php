@@ -373,7 +373,7 @@ class RecurrenceService
 
         $generationDate = $this->scheduledDateForPeriod($today, $recurrence->frequency, $recurrence->frequency_day);
 
-        if ($recurrence->until_date && $generationDate->gt($recurrence->until_date)) {
+        if ($recurrence->until_date && ($today->gt($recurrence->until_date) || $generationDate->gt($recurrence->until_date))) {
             throw new RecurrenceGenerationException('A recorrência já atingiu sua data final.');
         }
 

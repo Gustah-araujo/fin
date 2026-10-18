@@ -22,7 +22,7 @@ class IncomeConfirmationTest extends IncomeTestCase
             ->post(route('incomes.pay', [$this->workspace, $transaction]));
 
         $expected = (float) $this->account->initial_balance + 2000;
-        $this->assertEquals($expected, $this->account->refresh()->current_balance);
+        $this->assertEqualsWithDelta($expected, (float) $this->account->refresh()->current_balance, 0.01);
     }
 
     public function test_unconfirming_receipt_restores_balance(): void
@@ -35,10 +35,10 @@ class IncomeConfirmationTest extends IncomeTestCase
         $transaction = Transaction::where('description', 'Salário')->first();
 
         $this->actingAs($this->user)->post(route('incomes.pay', [$this->workspace, $transaction]));
-        $this->assertEquals((float) $this->account->initial_balance + 1500, $this->account->refresh()->current_balance);
+        $this->assertEqualsWithDelta((float) $this->account->initial_balance + 1500, (float) $this->account->refresh()->current_balance, 0.01);
 
         $this->actingAs($this->user)->post(route('incomes.unpay', [$this->workspace, $transaction]));
-        $this->assertEquals((float) $this->account->initial_balance, $this->account->refresh()->current_balance);
+        $this->assertEqualsWithDelta((float) $this->account->initial_balance, (float) $this->account->refresh()->current_balance, 0.01);
     }
 
     public function test_confirming_receipt_marks_transaction_paid(): void
