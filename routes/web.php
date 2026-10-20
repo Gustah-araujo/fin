@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
@@ -152,5 +153,10 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
             ->name('bills.unpay');
         Route::post('bills/close-current', [CreditCardBillController::class, 'closeCurrent'])
             ->name('bills.close-current');
+
+        // Notification routes
+        Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::patch('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+        Route::post('notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-as-read');
     });
 });
