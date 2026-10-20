@@ -17,7 +17,8 @@ export default function NotificationBell() {
     const { props } = usePage();
     const workspaceUuid = props.workspace?.uuid;
     const [open, setOpen] = useState(false);
-    const { unreadCount, notifications, isLoading, refresh } = useNotificationPolling(workspaceUuid);
+    const { unreadCount, notifications, isLoading, refresh } =
+        useNotificationPolling(workspaceUuid);
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>

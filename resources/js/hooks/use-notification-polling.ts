@@ -21,7 +21,9 @@ interface PollingResult {
 
 const POLL_INTERVAL_MS = 30_000;
 
-export function useNotificationPolling(workspaceUuid: string | undefined): PollingResult {
+export function useNotificationPolling(
+    workspaceUuid: string | undefined,
+): PollingResult {
     const [unreadCount, setUnreadCount] = useState(0);
     const [notifications, setNotifications] = useState<NotificationData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -31,7 +33,9 @@ export function useNotificationPolling(workspaceUuid: string | undefined): Polli
         if (!workspaceUuid) return;
 
         try {
-            const response = await fetch(route('notifications.index', { workspace: workspaceUuid }));
+            const response = await fetch(
+                route('notifications.index', { workspace: workspaceUuid }),
+            );
 
             if (!response.ok) return;
 
@@ -61,5 +65,10 @@ export function useNotificationPolling(workspaceUuid: string | undefined): Polli
         };
     }, [workspaceUuid, fetchNotifications]);
 
-    return { unreadCount, notifications, isLoading, refresh: fetchNotifications };
+    return {
+        unreadCount,
+        notifications,
+        isLoading,
+        refresh: fetchNotifications,
+    };
 }

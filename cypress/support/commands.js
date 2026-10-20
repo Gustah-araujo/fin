@@ -173,6 +173,24 @@ Cypress.Commands.add(
 );
 
 Cypress.Commands.add(
+    'seedNotifications',
+    (workspaceUuid, count = 3, title = null) => {
+        return cy.request({
+            method: 'POST',
+            url: `/w/${workspaceUuid}/testing/notifications`,
+            body: { count, title },
+        });
+    },
+);
+
+Cypress.Commands.add('clearNotifications', (workspaceUuid) => {
+    return cy.request({
+        method: 'DELETE',
+        url: `/w/${workspaceUuid}/testing/notifications`,
+    });
+});
+
+Cypress.Commands.add(
     'registerAndCreateWorkspace',
     (workspaceName = 'E2E Workspace') => {
         const email = `e2e-${Date.now()}@example.com`;

@@ -39,16 +39,19 @@ export function NotificationDrawer({
 
     const handleMarkAsRead = async (notificationId: string) => {
         try {
-            const response = await fetch(route('notifications.read', {
-                workspace: workspaceUuid,
-                notification: notificationId,
-            }), {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
+            const response = await fetch(
+                route('notifications.read', {
+                    workspace: workspaceUuid,
+                    notification: notificationId,
+                }),
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
                 },
-            });
+            );
 
             if (response.ok) {
                 toast.success('Notificação marcada como lida.');
@@ -62,18 +65,23 @@ export function NotificationDrawer({
     const handleMarkAllAsRead = async () => {
         setMarkingAll(true);
         try {
-            const response = await fetch(route('notifications.mark-all-as-read', {
-                workspace: workspaceUuid,
-            }), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
+            const response = await fetch(
+                route('notifications.mark-all-as-read', {
+                    workspace: workspaceUuid,
+                }),
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
                 },
-            });
+            );
 
             if (response.ok) {
-                toast.success('Todas as notificações foram marcadas como lidas.');
+                toast.success(
+                    'Todas as notificações foram marcadas como lidas.',
+                );
                 await onRefresh();
             }
         } catch {
@@ -147,11 +155,14 @@ export function NotificationDrawer({
                             >
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="flex-1 space-y-1">
-                                        <p className={`text-sm font-medium ${!notification.is_read ? 'text-foreground' : 'text-muted-foreground'}`}>
+                                        <p
+                                            className={`text-sm font-medium ${!notification.is_read ? 'text-foreground' : 'text-muted-foreground'}`}
+                                        >
                                             {!notification.is_read && (
                                                 <span className="inline-block h-2 w-2 rounded-full bg-primary mr-2" />
                                             )}
-                                            {notification.title || 'Notificação'}
+                                            {notification.title ||
+                                                'Notificação'}
                                         </p>
                                         {notification.message && (
                                             <p className="text-sm text-muted-foreground">
@@ -159,29 +170,40 @@ export function NotificationDrawer({
                                             </p>
                                         )}
                                         <p className="text-xs text-muted-foreground">
-                                            {formatRelativeTime(notification.created_at)}
+                                            {formatRelativeTime(
+                                                notification.created_at,
+                                            )}
                                         </p>
                                     </div>
                                 </div>
 
                                 <div className="flex items-center gap-2 pt-1">
-                                    {notification.action_url && notification.action_text && (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="h-7 text-xs"
-                                            onClick={() => handleActionClick(notification.action_url!)}
-                                        >
-                                            <ExternalLink className="mr-1 h-3 w-3" />
-                                            {notification.action_text}
-                                        </Button>
-                                    )}
+                                    {notification.action_url &&
+                                        notification.action_text && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-7 text-xs"
+                                                onClick={() =>
+                                                    handleActionClick(
+                                                        notification.action_url!,
+                                                    )
+                                                }
+                                            >
+                                                <ExternalLink className="mr-1 h-3 w-3" />
+                                                {notification.action_text}
+                                            </Button>
+                                        )}
                                     {!notification.is_read && (
                                         <Button
                                             variant="ghost"
                                             size="sm"
                                             className="h-7 text-xs"
-                                            onClick={() => handleMarkAsRead(notification.id)}
+                                            onClick={() =>
+                                                handleMarkAsRead(
+                                                    notification.id,
+                                                )
+                                            }
                                         >
                                             <Check className="mr-1 h-3 w-3" />
                                             Marcar como lida
