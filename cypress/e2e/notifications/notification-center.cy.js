@@ -70,16 +70,21 @@ describe('Notification Center', () => {
     // 6. Action button: Create notification with action_url, verify button renders
     it('shows the action button when a notification has an action', () => {
         cy.clearNotifications(workspaceUuid);
-        cy.request({
-            method: 'POST',
-            url: `/w/${workspaceUuid}/testing/notifications`,
-            body: {
-                count: 1,
-                title: 'Notification with Action',
-                message: 'Click the action button',
-                action_url: `/w/${workspaceUuid}`,
-                action_text: 'Go to Dashboard',
-            },
+        cy.get('meta[name="csrf-token"]').then((meta) => {
+            cy.request({
+                method: 'POST',
+                url: `/w/${workspaceUuid}/testing/notifications`,
+                headers: {
+                    'X-CSRF-TOKEN': meta.attr('content'),
+                },
+                body: {
+                    count: 1,
+                    title: 'Notification with Action',
+                    message: 'Click the action button',
+                    action_url: `/w/${workspaceUuid}`,
+                    action_text: 'Go to Dashboard',
+                },
+            });
         });
         cy.visit(`/w/${workspaceUuid}`);
 
