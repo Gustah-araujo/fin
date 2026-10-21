@@ -1,10 +1,15 @@
 import { Check, CheckCheck, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { router, usePage } from '@inertiajs/react';
+import { dispatchToast } from '@/lib/toast';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useState } from 'react';
 import { toast } from 'sonner';
+
+const getCsrfToken = (): string =>
+    document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')
+        ?.content ?? '';
 
 interface NotificationData {
     id: string;
@@ -49,16 +54,19 @@ export function NotificationDrawer({
                     headers: {
                         'Content-Type': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': getCsrfToken(),
                     },
                 },
             );
 
             if (response.ok) {
                 toast.success('Notificação marcada como lida.');
+                dispatchToast('success', 'Notificação marcada como lida.');
                 await onRefresh();
             }
         } catch {
             toast.error('Erro ao marcar notificação como lida.');
+            dispatchToast('error', 'Erro ao marcar notificação como lida.');
         }
     };
 
@@ -74,6 +82,7 @@ export function NotificationDrawer({
                     headers: {
                         'Content-Type': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': getCsrfToken(),
                     },
                 },
             );
@@ -82,10 +91,15 @@ export function NotificationDrawer({
                 toast.success(
                     'Todas as notificações foram marcadas como lidas.',
                 );
+                dispatchToast(
+                    'success',
+                    'Todas as notificações foram marcadas como lidas.',
+                );
                 await onRefresh();
             }
         } catch {
             toast.error('Erro ao marcar notificações como lidas.');
+            dispatchToast('error', 'Erro ao marcar notificações como lidas.');
         } finally {
             setMarkingAll(false);
         }

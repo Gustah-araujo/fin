@@ -1,6 +1,7 @@
 import { TooltipProvider } from '@/components/ui/tooltip';
 import AppSidebar from '@/Components/AppSidebar';
 import AppHeader from '@/Components/AppHeader';
+import { dispatchToast } from '@/lib/toast';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { usePage, router } from '@inertiajs/react';
 import { Toaster, toast } from 'sonner';
@@ -11,34 +12,6 @@ interface Props {
 
 const COLLAPSED_WIDTH = '68px';
 const EXPANDED_WIDTH = '240px';
-
-interface ToastBufferItem {
-    type: string;
-    message: string;
-    timestamp: number;
-}
-
-function dispatchToast(type: string, message: string): void {
-    const detail = { type, message };
-    window.dispatchEvent(new CustomEvent('toast', { detail }));
-
-    // Buffer toasts to survive Inertia SPA navigations — fixes race condition
-    // where Cypress assertToast attaches its listener after the event fires.
-    if (
-        !(window as unknown as { __toastBuffer?: ToastBufferItem[] })
-            .__toastBuffer
-    ) {
-        (
-            window as unknown as { __toastBuffer: ToastBufferItem[] }
-        ).__toastBuffer = [];
-    }
-    (
-        window as unknown as { __toastBuffer: ToastBufferItem[] }
-    ).__toastBuffer.push({
-        ...detail,
-        timestamp: Date.now(),
-    });
-}
 
 export default function AuthenticatedLayout({ children }: Props) {
     const { flash } = usePage().props;
