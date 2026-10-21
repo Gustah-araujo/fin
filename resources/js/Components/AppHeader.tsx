@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Menu } from 'lucide-react';
 import UserMenu from '@/Components/UserMenu';
+import NotificationBell from '@/Components/NotificationBell';
 import { usePage } from '@inertiajs/react';
 
 interface Props {
@@ -65,6 +66,7 @@ export default function AppHeader({ onToggle, sidebar }: Props) {
             </Breadcrumb>
 
             <div className="ml-auto flex items-center gap-2">
+                <NotificationBell />
                 <UserMenu />
             </div>
         </header>

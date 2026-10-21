@@ -28,3 +28,29 @@ declare module '@inertiajs/core' {
 }
 
 export {};
+
+export interface NotificationData {
+    id: string;
+    type: string;
+    title: string | null;
+    message: string | null;
+    action_url: string | null;
+    action_text: string | null;
+    is_read: boolean;
+    created_at: string;
+    read_at: string | null;
+}
+
+export interface NotificationsIndexResponse {
+    unread_count: number;
+    notifications: NotificationData[];
+}
+
+export interface NotificationMarkReadResponse {
+    unread_count: number;
+    notification: NotificationData;
+}
+
+export interface NotificationMarkAllReadResponse {
+    unread_count: number;
+}

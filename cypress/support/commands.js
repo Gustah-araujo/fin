@@ -173,6 +173,34 @@ Cypress.Commands.add(
 );
 
 Cypress.Commands.add(
+    'seedNotifications',
+    (workspaceUuid, count = 3, title = null) => {
+        return cy.get('meta[name="csrf-token"]').then((meta) => {
+            return cy.request({
+                method: 'POST',
+                url: `/w/${workspaceUuid}/testing/notifications`,
+                headers: {
+                    'X-CSRF-TOKEN': meta.attr('content'),
+                },
+                body: { count, title },
+            });
+        });
+    },
+);
+
+Cypress.Commands.add('clearNotifications', (workspaceUuid) => {
+    return cy.get('meta[name="csrf-token"]').then((meta) => {
+        return cy.request({
+            method: 'DELETE',
+            url: `/w/${workspaceUuid}/testing/notifications`,
+            headers: {
+                'X-CSRF-TOKEN': meta.attr('content'),
+            },
+        });
+    });
+});
+
+Cypress.Commands.add(
     'registerAndCreateWorkspace',
     (workspaceName = 'E2E Workspace') => {
         const email = `e2e-${Date.now()}@example.com`;
