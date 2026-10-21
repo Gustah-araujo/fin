@@ -40,7 +40,7 @@ describe('Notification Center', () => {
         cy.seedNotifications(workspaceUuid, 2, 'Test Notification');
         cy.visit(`/w/${workspaceUuid}`);
 
-        cy.get('button svg.lucide-bell').click();
+        cy.get('svg.lucide-bell').closest('button').click();
         cy.contains('Notificações').should('be.visible');
         cy.contains('Test Notification').should('be.visible');
     });
@@ -51,7 +51,7 @@ describe('Notification Center', () => {
         cy.seedNotifications(workspaceUuid, 3);
         cy.visit(`/w/${workspaceUuid}`);
 
-        cy.get('button svg.lucide-bell').click();
+        cy.get('svg.lucide-bell').closest('button').click();
         cy.contains('Marcar como lida').first().click();
         cy.assertToast('success', 'marcada como lida');
     });
@@ -62,7 +62,7 @@ describe('Notification Center', () => {
         cy.seedNotifications(workspaceUuid, 3);
         cy.visit(`/w/${workspaceUuid}`);
 
-        cy.get('button svg.lucide-bell').click();
+        cy.get('svg.lucide-bell').closest('button').click();
         cy.contains('Marcar todas como lidas').click();
         cy.assertToast('success', 'Todas');
     });
@@ -88,7 +88,7 @@ describe('Notification Center', () => {
         });
         cy.visit(`/w/${workspaceUuid}`);
 
-        cy.get('button svg.lucide-bell').click();
+        cy.get('svg.lucide-bell').closest('button').click();
         cy.contains('button', 'Go to Dashboard').should('be.visible');
     });
 
@@ -97,7 +97,7 @@ describe('Notification Center', () => {
         cy.clearNotifications(workspaceUuid);
         cy.visit(`/w/${workspaceUuid}`);
 
-        cy.get('button svg.lucide-bell').click();
+        cy.get('svg.lucide-bell').closest('button').click();
         cy.contains('Nenhuma notificação no momento').should('be.visible');
     });
 });
