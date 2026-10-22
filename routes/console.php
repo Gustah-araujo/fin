@@ -1,5 +1,6 @@
 <?php
 
+use App\Console\Commands\RunFinancialAnalysisCommand;
 use App\Jobs\CloseBillsJob;
 use App\Jobs\PreCreateBillsJob;
 use App\Jobs\ProcessRecurrencesJob;
@@ -14,3 +15,4 @@ Artisan::command('inspire', function () {
 Schedule::job(new CloseBillsJob)->dailyAt('00:00');
 Schedule::job(new PreCreateBillsJob)->dailyAt('00:00');
 Schedule::job(new ProcessRecurrencesJob)->dailyAt('00:00');
+Schedule::command(RunFinancialAnalysisCommand::class)->dailyAt('02:00');
