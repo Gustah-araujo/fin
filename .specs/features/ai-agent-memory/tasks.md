@@ -32,7 +32,7 @@
 **Gate:** `php artisan test --filter=AgentMemoryService`
 
 ## Task 4: BaseAgent Abstract Class
-What:** Abstract agent with memory tool injection and memory map in instructions.
+**What:** Abstract agent with memory tool injection and memory map in instructions.
 **Where:** `app/Ai/Agents/BaseAgent.php`
 **Depends on:** Task 3
 **Reuses:** `TransactionParser` as reference for Agent/HasTools/Promptable pattern
@@ -50,7 +50,7 @@ What:** Abstract agent with memory tool injection and memory map in instructions
 **Gate:** `php artisan test --filter=MemoryTool`
 
 ## Task 6: ScheduledFinancialAnalysisAgent
-What:** Concrete agent for daily financial analysis.
+**What:** Concrete agent for daily financial analysis.
 **Where:** `app/Ai/Agents/ScheduledFinancialAnalysisAgent.php`
 **Depends on:** Task 4, Task 5
 **Reuses:** `TransactionParser` for HasStructuredOutput pattern
@@ -58,17 +58,17 @@ What:** Concrete agent for daily financial analysis.
 **Tests:** Feature test with fake response asserting structured output, tools count (6 total).
 **Gate:** `php artisan test --filter=ScheduledFinancialAnalysisAgent`
 
-## Task 7: FinancialInsightNotification
-What:** Database notification for financial insights.
+## Task 7: FinancialInsightNotification (reuses existing notification center)
+**What:** Database notification for financial insights, conforming to the existing notification center data contract.
 **Where:** `app/Notifications/Workspace/FinancialInsightNotification.php`
-**Depends on:** —
-**Reuses:** Existing notification pattern (`NewInvite.php`)
-**Done when:** Notification via `database` channel, toDatabase returns workspace_id, insight_count, message.
-**Tests:** Feature test asserting via includes database, payload structure.
+**Depends on:** — (notification center already merged in PR #35)
+**Reuses:** Existing notification center (`notifications` table, `NotificationResource`, `NotificationService`, `NotificationBell`/`NotificationDrawer`); `NewInvite.php` as the Notification class pattern.
+**Done when:** Notification via `database` channel; `toDatabase()` returns `title`, `message`, `action_url`, `action_text`, `workspace_uuid` so it renders in the existing drawer and is scoped by `data->workspace_uuid`.
+**Tests:** Feature test asserting `via` includes `database` and payload conforms to the `NotificationResource` contract (keys present, `workspace_uuid` set).
 **Gate:** `php artisan test --filter=FinancialInsightNotification`
 
 ## Task 8: RunFinancialAnalysisCommand
-What:** Artisan command that runs analysis for all workspaces.
+**What:** Artisan command that runs analysis for all workspaces.
 **Where:** `app/Console/Commands/RunFinancialAnalysisCommand.php`
 **Depends on:** Task 6, Task 7
 **Reuses:** Existing command patterns, Job patterns for reference
@@ -77,7 +77,7 @@ What:** Artisan command that runs analysis for all workspaces.
 **Gate:** `php artisan test --filter=RunFinancialAnalysisCommand`
 
 ## Task 9: Schedule Registration
-What:** Register command in routes/console.php at 02:00 daily.
+**What:** Register command in routes/console.php at 02:00 daily.
 **Where:** `routes/console.php`
 **Depends on:** Task 8
 **Reuses:** Existing schedule patterns (dailyAt)
@@ -85,20 +85,13 @@ What:** Register command in routes/console.php at 02:00 daily.
 **Tests:** Smoke test asserting command can be called manually.
 **Gate:** `php artisan agent:financial-analysis` (with faked agent)
 
-## Task 10: Notifications Table Migration
-What:** Ensure `notifications` table exists (Laravel built-in).
-**Where:** `database/migrations/2026_10_20_000002_create_notifications_table.php`
-**Depends on:** — (can run anytime)
-**Reuses:** Laravel's default notification migration
-**Done when:** Standard Laravel notifications table migration present.
-**Tests:** Migration runs successfully.
-**Gate:** `php artisan migrate --database=testing`
-
-## Task 11: Quality Gate & Final Verification
-What:** Run all tests, quality checks, fix any issues.
+## Task 10: Quality Gate & Final Verification
+**What:** Run all tests, quality checks, fix any issues.
 **Where:** —
 **Depends on:** All previous tasks
 **Reuses:** `composer quality`, `php artisan test`
 **Done when:** All tests pass, quality gate passes.
 **Tests:** Full test suite.
 **Gate:** `composer quality && php artisan test`
+
+> **Note:** the `notifications` table migration (formerly Task 10) is **already merged in PR #35** along with the full notification center (service, controller, resource, frontend bell/drawer/polling). No new migration or read-side code is needed — `FinancialInsightNotification` (Task 7) just emits data in the existing contract.

@@ -25,8 +25,8 @@ Four `Tool` implementations in `app/Ai/Tools/Memory/`:
 ### R5 — ScheduledFinancialAnalysisAgent
 Concrete agent extending `BaseAgent` + `HasStructuredOutput`. Uses `QueryTransactionsTool` + `QueryRecurrencesTool` to analyze recent 30-day financial data. Structured output schema: `{ insights: array<{type, title, description, severity, data}> }`. Creates memories for new insights.
 
-### R6 — DatabaseNotification for Insights
-`FinancialInsightNotification` notification class via `database` channel. Contains workspace name, insight count, and summary. Sent to all workspace members.
+### R6 — Notification via Existing Notification Center
+`FinancialInsightNotification` notification class via `database` channel, reusing the notification center already merged in PR #35 (no new migration or read-side code). Its `toDatabase()` payload must conform to the existing `NotificationResource` contract — `title`, `message`, `action_url`, `action_text`, `workspace_uuid` — so it renders in the existing `NotificationBell`/`NotificationDrawer` and is scoped by `data->workspace_uuid`. Sent to all workspace members.
 
 ### R7 — Artisan Command for Scheduled Execution
 `RunFinancialAnalysisCommand` iterates all workspaces, runs `ScheduledFinancialAnalysisAgent` for each, sends notifications to members. Registered in `routes/console.php` to run daily at 02:00.
@@ -47,7 +47,7 @@ Smoke test for the scheduled command (artisan command runs without error).
 | AC4 | `BaseAgent::tools()` returns 4 memory tools + any subclass tools |
 | AC5 | Memory tools correctly create/read/update/delete via agent tool calls |
 | AC6 | `ScheduledFinancialAnalysisAgent` returns structured insights from fake response |
-| AC7 | `FinancialInsightNotification::via` includes `['database']` |
+| AC7 | `FinancialInsightNotification` uses `database` channel and its payload conforms to the existing notification center contract (`title`/`message`/`workspace_uuid`) |
 | AC8 | `RunFinancialAnalysisCommand` processes all workspaces and sends notifications |
 | AC9 | Command scheduled at 02:00 daily in `routes/console.php` |
 | AC10 | All feature tests pass (`php artisan test`) |
@@ -56,7 +56,8 @@ Smoke test for the scheduled command (artisan command runs without error).
 ## Out of Scope
 
 - Frontend UI for viewing/managing agent memories (future feature)
-- Real-time WebSocket notifications (using DatabaseNotification only)
+- Real-time WebSocket notifications (the notification center uses 30s polling — reuse as-is)
+- Notification center read-side / UI / polling (already implemented in PR #35)
 - Memory versioning or audit trail
 - Agent conversation history (handled by Laravel AI SDK natively)
 
@@ -65,5 +66,5 @@ Smoke test for the scheduled command (artisan command runs without error).
 - Laravel AI SDK ^1.2 (already installed)
 - Existing `QueryTransactionsTool`, `QueryRecurrencesTool` (already available)
 - `Workspace` model with `members()` relationship (already available)
-- `User` model with `Notifiable` + `HasDatabaseNotifications` (already available)
-- `notifications` table (needs migration — Laravel built-in)
+- `User` model with `Notifiable` (includes `HasDatabaseNotifications` + `RoutesNotifications`) (already available)
+- `notifications` table + full notification center read-side (already merged in PR #35 — no new migration needed)

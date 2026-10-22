@@ -15,7 +15,8 @@
 │    1. Instantiate ScheduledFinancialAnalysisAgent(workspace)     │
 │    2. prompt("Analyze recent finances")                          │
 │    3. For each insight → AgentMemoryService::create()           │
-│    4. Notify all members → FinancialInsightNotification          │
+│    4. Notify all members → FinancialInsightNotification        │
+│       (database channel → existing notification center)        │
 └──────────────────────────┬──────────────────────────────────────┘
                            │
                            ▼
@@ -210,7 +211,14 @@ class ScheduledFinancialAnalysisAgent extends BaseAgent implements HasStructured
 }
 ```
 
-### 9. Notification: `FinancialInsightNotification`
+### 9. Notification: `FinancialInsightNotification` (reuses notification center)
+
+The notification center is already merged (PR #35): `notifications` table migration,
+`NotificationService` (scopes by `data->workspace_uuid`), `NotificationController`,
+`NotificationResource`, and the frontend `NotificationBell`/`NotificationDrawer`/
+`use-notification-polling`. We do **not** create a new table or read-side code — we only
+emit a database notification whose payload conforms to the existing `NotificationResource`
+contract (`title`, `message`, `action_url`, `action_text`, `workspace_uuid`):
 
 ```php
 class FinancialInsightNotification extends Notification
@@ -228,13 +236,20 @@ class FinancialInsightNotification extends Notification
     public function toDatabase(object $notifiable): array
     {
         return [
-            'workspace_id' => $this->workspace->uuid,
-            'insight_count' => $this->insightCount,
-            'message' => "{$this->insightCount} novos insights financeiros identificados para {$this->workspace->name}.",
+            // Must match NotificationResource contract
+            'workspace_uuid' => $this->workspace->uuid,
+            'title'          => 'Análise financeira concluída',
+            'message'        => "{$this->insightCount} novos insights financeiros identificados para {$this->workspace->name}.",
+            'action_url'     => null,
+            'action_text'    => null,
         ];
     }
 }
 ```
+
+The `Notifiable` trait on `User` already pulls in `HasDatabaseNotifications`, so
+`$workspace->members->each->notify($notification)` writes directly to the existing
+`notifications` table, and the existing drawer renders it with no further changes.
 
 ### 10. Command: `RunFinancialAnalysisCommand`
 
@@ -291,7 +306,7 @@ Schedule::command(RunFinancialAnalysisCommand::class)->dailyAt('02:00');
    - Agent uses `ReadMemoryTool` to check existing knowledge
    - Agent produces structured output with insights
    - Command creates new memories via `AgentMemoryService::create()`
-   - Command sends `FinancialInsightNotification` to all workspace members
+   - Command sends `FinancialInsightNotification` to all workspace members (rendered by the existing notification center)
 4. Next execution: new memories appear in the memory map, preventing duplicate insights
 
 ## Error Handling
@@ -311,6 +326,6 @@ Schedule::command(RunFinancialAnalysisCommand::class)->dailyAt('02:00');
 | BaseAgent | Feature | Memory injection in instructions, tools present |
 | Memory Tools | Feature | Each tool creates/reads/updates/deletes |
 | ScheduledFinancialAnalysisAgent | Feature | Structured output, tools registered |
-| FinancialInsightNotification | Feature | via includes database, correct payload |
+| FinancialInsightNotification | Feature | via includes `database`; payload conforms to `NotificationResource` contract (title/message/workspace_uuid) |
 | RunFinancialAnalysisCommand | Feature | Processes workspaces, sends notifications |
 | ScheduledFinancialAnalysisAgent | Fake test | Schema validation, structured response |
