@@ -188,6 +188,22 @@ Cypress.Commands.add(
     },
 );
 
+Cypress.Commands.add(
+    'triggerFinancialAnalysis',
+    (workspaceUuid, insights = null) => {
+        return cy.get('meta[name="csrf-token"]').then((meta) => {
+            return cy.request({
+                method: 'POST',
+                url: `/w/${workspaceUuid}/testing/financial-analysis`,
+                headers: {
+                    'X-CSRF-TOKEN': meta.attr('content'),
+                },
+                body: insights === null ? {} : { insights },
+            });
+        });
+    },
+);
+
 Cypress.Commands.add('clearNotifications', (workspaceUuid) => {
     return cy.get('meta[name="csrf-token"]').then((meta) => {
         return cy.request({
