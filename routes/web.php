@@ -17,15 +17,19 @@ use App\Http\Controllers\DatatableStateController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\IncomeController;
 use App\Http\Controllers\InviteController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PlanningController;
 use App\Http\Controllers\RecurrenceController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\WorkspaceMemberController;
+use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 
 // Guest routes
 Route::middleware('guest')->group(function () {
@@ -152,5 +156,48 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
             ->name('bills.unpay');
         Route::post('bills/close-current', [CreditCardBillController::class, 'closeCurrent'])
             ->name('bills.close-current');
+
+        // Notification routes
+        Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::patch('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+        Route::post('notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-as-read');
+
+        // Test-only notification seeding endpoints (non-production only)
+        if (! app()->environment('production')) {
+            Route::post('testing/notifications', function (Workspace $workspace) {
+                $user = request()->user();
+                $count = request()->input('count', 1);
+
+                for ($i = 0; $i < $count; $i++) {
+                    DatabaseNotification::create([
+                        'id' => Str::uuid()->toString(),
+                        'type' => 'App\\Notifications\\TestNotification',
+                        'notifiable_type' => User::class,
+                        'notifiable_id' => $user->id,
+                        'data' => [
+                            'title' => request()->input('title', 'Notificação de Teste '.($i + 1)),
+                            'message' => request()->input('message', 'Esta é uma notificação de teste para E2E.'),
+                            'action_url' => request()->input('action_url', null),
+                            'action_text' => request()->input('action_text', null),
+                            'workspace_uuid' => $workspace->uuid,
+                        ],
+                        'read_at' => null,
+                    ]);
+                }
+
+                return response()->json(['created' => $count]);
+            })->name('testing.notifications.store');
+
+            Route::delete('testing/notifications', function (Workspace $workspace) {
+                $user = request()->user();
+
+                DatabaseNotification::where('notifiable_type', User::class)
+                    ->where('notifiable_id', $user->id)
+                    ->where('data->workspace_uuid', $workspace->uuid)
+                    ->delete();
+
+                return response()->json(['deleted' => true]);
+            })->name('testing.notifications.destroy');
+        }
     });
 });

@@ -220,6 +220,10 @@ describe('Unified CSV Import', () => {
         cy.contains('Revise os dados antes de confirmar a importação').should(
             'be.visible',
         );
+        cy.get('table tbody tr').should('have.length', 4);
+        cy.contains('3 despesas + 1 receitas selecionadas').should(
+            'be.visible',
+        );
         cy.contains('button', 'Confirmar Importação').click({ force: true });
         cy.assertToast('success', 'importadas');
 
