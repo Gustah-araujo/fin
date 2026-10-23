@@ -1,5 +1,6 @@
 <?php
 
+use App\Ai\Agents\ScheduledFinancialAnalysisAgent;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\WorkspaceMemberController;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Services\FinancialAnalysisService;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Route;
@@ -198,6 +200,36 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
 
                 return response()->json(['deleted' => true]);
             })->name('testing.notifications.destroy');
+
+            Route::post('testing/financial-analysis', function (Workspace $workspace) {
+                $insights = request()->input('insights', [
+                    [
+                        'type' => 'anomaly',
+                        'title' => 'Gasto anômalo em alimentação',
+                        'description' => 'Gastos com alimentação 60% acima da média.',
+                        'severity' => 'high',
+                        'data' => null,
+                    ],
+                    [
+                        'type' => 'insight',
+                        'title' => 'Tendência de economia em lazer',
+                        'description' => 'Gastos com lazer caíram 20% em relação à média.',
+                        'severity' => 'medium',
+                        'data' => null,
+                    ],
+                ]);
+
+                ScheduledFinancialAnalysisAgent::fake([
+                    ['insights' => $insights],
+                ]);
+
+                $count = app(FinancialAnalysisService::class)->analyze($workspace);
+
+                return response()->json([
+                    'insights' => $count,
+                    'notification_sent' => $count > 0,
+                ]);
+            })->name('testing.financial-analysis');
         }
     });
 });
