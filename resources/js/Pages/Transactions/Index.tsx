@@ -3,7 +3,8 @@ import { useCallback, useState } from 'react';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Banknote, CheckCircle2, Circle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DataTable } from '@/Components/DataTable/DataTable';
 import { MonthPicker } from '@/Components/MonthPicker';
@@ -68,6 +69,12 @@ interface TransactionItem {
     bill?: { uuid: string; period_label: string; status: string } | null;
 }
 
+interface Totals {
+    total: number;
+    paid: number;
+    pending: number;
+}
+
 interface Props {
     accounts: AccountItem[];
     categories: CategoryItem[];
@@ -75,6 +82,7 @@ interface Props {
     cards: CardItem[];
     bills: BillItem[];
     initialState: TableState;
+    totals: Totals;
 }
 
 function formatDate(dateStr: string): string {
@@ -154,6 +162,7 @@ export default function Index({
     cards,
     bills,
     initialState,
+    totals,
 }: Props) {
     const workspace = useWorkspace();
     const page = usePage();
@@ -396,6 +405,59 @@ export default function Index({
                             </Link>
                         </Button>
                     </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-3">
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                                <Banknote className="h-4 w-4" />
+                                Total
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p
+                                className="text-2xl font-semibold"
+                                data-testid="total-expenses"
+                            >
+                                {formatCurrency(totals.total)}
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                Total Pago
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p
+                                className="text-2xl font-semibold text-emerald-600"
+                                data-testid="total-paid"
+                            >
+                                {formatCurrency(totals.paid)}
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                                <Circle className="h-4 w-4 text-amber-600" />
+                                Total Pendente
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p
+                                className="text-2xl font-semibold text-amber-600"
+                                data-testid="total-pending"
+                            >
+                                {formatCurrency(totals.pending)}
+                            </p>
+                        </CardContent>
+                    </Card>
                 </div>
 
                 <Card>
