@@ -33,16 +33,16 @@ Entregar um assistente de chat conversacional ("Fin") dentro do workspace que:
 
 | ID | Decisão |
 | --- | --- |
-| **D-73** | **Conversas escopadas por workspace**: `Workspace` é o `participant` (morph) das conversas, usando as tabelas `agent_conversations`/`agent_conversation_messages` do SDK. Listagem/CRUD sempre filtradas por `participant_type=Workspace` + `participant_id=$workspace->id`. Atribuição de `created_by` para auditoria. *(Alternativa sinalizada: isolamento por usuário dentro do workspace — fora do escopo v1.)* |
-| **D-74** | **Assíncrono via `DispatchFinAssistantJob` (ShouldQueue) + polling** — sem WebSockets e sem SSE. **Supersede** o AC-3 do spec (`SSE`) por decisão do issue. Resposta gerada em background; frontend consulta status periodicamente (~2s). |
+| **D-73** | **Conversas escopadas por workspace** (workspace-wide, confirmado): `Workspace` é o `participant` (morph) das conversas, usando as tabelas `agent_conversations`/`agent_conversation_messages` do SDK. Listagem/CRUD sempre filtradas por `participant_type=Workspace` + `participant_id=$workspace->id`. Atribuição de `created_by` para auditoria (coluna adicionada via nova migração). |
+| **D-74** | **Assíncrono via `DispatchFinAssistantJob` (ShouldQueue) + polling** (confirmado) — sem WebSockets e sem SSE. **Supersede** o AC-3 do spec (`SSE`). Resposta gerada em background; frontend consulta status periodicamente (~2s). |
 | **D-75** | **Rastreamento de status via model `FinAssistantRun`** (nova tabela) com enum `FinRunStatus` (`pending`/`processing`/`completed`/`failed`). O `ConversationMessage` do assistant só é criado ao concluir. Motivo: o enum do SDK (`MessageStatus`) só tem `completed`/`failed`/`paused` — não há estado "pendente". Endpoint de polling retorna o status do run. |
-| **D-76** | **Janela de contexto** via override de `maxConversationMessages()` no agente (default `20`, configurável), limitando as últimas N mensagens enviadas à LLM. |
-| **D-77** | **Titulação automática** na 1ª mensagem via `TitleConversationJob` usando modelo leve `deepseek-v4.1-flash`; grava em `agent_conversations.title`. |
+| **D-76** | **Janela de contexto** com N = **20** (confirmado, configurável via `FIN_CONTEXT_WINDOW`), limitando as últimas N mensagens enviadas à LLM. Aplicada no `FinAssistantService` (histórico manual via `withMessages()`), não via trait `RemembersConversations` (ver nota técnica abaixo). |
+| **D-77** | **Titulação automática** na 1ª mensagem via `TitleConversationJob` usando modelo leve `deepseek-v4.1-flash` (confirmado); grava em `agent_conversations.title`. |
 | **D-78** | **Read tools injetam `workspace_id` no servidor** (via construtor, igual aos `Query*` existentes) — nunca a partir do prompt/IA. Adicionar `QueryAccountsTool` e `QueryCreditCardsTool`. |
 | **D-79** | **Mutation em 2 etapas**: `ValidateTransactionTool` extrai dados + roda checagem de duplicidade + persiste `FinPendingMutation` (escopada ao workspace, com expiração); agente **sempre** apresenta resumo + alertas e aguarda confirmação explícita; `ConfirmTransactionTool` (aceita só `pending_id`, re-escopa ao workspace, persiste via `TransactionService`). **Nenhuma mutação sem confirmação.** |
 | **D-80** | **`DuplicateDetectionService` compartilhado** com a regra fuzzy (valor ±0.01, data ±1 dia, `similar_text` ≥ 80% na descrição) — reusável pela importação no futuro. |
 | **D-81** | **Guardrails em duas camadas**: (1) instruções de sistema rejeitando assuntos fora de finanças/plataforma (best-effort); (2) enforcement estrutural no nível de tool/persistência (escopo workspace obrigatório, campos whitelisted, sem SQL arbitrário). |
-| **D-82** | **Modelos**: `config/ai.php` passa a expor modelo principal do assistente + modelo leve de titulação. ⚠️ *Discrepância a confirmar*: config atual usa `claude-haiku-5-5`; o issue e o ambiente indicam `deepseek-v4-pro` (principal) e `deepseek-v4.1-flash` (titulação). Recomenda-se `FIN_MODEL=deepseek-v4-pro` e `FIN_TITLE_MODEL=deepseek-v4.1-flash`. |
+| **D-82** | **Modelos (confirmado)**: modelo principal do assistente = `claude-haiku-5-5` (mantém o `OPENCODE_MODEL` atual — `FIN_MODEL` default `claude-haiku-5-5`); modelo de titulação = `deepseek-v4.1-flash` (`FIN_TITLE_MODEL`). Expostos em `config/ai.php` na chave `ai.fin`. |
 
 ## 4. Arquitetura — fluxo assíncrono
 
@@ -158,10 +158,17 @@ Frontend (polling ~2s)
 **Fase F — E2E + qualidade**
 - **T10**: Cypress `fin.cy.js` + gates finais (`composer quality`, `npm run quality`, `npm run build`).
 
-## 9. Pontos abertos a confirmar (antes de implementar)
+## 9. Decisões confirmadas (para implementação)
 
-1. **Modelos/nomes**: confirmar `FIN_MODEL` e `FIN_TITLE_MODEL` reais no endpoint `opencode` (recomendado: `deepseek-v4-pro` / `deepseek-v4.1-flash`). A config atual aponta `claude-haiku-5-5`.
-2. **Escopo da conversa**: workspace-wide (recomendado) vs. por-usuário-dentro-do-workspace.
-3. **Valor de N** da janela de contexto (recomendado: 20).
-4. **SSE vs polling**: este plano assume polling (conforme issue); confirma a remoção definitiva do streaming (AC-3 do spec original).
-5. **TTL das `FinPendingMutation`**: tempo de expiração (recomendado: 30 min).
+1. **Modelos**: principal = `claude-haiku-5-5` (mantém o atual); titulação = `deepseek-v4.1-flash`. (`FIN_MODEL` / `FIN_TITLE_MODEL`.)
+2. **Escopo da conversa**: **workspace-wide** (todos os membros veem as mesmas conversas).
+3. **Janela de contexto N**: **20**.
+4. **SSE vs polling**: **polling confirmado** — streaming/SSE descartado definitivamente.
+5. **TTL das `FinPendingMutation`**: **30 min**.
+
+## 10. Notas técnicas de implementação (descobertas da exploração)
+
+1. **`participant_id` é `unsignedBigInteger`**: `Workspace` usa `id` auto-increment (PK) + coluna `uuid` (route key). `Conversation::participantKey($workspace)` retorna o `id` (bigint), compatível com `agent_conversations.participant_id`. O id da **conversa** é UUID string (route key da UI). Internamente, o workspace é referenciado pelo `id` (bigint) no morph.
+2. **Bug latente nas Query tools existentes**: `QueryTransactionsTool` (e similares) injetam `$workspace->uuid` mas fazem `where('workspace_id', uuid)` — porém `transactions.workspace_id` é `foreignId` (bigint). As novas tools (`QueryAccountsTool`, `QueryCreditCardsTool`) devem resolver o workspace por uuid (`Workspace::where('uuid', ...)->firstOrFail()`) e então filtrar por `$workspace->id`. Corrigir também as Query tools existentes (T2) para que o agente realmente encontre dados.
+3. **Orquestração manual (sem `RemembersConversations`)**: o middleware `RememberConversation` do SDK auto-persiste a conversa quando o agente usa o trait `RemembersConversations` + `continue()`. Para ter visibilidade imediata da mensagem do usuário (persistida no controller, antes do job) e evitar dupla persistência, o `FinancialAssistantAgent` **não** implementa `Conversational`/`RemembersConversations`; o `FinAssistantService` monta o histórico (últimas N mensagens) e injeta via `withMessages()`, e persiste as mensagens manualmente via Eloquent `Conversation`/`ConversationMessage` (`Laravel\Ai\Models\*`), com `id` UUID (`Str::orderedUuid()`), `status` = `completed`.
+4. **Modelos de mensagem do SDK**: `Conversation`/`ConversationMessage` têm `id` string, `$guarded = []`, e o `ConversationMessage` exige as colunas `agent`, `role`, `content`, `attachments`, `steps`, `usage`, `meta`, `status` (todas NOT NULL na migration). Preencher JSON como `[]`/`{}` quando vazio.
