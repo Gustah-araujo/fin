@@ -237,3 +237,16 @@ Cypress.Commands.add(
         });
     },
 );
+
+Cypress.Commands.add('finResponse', (workspaceUuid, body = {}) => {
+    return cy.get('meta[name="csrf-token"]').then((meta) => {
+        return cy.request({
+            method: 'POST',
+            url: `/w/${workspaceUuid}/testing/fin-response`,
+            headers: {
+                'X-CSRF-TOKEN': meta.attr('content'),
+            },
+            body,
+        });
+    });
+});
