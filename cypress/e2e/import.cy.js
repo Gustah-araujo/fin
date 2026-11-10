@@ -4,7 +4,7 @@ function importCsv() {
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const d = (day) => `${year}-${month}-${String(day).padStart(2, '0')}`;
 
-    const contents = [
+    const csv = [
         'description,value,date,category,type',
         `Supermercado XYZ,150.00,${d(1)},Alimentação,debit`,
         `Farmácia ABC,45.90,${d(2)},Saúde,debit`,
@@ -12,7 +12,13 @@ function importCsv() {
         `Salário Empresa,5000.00,${d(5)},Trabalho,credit`,
     ].join('\n');
 
-    return { contents, fileName: 'import.csv', mimeType: 'text/csv' };
+    // Cypress `selectFile` treats a string `contents` as a filesystem path.
+    // To upload in-memory content it must be wrapped in a Buffer.
+    return {
+        contents: Cypress.Buffer.from(csv),
+        fileName: 'import.csv',
+        mimeType: 'text/csv',
+    };
 }
 
 describe('Unified CSV Import', () => {
