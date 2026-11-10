@@ -7,6 +7,7 @@ namespace App\Ai\Tools;
 use App\Enums\RecurrenceStatus;
 use App\Enums\TransactionType;
 use App\Models\Recurrence;
+use App\Models\Workspace;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Laravel\Ai\Attributes\Strict;
@@ -17,7 +18,7 @@ use Laravel\Ai\Tools\Request;
 class QueryRecurrencesTool implements Tool
 {
     public function __construct(
-        protected string $workspaceId,
+        protected string $workspaceUuid,
     ) {}
 
     /**
@@ -36,7 +37,7 @@ class QueryRecurrencesTool implements Tool
     public function handle(Request $request): string
     {
         $query = Recurrence::query()
-            ->where('workspace_id', $this->workspaceId);
+            ->where('workspace_id', $this->resolveWorkspaceId());
 
         $type = (string) $request->string('type');
         if ($type !== '') {
@@ -65,6 +66,11 @@ class QueryRecurrencesTool implements Tool
                 'next_date' => $r->next_date?->format('Y-m-d'),
             ])->all(),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    private function resolveWorkspaceId(): int
+    {
+        return Workspace::where('uuid', $this->workspaceUuid)->firstOrFail()->id;
     }
 
     /**

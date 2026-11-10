@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Ai\Tools;
 
 use App\Models\Tag;
+use App\Models\Workspace;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Laravel\Ai\Attributes\Strict;
@@ -15,7 +16,7 @@ use Laravel\Ai\Tools\Request;
 class QueryTagsTool implements Tool
 {
     public function __construct(
-        protected string $workspaceId,
+        protected string $workspaceUuid,
     ) {}
 
     /**
@@ -32,7 +33,7 @@ class QueryTagsTool implements Tool
     public function handle(Request $request): string
     {
         $tags = Tag::query()
-            ->where('workspace_id', $this->workspaceId)
+            ->where('workspace_id', $this->resolveWorkspaceId())
             ->orderBy('name')
             ->get(['uuid', 'name', 'color']);
 
@@ -44,6 +45,11 @@ class QueryTagsTool implements Tool
                 'color' => $t->color,
             ])->all(),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    private function resolveWorkspaceId(): int
+    {
+        return Workspace::where('uuid', $this->workspaceUuid)->firstOrFail()->id;
     }
 
     /**

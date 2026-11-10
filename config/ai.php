@@ -23,4 +23,10 @@ return [
 
     // Mantido para compatibilidade com timeout legado
     'timeout' => env('OPENCODE_TIMEOUT', 120),
+
+    'fin' => [
+        'model' => env('FIN_MODEL', 'claude-haiku-5-5'),
+        'title_model' => env('FIN_TITLE_MODEL', 'deepseek-v4.1-flash'),
+        'pending_ttl' => env('FIN_PENDING_TTL', 30),
+    ],
 ];
