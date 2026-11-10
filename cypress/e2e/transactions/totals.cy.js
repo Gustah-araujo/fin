@@ -73,4 +73,14 @@ describe('Transaction Totals', () => {
         cy.get('[data-testid="total-paid"]').should('contain', '50,00');
         cy.get('[data-testid="total-pending"]').should('contain', '125,00');
     });
+
+    it('scopes totals to the selected month', () => {
+        createExpense('Totalizador Escopo 100', '100');
+
+        cy.get('[data-testid="total-expenses"]').should('contain', '100,00');
+
+        cy.get('[data-testid="month-prev"]').click();
+
+        cy.get('[data-testid="total-expenses"]').should('contain', '0,00');
+    });
 });

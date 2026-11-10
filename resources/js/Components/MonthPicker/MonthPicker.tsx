@@ -13,6 +13,7 @@ export default function MonthPicker({ month, onChange }: MonthPickerProps) {
             <Button
                 variant="outline"
                 size="icon"
+                data-testid="month-prev"
                 onClick={() => onChange(navigateMonth(month, -1))}
             >
                 <ChevronLeft />
@@ -23,6 +24,7 @@ export default function MonthPicker({ month, onChange }: MonthPickerProps) {
             <Button
                 variant="outline"
                 size="icon"
+                data-testid="month-next"
                 onClick={() => onChange(navigateMonth(month, 1))}
             >
                 <ChevronRight />
