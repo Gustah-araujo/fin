@@ -28,5 +28,6 @@ return [
         'model' => env('FIN_MODEL', 'claude-haiku-5-5'),
         'title_model' => env('FIN_TITLE_MODEL', 'deepseek-v4.1-flash'),
         'pending_ttl' => env('FIN_PENDING_TTL', 30),
+        'context_window' => env('FIN_CONTEXT_WINDOW', 20),
     ],
 ];
