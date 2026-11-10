@@ -24,7 +24,7 @@ The expenses listing page (`Transactions/Index.tsx`, title "Despesas") shows a m
 | Status semantics | `paid_at IS NOT NULL` → Pago; `paid_at IS NULL` → Pendente | Mirrors the existing `status` datatable filter and `AccountService::recalculateBalance` |
 | Where totals are computed | `TransactionController@index()` returns a `totals` Inertia prop | Cards are month-scoped only and must NOT react to datatable column filters (description/category/status). The Planning page already uses this exact pattern |
 | Month scoping | Read `?month=` in `index()` (new `Request` param), reuse `YYYY-MM` regex from `datatable()` | Same month semantics as the datatable; refresh-safe via existing URL sync |
-| No month param | Sum across all months (no month filter) | Mirrors `datatable()` behavior — invalid/absent month = unfiltered |
+| No month param | Default to the current month (`now()->format('Y-m')`) | Matches the frontend month selector default (`getCurrentMonth()`) so the cards always reflect the month being viewed; invalid month also falls back to current month |
 | Business logic location | New `TransactionService::monthlyTotals()` method | Service layer owns aggregation; controller stays thin |
 | Icons | `Banknote` (Total), `CheckCircle2` (Pago), `Circle` (Pendente) from `lucide-react` | Existing project icon library |
 | Colors | Pago `text-emerald-600`, Pendente `text-amber-600`, Total neutral | Matches existing status column and Home/Planning card tokens |
@@ -209,7 +209,8 @@ Month reactivity requires no extra wiring: `handleMonthChange` already re-fetche
 | `test_totals_sum_all_expenses_in_month` | Total = sum of all expenses in the month |
 | `test_totals_split_paid_and_pending` | Paid vs pending split; `total === paid + pending` |
 | `test_totals_respect_month_param` | `?month=` scopes totals to the selected month |
-| `test_totals_without_month_param_include_all` | No month → totals across all months |
+| `test_totals_without_month_param_defaults_to_current_month` | No month → totals default to current month |
+| `test_totals_with_invalid_month_param_defaults_to_current_month` | Invalid month → totals default to current month |
 | `test_totals_exclude_income` | Income transactions are not counted |
 | `test_totals_respect_workspace_scope` | Other-workspace expenses excluded |
 | `test_totals_exclude_soft_deleted` | Soft-deleted expenses excluded |

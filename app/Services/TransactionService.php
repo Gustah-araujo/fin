@@ -84,11 +84,13 @@ class TransactionService
         $query = $workspace->transactions()
             ->where('type', TransactionType::Expense);
 
-        if ($month !== null && preg_match('/^\d{4}-\d{2}$/', $month)) {
-            [$year, $monthNum] = explode('-', $month);
-            $query->whereYear('date', (int) $year)
-                ->whereMonth('date', (int) $monthNum);
-        }
+        $month = is_string($month) && preg_match('/^\d{4}-\d{2}$/', $month)
+            ? $month
+            : now()->format('Y-m');
+
+        [$year, $monthNum] = explode('-', $month);
+        $query->whereYear('date', (int) $year)
+            ->whereMonth('date', (int) $monthNum);
 
         return [
             'total' => round((float) (clone $query)->sum('value'), 2),
