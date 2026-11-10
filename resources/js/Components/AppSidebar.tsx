@@ -13,6 +13,7 @@ import {
     Tags,
     Folders,
     FileUp,
+    Bot,
     type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -141,6 +142,17 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
                     href: route('cards.index', { workspace: workspaceUuid }),
                     icon: CreditCard,
                     testId: 'sidebar-cards',
+                },
+            ],
+        },
+        {
+            title: 'Assistente',
+            items: [
+                {
+                    label: 'Fin',
+                    href: route('fin.index', { workspace: workspaceUuid }),
+                    icon: Bot,
+                    testId: 'sidebar-fin',
                 },
             ],
         },

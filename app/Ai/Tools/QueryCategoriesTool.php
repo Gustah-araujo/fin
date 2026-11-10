@@ -6,6 +6,7 @@ namespace App\Ai\Tools;
 
 use App\Enums\TransactionType;
 use App\Models\Category;
+use App\Models\Workspace;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Laravel\Ai\Attributes\Strict;
@@ -16,7 +17,7 @@ use Laravel\Ai\Tools\Request;
 class QueryCategoriesTool implements Tool
 {
     public function __construct(
-        protected string $workspaceId,
+        protected string $workspaceUuid,
     ) {}
 
     /**
@@ -36,8 +37,10 @@ class QueryCategoriesTool implements Tool
     {
         $type = (string) $request->string('type');
 
+        $workspaceId = $this->resolveWorkspaceId();
+
         $query = Category::query()
-            ->where('workspace_id', $this->workspaceId);
+            ->where('workspace_id', $workspaceId);
 
         if ($type !== '' && $type !== 'both') {
             $query->where('type', TransactionType::from($type));
@@ -59,6 +62,11 @@ class QueryCategoriesTool implements Tool
                 'is_system' => $c->is_system,
             ])->all(),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    private function resolveWorkspaceId(): int
+    {
+        return Workspace::where('uuid', $this->workspaceUuid)->firstOrFail()->id;
     }
 
     /**

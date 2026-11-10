@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Contracts\AiParserInterface;
 use App\Models\Recurrence;
 use App\Models\Workspace;
+use App\Policies\FinConversationPolicy;
 use App\Policies\RecurrencePolicy;
 use App\Policies\WorkspacePolicy;
 use App\Services\AiService;
@@ -14,6 +15,7 @@ use App\Services\FakeAiService;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Ai\Models\Conversation;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -34,5 +36,6 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(Workspace::class, WorkspacePolicy::class);
         Gate::policy(Recurrence::class, RecurrencePolicy::class);
+        Gate::policy(Conversation::class, FinConversationPolicy::class);
     }
 }

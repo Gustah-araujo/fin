@@ -1,6 +1,8 @@
 <?php
 
+use App\Ai\Agents\FinancialAssistantAgent;
 use App\Ai\Agents\ScheduledFinancialAnalysisAgent;
+use App\Enums\FinRunStatus;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
@@ -15,6 +17,10 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CreditCardBillController;
 use App\Http\Controllers\CreditCardController;
 use App\Http\Controllers\DatatableStateController;
+use App\Http\Controllers\FinController;
+use App\Http\Controllers\FinConversationController;
+use App\Http\Controllers\FinMessageController;
+use App\Http\Controllers\FinRunController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\IncomeController;
 use App\Http\Controllers\InviteController;
@@ -25,9 +31,11 @@ use App\Http\Controllers\TagController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\WorkspaceMemberController;
+use App\Models\FinAssistantRun;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\FinancialAnalysisService;
+use App\Services\FinAssistantService;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Route;
@@ -148,6 +156,19 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
         Route::get('planning', [PlanningController::class, 'index'])->name('planning.index');
         Route::get('planning/month-detail', [PlanningController::class, 'monthDetail'])->name('planning.month-detail');
 
+        // Fin AI assistant
+        Route::get('fin', [FinController::class, 'index'])->name('fin.index');
+
+        Route::prefix('fin')->name('fin.')->group(function () {
+            Route::get('conversations', [FinConversationController::class, 'index'])->name('conversations.index');
+            Route::post('conversations', [FinConversationController::class, 'store'])->name('conversations.store');
+            Route::get('conversations/{conversation}', [FinConversationController::class, 'show'])->name('conversations.show');
+            Route::put('conversations/{conversation}', [FinConversationController::class, 'update'])->name('conversations.update');
+            Route::delete('conversations/{conversation}', [FinConversationController::class, 'destroy'])->name('conversations.destroy');
+            Route::post('conversations/{conversation}/messages', [FinMessageController::class, 'store'])->name('conversations.messages.store');
+            Route::get('runs/{run}', [FinRunController::class, 'show'])->name('runs.show');
+        });
+
         Route::resource('cards', CreditCardController::class);
 
         Route::get('bills/{bill}', [CreditCardBillController::class, 'show'])
@@ -230,6 +251,47 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
                     'notification_sent' => $count > 0,
                 ]);
             })->name('testing.financial-analysis');
+
+            Route::post('testing/fin-response', function (Workspace $workspace) {
+                $user = request()->user();
+                $service = app(FinAssistantService::class);
+
+                $message = request()->input('message');
+                $responseText = (string) request()->input('response', 'Resposta simulada do Fin para fins de teste.');
+                $title = (string) request()->input('title', 'Nova conversa');
+                $fail = (bool) request()->input('fail', false);
+
+                if (is_string($message) && $message !== '') {
+                    $conversation = $service->createConversation($workspace, $user, $title);
+
+                    FinancialAssistantAgent::fake([$responseText]);
+
+                    $run = $service->sendMessage($workspace, $user, $conversation, $message);
+                    $service->run($run);
+
+                    return response()->json(['conversation_id' => $conversation->id]);
+                }
+
+                $runs = FinAssistantRun::query()
+                    ->where('workspace_id', $workspace->id)
+                    ->where('status', FinRunStatus::Pending)
+                    ->get();
+
+                FinancialAssistantAgent::fake([$responseText]);
+
+                foreach ($runs as $run) {
+                    if ($fail) {
+                        $run->update([
+                            'status' => FinRunStatus::Failed,
+                            'error_message' => 'Erro simulado para teste.',
+                        ]);
+                    } else {
+                        $service->run($run);
+                    }
+                }
+
+                return response()->json(['completed' => $runs->count()]);
+            })->name('testing.fin-response');
         }
     });
 });

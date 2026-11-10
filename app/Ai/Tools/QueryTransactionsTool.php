@@ -6,6 +6,7 @@ namespace App\Ai\Tools;
 
 use App\Enums\TransactionType;
 use App\Models\Transaction;
+use App\Models\Workspace;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -30,7 +31,7 @@ class QueryTransactionsTool implements Tool
     private const ALLOWED_DIRECTIONS = ['asc', 'desc'];
 
     public function __construct(
-        protected string $workspaceId,
+        protected string $workspaceUuid,
     ) {}
 
     /**
@@ -48,7 +49,7 @@ class QueryTransactionsTool implements Tool
      */
     public function handle(Request $request): string
     {
-        $query = $this->buildBaseQuery($request);
+        $query = $this->buildBaseQuery($request, $this->resolveWorkspaceId());
         [$orderBy, $direction, $limit] = $this->resolveOrdering($request);
 
         $query->orderBy($orderBy, $direction)->limit($limit);
@@ -61,10 +62,10 @@ class QueryTransactionsTool implements Tool
      *
      * @SuppressWarnings(PHPMD.StaticAccess)
      */
-    private function buildBaseQuery(Request $request): Builder
+    private function buildBaseQuery(Request $request, int $workspaceId): Builder
     {
         $query = Transaction::query()
-            ->where('workspace_id', $this->workspaceId);
+            ->where('workspace_id', $workspaceId);
 
         $this->applyDateRange($request, $query);
         $this->applyTypeFilter($request, $query);
@@ -77,6 +78,11 @@ class QueryTransactionsTool implements Tool
         $this->applyUuidFilter($request, $query, 'category_id');
 
         return $query;
+    }
+
+    private function resolveWorkspaceId(): int
+    {
+        return Workspace::where('uuid', $this->workspaceUuid)->firstOrFail()->id;
     }
 
     private function applyDateRange(Request $request, Builder $query): void

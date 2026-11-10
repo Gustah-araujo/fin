@@ -1,0 +1,95 @@
+describe('Fin AI Assistant', () => {
+    let workspaceUuid;
+
+    before(() => {
+        cy.loginViaSession('fin-assistant-session');
+
+        cy.visit('/workspace/create');
+        cy.get('#name').type('E2E Fin');
+        cy.get('button[type="submit"]').click();
+
+        cy.url().should('match', /\/w\/([a-f0-9-]+)/);
+        cy.url().then((url) => {
+            workspaceUuid = url.match(/\/w\/([a-f0-9-]+)/)[1];
+        });
+    });
+
+    beforeEach(() => {
+        cy.loginViaSession('fin-assistant-session');
+
+        cy.visit(`/w/${workspaceUuid}/fin`);
+    });
+
+    // 1. Smoke test: page renders without crashing
+    it('renders the Fin assistant page without crashing', () => {
+        cy.get('[data-testid="sidebar-fin"]').should('be.visible');
+        cy.contains('Assistente Fin').should('be.visible');
+        cy.contains('Selecione uma conversa ou crie uma nova.').should('be.visible');
+    });
+
+    // 2. Navigation: create a new conversation
+    it('creates a new conversation', () => {
+        cy.get('[data-testid="fin-new-conversation"]').click();
+        cy.get('[data-testid="fin-conversation-item"]').should('have.length.at.least', 1);
+        cy.get('[data-testid="fin-input"]').should('be.visible');
+    });
+
+    // 3. Full flow: seeded conversation renders user + assistant messages
+    it('renders a completed conversation with messages', () => {
+        cy.finResponse(workspaceUuid, {
+            message: 'Qual é o meu saldo?',
+            response: 'Seu saldo atual é de R$ 5.000,00.',
+            title: 'Saldo',
+        });
+
+        cy.visit(`/w/${workspaceUuid}/fin`);
+
+        cy.contains('[data-testid="fin-conversation-item"]', 'Saldo').click();
+        cy.contains('Qual é o meu saldo?').should('be.visible');
+        cy.contains('Seu saldo atual é de R$ 5.000,00.').should('be.visible');
+    });
+
+    // 4. Input blocking + polling completion
+    it('blocks the input while processing and re-enables after completion', () => {
+        cy.intercept('POST', '**/fin/conversations/*/messages').as('sendMessage');
+
+        cy.get('[data-testid="fin-new-conversation"]').click();
+        cy.get('[data-testid="fin-input"]').type('Quanto gastei em alimentação?');
+        cy.get('[data-testid="fin-send"]').click();
+
+        cy.wait('@sendMessage');
+        cy.get('[data-testid="fin-input"]').should('be.disabled');
+        cy.get('[data-testid="fin-typing"]').should('be.visible');
+
+        cy.finResponse(workspaceUuid, {
+            response: 'Você gastou R$ 150,00 em alimentação.',
+        });
+
+        cy.contains('Você gastou R$ 150,00 em alimentação.', { timeout: 10000 }).should('be.visible');
+        cy.get('[data-testid="fin-input"]').should('not.be.disabled');
+    });
+
+    // 5. Error toast on failed run
+    it('shows an error toast when the assistant run fails', () => {
+        cy.intercept('POST', '**/fin/conversations/*/messages').as('sendMessage');
+
+        cy.get('[data-testid="fin-new-conversation"]').click();
+        cy.get('[data-testid="fin-input"]').type('Teste de falha');
+        cy.get('[data-testid="fin-send"]').click();
+
+        cy.wait('@sendMessage');
+
+        cy.finResponse(workspaceUuid, { fail: true });
+
+        cy.assertToast('error', 'não conseguiu responder');
+    });
+
+    // 6. Delete conversation + toast
+    it('deletes a conversation and shows a success toast', () => {
+        cy.get('[data-testid="fin-new-conversation"]').click();
+        cy.get('[data-testid="fin-delete"]').click();
+        cy.get('[data-testid="fin-delete-confirm"]').click();
+
+        cy.assertToast('success', 'excluída');
+    });
+});
