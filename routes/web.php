@@ -15,6 +15,10 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CreditCardBillController;
 use App\Http\Controllers\CreditCardController;
 use App\Http\Controllers\DatatableStateController;
+use App\Http\Controllers\FinController;
+use App\Http\Controllers\FinConversationController;
+use App\Http\Controllers\FinMessageController;
+use App\Http\Controllers\FinRunController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\IncomeController;
 use App\Http\Controllers\InviteController;
@@ -147,6 +151,19 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
 
         Route::get('planning', [PlanningController::class, 'index'])->name('planning.index');
         Route::get('planning/month-detail', [PlanningController::class, 'monthDetail'])->name('planning.month-detail');
+
+        // Fin AI assistant
+        Route::get('fin', [FinController::class, 'index'])->name('fin.index');
+
+        Route::prefix('fin')->name('fin.')->group(function () {
+            Route::get('conversations', [FinConversationController::class, 'index'])->name('conversations.index');
+            Route::post('conversations', [FinConversationController::class, 'store'])->name('conversations.store');
+            Route::get('conversations/{conversation}', [FinConversationController::class, 'show'])->name('conversations.show');
+            Route::put('conversations/{conversation}', [FinConversationController::class, 'update'])->name('conversations.update');
+            Route::delete('conversations/{conversation}', [FinConversationController::class, 'destroy'])->name('conversations.destroy');
+            Route::post('conversations/{conversation}/messages', [FinMessageController::class, 'store'])->name('conversations.messages.store');
+            Route::get('runs/{run}', [FinRunController::class, 'show'])->name('runs.show');
+        });
 
         Route::resource('cards', CreditCardController::class);
 
