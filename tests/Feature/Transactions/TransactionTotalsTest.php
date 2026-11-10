@@ -74,18 +74,31 @@ class TransactionTotalsTest extends TestCase
             ->where('totals.total', fn ($value) => (float) $value === 50.0));
     }
 
-    public function test_totals_without_month_param_include_all(): void
+    public function test_totals_without_month_param_defaults_to_current_month(): void
     {
         [$user, $workspace, $account, $category] = $this->setupWorkspace();
 
-        $this->createExpense($workspace, $account, $category, $user, 100, '2026-08-10');
-        $this->createExpense($workspace, $account, $category, $user, 50, '2026-09-10');
-        $this->createExpense($workspace, $account, $category, $user, 25, '2026-10-10');
+        $this->createExpense($workspace, $account, $category, $user, 100, now()->format('Y-m-d'));
+        $this->createExpense($workspace, $account, $category, $user, 50, now()->subMonth()->format('Y-m-d'));
 
         $response = $this->actingAs($user)->get(route('transactions.index', $workspace));
 
         $response->assertInertia(fn (Assert $page) => $page
-            ->where('totals.total', fn ($value) => (float) $value === 175.0));
+            ->where('totals.total', fn ($value) => (float) $value === 100.0));
+    }
+
+    public function test_totals_with_invalid_month_param_defaults_to_current_month(): void
+    {
+        [$user, $workspace, $account, $category] = $this->setupWorkspace();
+
+        $this->createExpense($workspace, $account, $category, $user, 100, now()->format('Y-m-d'));
+        $this->createExpense($workspace, $account, $category, $user, 50, now()->subMonth()->format('Y-m-d'));
+
+        $response = $this->actingAs($user)
+            ->get(route('transactions.index', $workspace).'?month=invalid');
+
+        $response->assertInertia(fn (Assert $page) => $page
+            ->where('totals.total', fn ($value) => (float) $value === 100.0));
     }
 
     public function test_totals_exclude_income(): void
