@@ -1,3 +1,20 @@
+function importCsv() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const d = (day) => `${year}-${month}-${String(day).padStart(2, '0')}`;
+
+    const contents = [
+        'description,value,date,category,type',
+        `Supermercado XYZ,150.00,${d(1)},Alimentação,debit`,
+        `Farmácia ABC,45.90,${d(2)},Saúde,debit`,
+        `Uber Viagem,23.50,${d(3)},Transporte,debit`,
+        `Salário Empresa,5000.00,${d(5)},Trabalho,credit`,
+    ].join('\n');
+
+    return { contents, fileName: 'import.csv', mimeType: 'text/csv' };
+}
+
 describe('Unified CSV Import', () => {
     let workspaceUuid;
 
@@ -28,7 +45,7 @@ describe('Unified CSV Import', () => {
 
         cy.url().should('include', '/import');
 
-        cy.get('#file').selectFile('cypress/fixtures/import.csv', {
+        cy.get('#file').selectFile(importCsv(), {
             force: true,
         });
         cy.contains('button', 'Importar').click({ force: true });
@@ -76,7 +93,7 @@ describe('Unified CSV Import', () => {
     it('creates transactions in the database after confirm', () => {
         cy.get('[data-testid="sidebar-imports"]').click();
 
-        cy.get('#file').selectFile('cypress/fixtures/import.csv', {
+        cy.get('#file').selectFile(importCsv(), {
             force: true,
         });
         cy.contains('button', 'Importar').click({ force: true });
@@ -99,7 +116,7 @@ describe('Unified CSV Import', () => {
     it('shows both Despesa and Receita badges for mixed types', () => {
         cy.get('[data-testid="sidebar-imports"]').click();
 
-        cy.get('#file').selectFile('cypress/fixtures/import.csv', {
+        cy.get('#file').selectFile(importCsv(), {
             force: true,
         });
         cy.contains('button', 'Importar').click({ force: true });
@@ -117,7 +134,7 @@ describe('Unified CSV Import', () => {
     it('allows editing a field in the preview table before confirming', () => {
         cy.get('[data-testid="sidebar-imports"]').click();
 
-        cy.get('#file').selectFile('cypress/fixtures/import.csv', {
+        cy.get('#file').selectFile(importCsv(), {
             force: true,
         });
         cy.contains('button', 'Importar').click({ force: true });
@@ -144,7 +161,7 @@ describe('Unified CSV Import', () => {
     it('unchecking a row excludes it from import', () => {
         cy.get('[data-testid="sidebar-imports"]').click();
 
-        cy.get('#file').selectFile('cypress/fixtures/import.csv', {
+        cy.get('#file').selectFile(importCsv(), {
             force: true,
         });
         cy.contains('button', 'Importar').click({ force: true });
@@ -169,7 +186,7 @@ describe('Unified CSV Import', () => {
     it('cancel does not create any transactions', () => {
         cy.get('[data-testid="sidebar-imports"]').click();
 
-        cy.get('#file').selectFile('cypress/fixtures/import.csv', {
+        cy.get('#file').selectFile(importCsv(), {
             force: true,
         });
         cy.contains('button', 'Importar').click({ force: true });
@@ -212,7 +229,7 @@ describe('Unified CSV Import', () => {
         // First import
         cy.get('[data-testid="sidebar-imports"]').click();
 
-        cy.get('#file').selectFile('cypress/fixtures/import.csv', {
+        cy.get('#file').selectFile(importCsv(), {
             force: true,
         });
         cy.contains('button', 'Importar').click({ force: true });
@@ -232,7 +249,7 @@ describe('Unified CSV Import', () => {
         // Second import of same file
         cy.get('[data-testid="sidebar-imports"]').click();
 
-        cy.get('#file').selectFile('cypress/fixtures/import.csv', {
+        cy.get('#file').selectFile(importCsv(), {
             force: true,
         });
         cy.contains('button', 'Importar').click({ force: true });

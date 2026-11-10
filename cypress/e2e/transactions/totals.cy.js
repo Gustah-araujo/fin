@@ -45,6 +45,9 @@ describe('Transaction Totals', () => {
 
         cy.contains('Criar Despesa').click({ force: true });
         cy.assertToast('success', 'criada');
+        cy.window().then((win) => {
+            win.__toastBuffer = [];
+        });
 
         cy.url().should('include', '/transactions');
     }
