@@ -79,6 +79,24 @@ class TransactionService
         return $transaction;
     }
 
+    public function monthlyTotals(Workspace $workspace, ?string $month): array
+    {
+        $query = $workspace->transactions()
+            ->where('type', TransactionType::Expense);
+
+        if ($month !== null && preg_match('/^\d{4}-\d{2}$/', $month)) {
+            [$year, $monthNum] = explode('-', $month);
+            $query->whereYear('date', (int) $year)
+                ->whereMonth('date', (int) $monthNum);
+        }
+
+        return [
+            'total' => round((float) (clone $query)->sum('value'), 2),
+            'paid' => round((float) (clone $query)->whereNotNull('paid_at')->sum('value'), 2),
+            'pending' => round((float) (clone $query)->whereNull('paid_at')->sum('value'), 2),
+        ];
+    }
+
     public function update(Transaction $transaction, array $data): Transaction
     {
         $fieldsToUpdate = ['description', 'value', 'date', 'account_id', 'category_id'];

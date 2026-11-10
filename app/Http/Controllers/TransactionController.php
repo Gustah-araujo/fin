@@ -35,7 +35,7 @@ class TransactionController extends Controller
 {
     use PersistsTableState;
 
-    public function index(Workspace $workspace): Response
+    public function index(Workspace $workspace, Request $request, TransactionService $transactionService): Response
     {
         $this->authorize('viewAny', [Transaction::class, $workspace]);
 
@@ -50,6 +50,7 @@ class TransactionController extends Controller
             'tags' => TagResource::collection($workspace->tags()->orderBy('name')->get()),
             'bills' => CreditCardBillResource::collection($workspace->creditCardBills()->with('creditCard')->get()),
             'initialState' => $state,
+            'totals' => $transactionService->monthlyTotals($workspace, $request->query('month')),
         ]);
     }
 
