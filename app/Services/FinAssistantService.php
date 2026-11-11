@@ -11,8 +11,10 @@ use App\Jobs\TitleConversationJob;
 use App\Models\FinAssistantRun;
 use App\Models\User;
 use App\Models\Workspace;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 use Laravel\Ai\Enums\MessageStatus;
+use Laravel\Ai\Files\File;
 use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Messages\MessageRole;
 use Laravel\Ai\Models\Conversation;
@@ -20,6 +22,13 @@ use Laravel\Ai\Models\ConversationMessage;
 
 class FinAssistantService
 {
+    /**
+     * Prompt used when the user message has attachments but no text content.
+     */
+    private const EMPTY_CONTENT_FALLBACK_PROMPT = 'Analise o(s) arquivo(s) em anexo.';
+
+    public function __construct(private readonly FinAttachmentService $attachments) {}
+
     /**
      * Create a new conversation for the given workspace.
      */
@@ -36,12 +45,22 @@ class FinAssistantService
 
     /**
      * Persist the user message, create a pending run, and dispatch the required jobs.
+     *
+     * @param  array<int, UploadedFile>  $attachments
      */
-    public function sendMessage(Workspace $workspace, User $user, Conversation $conversation, string $content): FinAssistantRun
+    public function sendMessage(Workspace $workspace, User $user, Conversation $conversation, ?string $content = null, array $attachments = []): FinAssistantRun
     {
+        $storedAttachments = [];
+
+        foreach ($attachments as $file) {
+            $storedAttachments[] = $this->attachments->serialize(
+                $this->attachments->store($workspace, $file),
+            );
+        }
+
         $isFirstMessage = $conversation->messages()->where('role', 'user')->count() === 0;
 
-        $this->persistUserMessage($conversation, $workspace, $content);
+        $this->persistUserMessage($conversation, $workspace, $content ?? '', $storedAttachments);
 
         $run = FinAssistantRun::create([
             'uuid' => Str::orderedUuid()->toString(),
@@ -85,9 +104,18 @@ class FinAssistantService
                 }
             }
 
+            $attachmentFiles = $this->hydrateAttachments($conversation);
+
+            if ($attachmentFiles !== [] && trim($promptContent) === '') {
+                $promptContent = self::EMPTY_CONTENT_FALLBACK_PROMPT;
+            }
+
             $user = User::findOrFail($run->user_id);
             $agent = new FinancialAssistantAgent($workspace, $conversation->id, $user);
-            $response = $agent->withMessages($historyMessages)->prompt($promptContent);
+
+            $response = $attachmentFiles === []
+                ? $agent->withMessages($historyMessages)->prompt($promptContent)
+                : $agent->withMessages($historyMessages)->prompt($promptContent, attachments: $attachmentFiles);
 
             $assistantMessage = $this->persistAssistantMessage($conversation, $workspace, $response->text);
 
@@ -127,10 +155,12 @@ class FinAssistantService
 
     /**
      * Persist a user message in the conversation.
+     *
+     * @param  array<int, array{type: string, name: string|null, path: string, disk: string}>  $attachments
      */
-    public function persistUserMessage(Conversation $conversation, Workspace $workspace, string $content): ConversationMessage
+    public function persistUserMessage(Conversation $conversation, Workspace $workspace, string $content, array $attachments = []): ConversationMessage
     {
-        return $this->persistMessage($conversation, $workspace, 'user', $content);
+        return $this->persistMessage($conversation, $workspace, 'user', $content, $attachments);
     }
 
     /**
@@ -143,8 +173,10 @@ class FinAssistantService
 
     /**
      * Persist a message row in the conversation.
+     *
+     * @param  array<int, array{type: string, name: string|null, path: string, disk: string}>  $attachments
      */
-    private function persistMessage(Conversation $conversation, Workspace $workspace, string $role, string $content): ConversationMessage
+    private function persistMessage(Conversation $conversation, Workspace $workspace, string $role, string $content, array $attachments = []): ConversationMessage
     {
         return ConversationMessage::create([
             'id' => Str::orderedUuid()->toString(),
@@ -154,11 +186,34 @@ class FinAssistantService
             'agent' => FinancialAssistantAgent::class,
             'role' => $role,
             'content' => $content,
-            'attachments' => [],
+            'attachments' => $attachments,
             'steps' => [],
             'usage' => [],
             'meta' => [],
             'status' => MessageStatus::Completed,
         ]);
+    }
+
+    /**
+     * Rebuild the SDK files attached to the last user message of the conversation.
+     *
+     * @return list<File>
+     */
+    private function hydrateAttachments(Conversation $conversation): array
+    {
+        $lastUserMessage = $conversation->messages()
+            ->where('role', MessageRole::User->value)
+            ->orderByDesc('id')
+            ->first();
+
+        $files = [];
+
+        foreach ($lastUserMessage?->attachments ?? [] as $metadata) {
+            if (($file = $this->attachments->hydrate((array) $metadata)) !== null) {
+                $files[] = $file;
+            }
+        }
+
+        return $files;
     }
 }

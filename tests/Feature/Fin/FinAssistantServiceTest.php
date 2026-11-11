@@ -13,9 +13,16 @@ use App\Models\FinAssistantRun;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\FinAssistantService;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Laravel\Ai\Files\StoredDocument;
+use Laravel\Ai\Files\StoredImage;
+use Laravel\Ai\Messages\MessageRole;
 use Laravel\Ai\Models\Conversation;
+use Laravel\Ai\Models\ConversationMessage;
 use Tests\TestCase;
 
 class FinAssistantServiceTest extends TestCase
@@ -168,5 +175,148 @@ class FinAssistantServiceTest extends TestCase
         $this->assertSame('Mensagem 6', $history[0]->content);
         $this->assertSame('Mensagem 7', $history[1]->content);
         $this->assertSame('Mensagem 8', $history[2]->content);
+    }
+
+    public function test_send_message_with_file_persists_attachment_metadata_and_stores_file(): void
+    {
+        Queue::fake();
+        Storage::fake('local');
+
+        $conversation = $this->service->createConversation($this->workspace, $this->user, 'Orçamento mensal');
+        $file = UploadedFile::fake()->create('extrato.pdf', 100);
+
+        $this->service->sendMessage($this->workspace, $this->user, $conversation, 'Analise o extrato', [$file]);
+
+        $message = ConversationMessage::where('conversation_id', $conversation->id)
+            ->where('role', MessageRole::User->value)
+            ->firstOrFail();
+
+        $this->assertCount(1, $message->attachments);
+
+        $metadata = $message->attachments[0];
+
+        $this->assertSame('stored-document', $metadata['type']);
+        $this->assertSame('extrato.pdf', $metadata['name']);
+        $this->assertSame('local', $metadata['disk']);
+        $this->assertStringContainsString("fin/{$this->workspace->uuid}/", $metadata['path']);
+
+        Storage::disk('local')->assertExists($metadata['path']);
+    }
+
+    public function test_send_message_with_image_persists_stored_image_metadata(): void
+    {
+        Queue::fake();
+        Storage::fake('local');
+
+        $conversation = $this->service->createConversation($this->workspace, $this->user, 'Orçamento mensal');
+        $file = UploadedFile::fake()->image('nota.png');
+
+        $this->service->sendMessage($this->workspace, $this->user, $conversation, null, [$file]);
+
+        $message = ConversationMessage::where('conversation_id', $conversation->id)
+            ->where('role', MessageRole::User->value)
+            ->firstOrFail();
+
+        $this->assertSame('stored-image', $message->attachments[0]['type']);
+        $this->assertSame('nota.png', $message->attachments[0]['name']);
+        $this->assertSame('', $message->content);
+    }
+
+    public function test_send_message_without_files_persists_empty_attachments(): void
+    {
+        Queue::fake();
+
+        $conversation = $this->service->createConversation($this->workspace, $this->user, 'Orçamento mensal');
+
+        $this->service->sendMessage($this->workspace, $this->user, $conversation, 'Qual o meu saldo?');
+
+        $message = ConversationMessage::where('conversation_id', $conversation->id)
+            ->where('role', MessageRole::User->value)
+            ->firstOrFail();
+
+        $this->assertSame([], $message->attachments);
+    }
+
+    public function test_run_passes_hydrated_attachments_to_agent(): void
+    {
+        Queue::fake();
+        Storage::fake('local');
+
+        $conversation = $this->service->createConversation($this->workspace, $this->user, 'Orçamento mensal');
+
+        $pdf = UploadedFile::fake()->create('extrato.pdf', 100);
+        $image = UploadedFile::fake()->image('nota.png');
+
+        $run = $this->service->sendMessage($this->workspace, $this->user, $conversation, 'Analise os anexos', [$pdf, $image]);
+
+        $captured = null;
+
+        FinancialAssistantAgent::fake(function (string $prompt, Collection $attachments) use (&$captured) {
+            $captured = ['prompt' => $prompt, 'attachments' => $attachments->all()];
+
+            return 'Resposta falsa.';
+        });
+
+        $this->service->run($run);
+
+        $captured = $captured ?? ['prompt' => '', 'attachments' => []];
+
+        $this->assertSame('Analise os anexos', $captured['prompt']);
+        $this->assertCount(2, $captured['attachments']);
+        $this->assertInstanceOf(StoredDocument::class, $captured['attachments'][0]);
+        $this->assertSame('extrato.pdf', $captured['attachments'][0]->name());
+        $this->assertInstanceOf(StoredImage::class, $captured['attachments'][1]);
+        $this->assertSame('nota.png', $captured['attachments'][1]->name());
+    }
+
+    public function test_run_uses_fallback_prompt_when_content_is_empty_with_attachments(): void
+    {
+        Queue::fake();
+        Storage::fake('local');
+
+        $conversation = $this->service->createConversation($this->workspace, $this->user, 'Orçamento mensal');
+
+        $pdf = UploadedFile::fake()->create('extrato.pdf', 100);
+
+        $run = $this->service->sendMessage($this->workspace, $this->user, $conversation, '', [$pdf]);
+
+        $captured = null;
+
+        FinancialAssistantAgent::fake(function (string $prompt, Collection $attachments) use (&$captured) {
+            $captured = ['prompt' => $prompt, 'attachments' => $attachments->all()];
+
+            return 'Resposta falsa.';
+        });
+
+        $this->service->run($run);
+
+        $captured = $captured ?? ['prompt' => '', 'attachments' => []];
+
+        $this->assertSame('Analise o(s) arquivo(s) em anexo.', $captured['prompt']);
+        $this->assertCount(1, $captured['attachments']);
+        $this->assertSame('extrato.pdf', $captured['attachments'][0]->name());
+    }
+
+    public function test_run_without_attachments_prompts_original_content_with_no_attachments(): void
+    {
+        $conversation = $this->service->createConversation($this->workspace, $this->user, 'Orçamento mensal');
+        $this->service->persistUserMessage($conversation, $this->workspace, 'Qual o meu saldo?');
+
+        $run = $this->createRun($conversation);
+
+        $captured = null;
+
+        FinancialAssistantAgent::fake(function (string $prompt, Collection $attachments) use (&$captured) {
+            $captured = ['prompt' => $prompt, 'attachments' => $attachments->all()];
+
+            return 'Resposta falsa.';
+        });
+
+        $this->service->run($run);
+
+        $captured = $captured ?? ['prompt' => '', 'attachments' => []];
+
+        $this->assertSame('Qual o meu saldo?', $captured['prompt']);
+        $this->assertSame([], $captured['attachments']);
     }
 }
