@@ -13,7 +13,7 @@ interface Props {
     messages: FinMessage[];
     isProcessing: boolean;
     loadingMessages?: boolean;
-    onSend: (content: string) => void;
+    onSend: (content: string, files: File[]) => void;
     onRename: (title: string) => void;
     onDelete: () => void;
     className?: string;

@@ -136,4 +136,104 @@ describe('Fin AI Assistant', () => {
 
         cy.assertToast('success', 'excluída');
     });
+
+    // 7. File upload: stage via hidden input, send with text, chip cleared
+    it('stages a file, sends it with a message and clears the staging area', () => {
+        // Intercept the polling GET instead of the multipart POST: cy.intercept
+        // re-serializes request bodies as UTF-8 text, which corrupts binary
+        // upload payloads. The first poll only happens after the POST has
+        // been accepted, so waiting for it proves the POST completed.
+        cy.intercept('GET', '**/fin/runs/*').as('pollRun');
+
+        cy.get('[data-testid="fin-new-conversation"]').click();
+        cy.get('[data-testid="fin-input"]').should('be.visible');
+
+        cy.get('[data-testid="fin-attachment-input"]')
+            .selectFile('cypress/fixtures/sample.pdf', { force: true });
+
+        cy.get('[data-testid="fin-attachment-chip"]')
+            .should('be.visible')
+            .and('contain', 'sample.pdf');
+
+        cy.get('[data-testid="fin-input"]').type('Analise o anexo.');
+        cy.get('[data-testid="fin-send"]').click();
+
+        cy.wait('@pollRun');
+        cy.get('[data-testid="fin-attachment-chip"]').should('not.exist');
+
+        cy.finResponse(workspaceUuid, { response: 'Analisei o arquivo em anexo.' });
+
+        cy.contains('Analisei o arquivo em anexo.', { timeout: 10000 }).should('be.visible');
+        cy.get('[data-testid="fin-message-attachments"]')
+            .should('be.visible')
+            .and('contain', 'sample.pdf');
+    });
+
+    // 8. File upload: send with only a staged file (no text)
+    it('sends a message with only a staged file and no text', () => {
+        cy.intercept('GET', '**/fin/runs/*').as('pollRun');
+
+        cy.get('[data-testid="fin-new-conversation"]').click();
+
+        // Binary fixtures must be passed as a Buffer: selectFile reads path
+        // strings as UTF-8 text, which corrupts non-ASCII bytes.
+        cy.fixture('sample.png', 'base64').then((base64) => {
+            cy.get('[data-testid="fin-attachment-input"]').selectFile(
+                {
+                    contents: Cypress.Buffer.from(base64, 'base64'),
+                    fileName: 'sample.png',
+                    mimeType: 'image/png',
+                },
+                { force: true },
+            );
+        });
+
+        cy.get('[data-testid="fin-attachment-chip"]')
+            .should('be.visible')
+            .and('contain', 'sample.png');
+
+        cy.get('[data-testid="fin-send"]').click();
+
+        cy.wait('@pollRun');
+        cy.get('[data-testid="fin-attachment-chip"]').should('not.exist');
+
+        cy.finResponse(workspaceUuid, { response: 'Arquivo recebido com sucesso.' });
+
+        cy.contains('Arquivo recebido com sucesso.', { timeout: 10000 }).should('be.visible');
+        cy.get('[data-testid="fin-message-attachments"]')
+            .should('be.visible')
+            .and('contain', 'sample.png');
+    });
+
+    // 9. File upload: non-permitted extension is rejected with an error toast
+    it('rejects a file with a non-permitted extension and shows an error toast', () => {
+        cy.get('[data-testid="fin-new-conversation"]').click();
+
+        cy.get('[data-testid="fin-attachment-input"]')
+            .selectFile('cypress/fixtures/blocked.exe', { force: true });
+
+        cy.get('[data-testid="fin-attachment-chip"]').should('not.exist');
+        cy.get('[data-testid="fin-send"]').should('be.disabled');
+
+        cy.get('[data-sonner-toast]')
+            .should('be.visible')
+            .and('contain', 'Tipo de arquivo não permitido.');
+    });
+
+    // 10. File upload: staged file can be removed before sending
+    it('removes a staged attachment via the chip remove button', () => {
+        cy.get('[data-testid="fin-new-conversation"]').click();
+
+        cy.get('[data-testid="fin-attachment-input"]')
+            .selectFile('cypress/fixtures/sample.pdf', { force: true });
+
+        cy.get('[data-testid="fin-attachment-chip"]')
+            .should('be.visible')
+            .and('contain', 'sample.pdf');
+
+        cy.get('button[aria-label="Remover anexo sample.pdf"]').click();
+
+        cy.get('[data-testid="fin-attachment-chip"]').should('not.exist');
+        cy.get('[data-testid="fin-send"]').should('be.disabled');
+    });
 });

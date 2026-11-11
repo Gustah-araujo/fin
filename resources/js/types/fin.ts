@@ -1,10 +1,18 @@
 export type FinMessageRole = 'user' | 'assistant';
 export type FinRunStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
+export type FinAttachmentKind = 'image' | 'document';
+
+export interface FinAttachment {
+    name: string;
+    kind: FinAttachmentKind;
+}
+
 export interface FinMessage {
     id: string;
     role: FinMessageRole;
     content: string;
+    attachments?: FinAttachment[];
     created_at: string;
 }
 
