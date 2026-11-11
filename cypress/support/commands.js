@@ -98,6 +98,21 @@ Cypress.Commands.add('waitForVerificationLink', (email, timeoutMs = 30000) => {
     return attempt();
 });
 
+/**
+ * Open a Radix combobox (Popover + cmdk Select primitive), click an option,
+ * and wait for the popover to fully close.
+ *
+ * Radix keeps [data-radix-popper-content-wrapper] in the DOM until the close
+ * animation finishes, then restores focus to the trigger. Waiting for it to
+ * unmount guarantees the focus-return already happened, so a following
+ * .type() cannot have its keystrokes stolen by the popover.
+ */
+Cypress.Commands.add('selectCombobox', (triggerSelector, optionText) => {
+    cy.get(triggerSelector).click();
+    cy.contains('[role="option"]', optionText).click();
+    cy.get('[data-radix-popper-content-wrapper]').should('not.exist');
+});
+
 Cypress.Commands.add('loginViaSession', (sessionId) => {
     cy.session(
         sessionId,

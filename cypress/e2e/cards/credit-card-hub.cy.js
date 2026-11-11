@@ -16,8 +16,7 @@ describe('Credit Card Hub', () => {
             cy.get('[data-testid="sidebar-accounts"]').click();
             cy.contains('Nova Conta').click();
             cy.get('#name').type('Conta Principal');
-            cy.get('#type').click();
-            cy.contains('Corrente').click();
+            cy.selectCombobox('#type', 'Corrente');
             cy.get('#initial_balance').type('10000');
             cy.contains('Criar Conta').click({ force: true });
             cy.assertToast('success', 'criada');
@@ -89,8 +88,7 @@ describe('Credit Card Hub', () => {
         cy.get('#description').type('Compra Online');
         cy.get('#value').type('500');
 
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
+        cy.selectCombobox('#category_id', 'Sem Categoria');
 
         cy.contains('Criar Despesa').click({ force: true });
         cy.assertToast('success', 'criada');
@@ -120,8 +118,7 @@ describe('Credit Card Hub', () => {
         cy.contains('button', 'Cartão de crédito').click();
 
         // Select the card
-        cy.get('#credit_card_id').click();
-        cy.contains('[role="option"]', 'Nubank Installments').click();
+        cy.selectCombobox('#credit_card_id', 'Nubank Installments');
 
         // Set installments to 12
         cy.get('#installments').type('{selectall}12');
@@ -134,8 +131,7 @@ describe('Credit Card Hub', () => {
         cy.get('#description').type('Notebook Dell');
 
         // Select category
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
+        cy.selectCombobox('#category_id', 'Sem Categoria');
 
         cy.contains('Criar Despesa').click({ force: true });
 
@@ -166,8 +162,7 @@ describe('Credit Card Hub', () => {
             cy.contains('a, button', 'Nova despesa neste cartão').click();
             cy.get('#description').type('Compra Teste Fatura');
             cy.get('#value').type('200');
-            cy.get('#category_id').click();
-            cy.contains('[role="option"]', 'Sem Categoria').click();
+            cy.selectCombobox('#category_id', 'Sem Categoria');
             cy.contains('Criar Despesa').click({ force: true });
             cy.assertToast('success', 'criada');
 
@@ -194,8 +189,10 @@ describe('Credit Card Hub', () => {
 
             // Dialog opens — select account
             cy.contains('Confirmar Pagamento').should('be.visible');
-            cy.get('[data-slot="select-trigger"]').click();
-            cy.contains('[role="option"]', 'Conta Principal').click();
+            cy.selectCombobox(
+                '[data-slot="select-trigger"]',
+                'Conta Principal',
+            );
             cy.contains('Confirmar Pagamento').click();
 
             // Bill status should change to paid
@@ -225,8 +222,7 @@ describe('Credit Card Hub', () => {
             cy.contains('a, button', 'Nova despesa neste cartão').click();
             cy.get('#description').type('Compra Undo Test');
             cy.get('#value').type('150');
-            cy.get('#category_id').click();
-            cy.contains('[role="option"]', 'Sem Categoria').click();
+            cy.selectCombobox('#category_id', 'Sem Categoria');
             cy.contains('Criar Despesa').click({ force: true });
             cy.assertToast('success', 'criada');
 
@@ -250,8 +246,10 @@ describe('Credit Card Hub', () => {
             // Pay the bill
             cy.contains('Marcar fatura como paga').click();
             cy.contains('Confirmar Pagamento').should('be.visible');
-            cy.get('[data-slot="select-trigger"]').click();
-            cy.contains('[role="option"]', 'Conta Principal').click();
+            cy.selectCombobox(
+                '[data-slot="select-trigger"]',
+                'Conta Principal',
+            );
             cy.contains('Confirmar Pagamento').click();
             cy.contains('Paga').should('be.visible');
 

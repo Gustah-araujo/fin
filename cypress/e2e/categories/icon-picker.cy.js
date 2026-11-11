@@ -53,8 +53,7 @@ describe('IconPicker', () => {
 
     it('creates a category with selected icon', () => {
         cy.get('#name').type('Compras Icon');
-        cy.get('#type').click();
-        cy.contains('[role="option"]', 'Despesa').click();
+        cy.selectCombobox('#type', 'Despesa');
 
         cy.get('[data-testid="icon-picker-trigger"]').click();
         cy.get('button[aria-label="Shopping Cart"]').click();
@@ -69,8 +68,7 @@ describe('IconPicker', () => {
 
     it('shows selected icon when editing a category', () => {
         cy.get('#name').type('Viajem Icon');
-        cy.get('#type').click();
-        cy.contains('[role="option"]', 'Despesa').click();
+        cy.selectCombobox('#type', 'Despesa');
 
         cy.get('[data-testid="icon-picker-trigger"]').click();
         cy.get('button[aria-label="Plane"]').click();

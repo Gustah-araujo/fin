@@ -81,8 +81,18 @@ class TransactionService
 
     public function monthlyTotals(Workspace $workspace, ?string $month): array
     {
+        return $this->monthlyTotalsFor($workspace, $month, TransactionType::Expense);
+    }
+
+    public function monthlyIncomeTotals(Workspace $workspace, ?string $month): array
+    {
+        return $this->monthlyTotalsFor($workspace, $month, TransactionType::Income);
+    }
+
+    private function monthlyTotalsFor(Workspace $workspace, ?string $month, TransactionType $type): array
+    {
         $query = $workspace->transactions()
-            ->where('type', TransactionType::Expense);
+            ->where('type', $type);
 
         $month = is_string($month) && preg_match('/^\d{4}-\d{2}$/', $month)
             ? $month

@@ -15,8 +15,7 @@ describe('Recurrence management', () => {
             cy.get('[data-testid="sidebar-accounts"]').click();
             cy.contains('Nova Conta').click();
             cy.get('#name').type('Conta Principal');
-            cy.get('#type').click();
-            cy.contains('Corrente').click();
+            cy.selectCombobox('#type', 'Corrente');
             cy.get('#initial_balance').type('5000');
             cy.contains('Criar Conta').click({ force: true });
             cy.assertToast('success', 'criada');
@@ -35,11 +34,9 @@ describe('Recurrence management', () => {
         cy.get('#description').type('Salário');
         cy.get('#value').type('3000');
 
-        cy.get('#account_id').click();
-        cy.contains('[role="option"]', 'Conta Principal').click();
+        cy.selectCombobox('#account_id', 'Conta Principal');
 
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
+        cy.selectCombobox('#category_id', 'Sem Categoria');
 
         cy.get('[data-slot="switch"]').click();
 

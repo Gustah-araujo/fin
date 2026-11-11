@@ -3,6 +3,8 @@ import { useCallback, useMemo, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Banknote, CheckCircle2, Circle } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
@@ -13,8 +15,10 @@ import {
 } from '@/components/ui/dialog';
 import DataTable from '@/Components/DataTable/DataTable';
 import type { ActiveFilter } from '@/Components/DataTable/ActiveFilters';
+import { MonthPicker } from '@/Components/MonthPicker';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { formatCurrency } from '@/lib/format-currency';
+import { getCurrentMonth } from '@/lib/month';
 import type { DataTableColumn, TableState } from '@/types/datatable';
 
 interface TagItem {
@@ -51,11 +55,18 @@ interface IncomeItem {
     tags: TagItem[];
 }
 
+interface Totals {
+    total: number;
+    paid: number;
+    pending: number;
+}
+
 interface Props {
     accounts: AccountItem[];
     categories: CategoryItem[];
     tags: TagItem[];
     initialState: TableState;
+    totals: Totals;
 }
 
 const STATUS_OPTIONS = [
@@ -76,12 +87,32 @@ function getTagStyle(color: string): string {
     return `background-color: ${color}20; color: ${color}; border-color: ${color}40`;
 }
 
-export default function Index({ accounts, categories, initialState }: Props) {
+export default function Index({
+    accounts,
+    categories,
+    initialState,
+    totals,
+}: Props) {
     const workspace = useWorkspace();
     const pageUrl = usePage().url;
+    const urlParams = new URLSearchParams(pageUrl.split('?')[1] ?? '');
+    const [month, setMonth] = useState(
+        () => urlParams.get('month') ?? getCurrentMonth(),
+    );
     const [reloadTrigger, setReloadTrigger] = useState(0);
     const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
     const clearState = useForm();
+
+    function handleMonthChange(newMonth: string) {
+        setMonth(newMonth);
+        router.visit(
+            route('incomes.index', {
+                workspace: workspace.uuid,
+                month: newMonth,
+            }),
+            { preserveState: true, preserveScroll: false, replace: true },
+        );
+    }
 
     function handleClearFilters(): void {
         clearState.delete(
@@ -160,10 +191,7 @@ export default function Index({ accounts, categories, initialState }: Props) {
         setReloadTrigger((n) => n + 1);
     }, []);
 
-    const recurrenceParam = useMemo(() => {
-        const search = pageUrl.includes('?') ? pageUrl.split('?')[1] : '';
-        return new URLSearchParams(search).get('recurrence') ?? undefined;
-    }, [pageUrl]);
+    const recurrenceParam = urlParams.get('recurrence') ?? undefined;
 
     const initialFilters = useMemo(
         () => (recurrenceParam ? { recurrence: recurrenceParam } : undefined),
@@ -372,26 +400,33 @@ export default function Index({ accounts, categories, initialState }: Props) {
         <AuthenticatedLayout>
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">
-                            Receitas
-                        </h1>
-                        {recurrenceParam ? (
-                            <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="secondary">
-                                    Mostrando instâncias de uma recorrência
-                                </Badge>
-                                <Button variant="ghost" size="sm" asChild>
-                                    <Link
-                                        href={route('incomes.index', {
-                                            workspace: workspace.uuid,
-                                        })}
-                                    >
-                                        Mostrar todas
-                                    </Link>
-                                </Button>
-                            </div>
-                        ) : null}
+                    <div className="flex items-center gap-4">
+                        <div>
+                            <h1 className="text-2xl font-semibold tracking-tight">
+                                Receitas
+                            </h1>
+                            {recurrenceParam ? (
+                                <div className="flex items-center gap-2 mt-1">
+                                    <Badge variant="secondary">
+                                        Mostrando instâncias de uma recorrência
+                                    </Badge>
+                                    <Button variant="ghost" size="sm" asChild>
+                                        <Link
+                                            href={route('incomes.index', {
+                                                workspace: workspace.uuid,
+                                                month,
+                                            })}
+                                        >
+                                            Mostrar todas
+                                        </Link>
+                                    </Button>
+                                </div>
+                            ) : null}
+                        </div>
+                        <MonthPicker
+                            month={month}
+                            onChange={handleMonthChange}
+                        />
                     </div>
                     <div className="flex items-center gap-2">
                         <Button asChild>
@@ -406,9 +441,64 @@ export default function Index({ accounts, categories, initialState }: Props) {
                     </div>
                 </div>
 
+                <div className="grid gap-4 sm:grid-cols-3">
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                                <Banknote className="h-4 w-4" />
+                                Total
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p
+                                className="text-2xl font-semibold"
+                                data-testid="total-incomes"
+                            >
+                                {formatCurrency(totals.total)}
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                Total recebido
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p
+                                className="text-2xl font-semibold text-emerald-600"
+                                data-testid="total-received"
+                            >
+                                {formatCurrency(totals.paid)}
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                                <Circle className="h-4 w-4 text-amber-600" />A
+                                receber
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p
+                                className="text-2xl font-semibold text-amber-600"
+                                data-testid="total-to-receive"
+                            >
+                                {formatCurrency(totals.pending)}
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
+
                 <DataTable
+                    key={month}
                     endpoint={route('incomes.datatable', {
                         workspace: workspace.uuid,
+                        month,
                     })}
                     columns={columns}
                     initialFilters={initialFilters}

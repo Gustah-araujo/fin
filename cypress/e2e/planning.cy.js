@@ -16,8 +16,7 @@ describe('Planning (Planejamento Futuro)', () => {
             cy.get('[data-testid="sidebar-accounts"]').click();
             cy.contains('Nova Conta').click();
             cy.get('#name').type('Conta Principal');
-            cy.get('#type').click();
-            cy.contains('Corrente').click();
+            cy.selectCombobox('#type', 'Corrente');
             cy.get('#initial_balance').type('5000');
             cy.contains('Criar Conta').click({ force: true });
             cy.assertToast('success', 'criada');
@@ -53,10 +52,8 @@ describe('Planning (Planejamento Futuro)', () => {
         cy.get('#description').type('Salário Mensal');
         cy.get('#value').type('5000');
 
-        cy.get('#account_id').click();
-        cy.contains('[role="option"]', 'Conta Principal').click();
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
+        cy.selectCombobox('#account_id', 'Conta Principal');
+        cy.selectCombobox('#category_id', 'Sem Categoria');
 
         // Make it recurring
         cy.get('[data-slot="switch"]').click();
@@ -70,10 +67,8 @@ describe('Planning (Planejamento Futuro)', () => {
         cy.get('#description').type('Aluguel');
         cy.get('#value').type('1500');
 
-        cy.get('#account_id').click();
-        cy.contains('[role="option"]', 'Conta Principal').click();
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
+        cy.selectCombobox('#account_id', 'Conta Principal');
+        cy.selectCombobox('#category_id', 'Sem Categoria');
         cy.contains('Criar Despesa').click({ force: true });
         cy.assertToast('success', 'criada');
         cy.url().should('include', '/transactions');
@@ -94,10 +89,8 @@ describe('Planning (Planejamento Futuro)', () => {
         cy.get('#description').type('Freelance');
         cy.get('#value').type('2000');
 
-        cy.get('#account_id').click();
-        cy.contains('[role="option"]', 'Conta Principal').click();
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
+        cy.selectCombobox('#account_id', 'Conta Principal');
+        cy.selectCombobox('#category_id', 'Sem Categoria');
         cy.get('[data-slot="switch"]').click();
         cy.contains('Criar Receita').click({ force: true });
         cy.assertToast('success', 'criada');
@@ -108,16 +101,14 @@ describe('Planning (Planejamento Futuro)', () => {
         cy.contains('Planejamento Futuro').should('be.visible');
 
         // Select "Próximos 3 meses"
-        cy.get('[data-slot="select-trigger"]').click();
-        cy.contains('[role="option"]', 'Próximos 3 meses').click();
+        cy.selectCombobox('[data-slot="select-trigger"]', 'Próximos 3 meses');
 
         // Table should render with rows
         cy.get('table').should('exist');
         cy.get('table tbody tr').should('have.length', 3);
 
         // Select "Próximo mês"
-        cy.get('[data-slot="select-trigger"]').click();
-        cy.contains('[role="option"]', 'Próximo mês').click();
+        cy.selectCombobox('[data-slot="select-trigger"]', 'Próximo mês');
         cy.get('table tbody tr').should('have.length', 1);
     });
 
@@ -128,10 +119,8 @@ describe('Planning (Planejamento Futuro)', () => {
         cy.get('#description').type('Consultoria');
         cy.get('#value').type('3000');
 
-        cy.get('#account_id').click();
-        cy.contains('[role="option"]', 'Conta Principal').click();
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
+        cy.selectCombobox('#account_id', 'Conta Principal');
+        cy.selectCombobox('#category_id', 'Sem Categoria');
         cy.get('[data-slot="switch"]').click();
         cy.contains('Criar Receita').click({ force: true });
         cy.assertToast('success', 'criada');
@@ -161,8 +150,7 @@ describe('Planning (Planejamento Futuro)', () => {
         cy.contains('Planejamento Futuro').should('be.visible');
 
         // Select "Personalizado"
-        cy.get('[data-slot="select-trigger"]').click();
-        cy.contains('[role="option"]', 'Personalizado').click();
+        cy.selectCombobox('[data-slot="select-trigger"]', 'Personalizado');
 
         // Date inputs should appear
         cy.get('input[type="date"]').should('have.length', 2);
@@ -197,10 +185,8 @@ describe('Planning (Planejamento Futuro)', () => {
         cy.get('#description').type('Renda Teste');
         cy.get('#value').type('4000');
 
-        cy.get('#account_id').click();
-        cy.contains('[role="option"]', 'Conta Principal').click();
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
+        cy.selectCombobox('#account_id', 'Conta Principal');
+        cy.selectCombobox('#category_id', 'Sem Categoria');
         cy.get('[data-slot="switch"]').click();
         cy.contains('Criar Receita').click({ force: true });
         cy.assertToast('success', 'criada');
@@ -212,10 +198,8 @@ describe('Planning (Planejamento Futuro)', () => {
         cy.get('#description').type('Gasto Teste');
         cy.get('#value').type('800');
 
-        cy.get('#account_id').click();
-        cy.contains('[role="option"]', 'Conta Principal').click();
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
+        cy.selectCombobox('#account_id', 'Conta Principal');
+        cy.selectCombobox('#category_id', 'Sem Categoria');
         cy.contains('Criar Despesa').click({ force: true });
         cy.assertToast('success', 'criada');
         cy.url().should('include', '/transactions');
@@ -247,10 +231,8 @@ describe('Planning (Planejamento Futuro)', () => {
         cy.get('#description').type('Renda Filter');
         cy.get('#value').type('3500');
 
-        cy.get('#account_id').click();
-        cy.contains('[role="option"]', 'Conta Principal').click();
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
+        cy.selectCombobox('#account_id', 'Conta Principal');
+        cy.selectCombobox('#category_id', 'Sem Categoria');
         cy.get('[data-slot="switch"]').click();
         cy.contains('Criar Receita').click({ force: true });
         cy.assertToast('success', 'criada');

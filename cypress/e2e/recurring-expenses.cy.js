@@ -15,8 +15,7 @@ describe('Recurring Expenses E2E', () => {
             cy.get('[data-testid="sidebar-accounts"]').click();
             cy.contains('Nova Conta').click();
             cy.get('#name').type('Conta Principal');
-            cy.get('#type').click();
-            cy.contains('Corrente').click();
+            cy.selectCombobox('#type', 'Corrente');
             cy.get('#initial_balance').type('5000');
             cy.contains('Criar Conta').click({ force: true });
             cy.assertToast('success', 'criada');
@@ -38,11 +37,9 @@ describe('Recurring Expenses E2E', () => {
         cy.get('#description').type('Netflix');
         cy.get('#value').type('39.90');
 
-        cy.get('#account_id').click();
-        cy.contains('[role="option"]', 'Conta Principal').click();
+        cy.selectCombobox('#account_id', 'Conta Principal');
 
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
+        cy.selectCombobox('#category_id', 'Sem Categoria');
 
         // Toggle recurrence ON
         cy.get('#is_recurring').click();
@@ -79,11 +76,9 @@ describe('Recurring Expenses E2E', () => {
         cy.get('#description').type('Freelance Recorrente');
         cy.get('#value').type('2000');
 
-        cy.get('#account_id').click();
-        cy.contains('[role="option"]', 'Conta Principal').click();
+        cy.selectCombobox('#account_id', 'Conta Principal');
 
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
+        cy.selectCombobox('#category_id', 'Sem Categoria');
 
         cy.get('[data-slot="switch"]').click();
         cy.contains('Criar Receita').click({ force: true });
@@ -119,11 +114,9 @@ describe('Recurring Expenses E2E', () => {
         cy.get('#description').type('Academia Mensal');
         cy.get('#value').type('120');
 
-        cy.get('#account_id').click();
-        cy.contains('[role="option"]', 'Conta Principal').click();
+        cy.selectCombobox('#account_id', 'Conta Principal');
 
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
+        cy.selectCombobox('#category_id', 'Sem Categoria');
 
         // Toggle recurrence ON
         cy.get('#is_recurring').click();

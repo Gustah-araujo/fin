@@ -31,8 +31,7 @@ describe('Account CRUD', () => {
         cy.url().should('include', '/accounts/create');
 
         cy.get('#name').type('Conta Teste');
-        cy.get('#type').click();
-        cy.contains('Corrente').click();
+        cy.selectCombobox('#type', 'Corrente');
         cy.get('#initial_balance').type('1000');
         cy.contains('Criar Conta').click();
         cy.assertToast('success', 'criada');
@@ -70,8 +69,7 @@ describe('Account CRUD', () => {
         cy.get('[data-testid="sidebar-accounts"]').click();
         cy.contains('Nova Conta').click();
         cy.get('#name').type('Para Excluir');
-        cy.get('#type').click();
-        cy.contains('Poupança').click();
+        cy.selectCombobox('#type', 'Poupança');
         cy.get('#initial_balance').type('200');
         cy.contains('Criar Conta').click();
         cy.assertToast('success', 'criada');
