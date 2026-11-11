@@ -16,8 +16,7 @@ describe('DataTable State Persistence', () => {
             cy.get('[data-testid="sidebar-accounts"]').click();
             cy.contains('Nova Conta').click();
             cy.get('#name').type('Conta Principal');
-            cy.get('#type').click();
-            cy.contains('Corrente').click();
+            cy.selectCombobox('#type', 'Corrente');
             cy.get('#initial_balance').type('5000');
             cy.contains('Criar Conta').click({ force: true });
             cy.assertToast('success', 'criada');

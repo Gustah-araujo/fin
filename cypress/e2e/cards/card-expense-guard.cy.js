@@ -16,8 +16,7 @@ describe('Card Expense Pay Guard', () => {
             cy.get('[data-testid="sidebar-accounts"]').click();
             cy.contains('Nova Conta').click();
             cy.get('#name').type('Conta Principal');
-            cy.get('#type').click();
-            cy.contains('Corrente').click();
+            cy.selectCombobox('#type', 'Corrente');
             cy.get('#initial_balance').type('10000');
             cy.contains('Criar Conta').click({ force: true });
             cy.assertToast('success', 'criada');
@@ -62,8 +61,7 @@ describe('Card Expense Pay Guard', () => {
         cy.contains('Nova despesa neste cartão').click();
         cy.get('#description').type('Compra Guard Test');
         cy.get('#value').type('250');
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
+        cy.selectCombobox('#category_id', 'Sem Categoria');
         cy.contains('Criar Despesa').click({ force: true });
         cy.assertToast('success', 'criada');
 
@@ -105,8 +103,7 @@ describe('Card Expense Pay Guard', () => {
         cy.contains('Nova despesa neste cartão').click();
         cy.get('#description').type('Compra Status Test');
         cy.get('#value').type('300');
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
+        cy.selectCombobox('#category_id', 'Sem Categoria');
         cy.contains('Criar Despesa').click({ force: true });
         cy.assertToast('success', 'criada');
 
@@ -137,8 +134,7 @@ describe('Card Expense Pay Guard', () => {
         cy.contains('Nova despesa neste cartão').click();
         cy.get('#description').type('Compra Filtro A');
         cy.get('#value').type('100');
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
+        cy.selectCombobox('#category_id', 'Sem Categoria');
         cy.contains('Criar Despesa').click({ force: true });
         cy.assertToast('success', 'criada');
 
@@ -156,8 +152,7 @@ describe('Card Expense Pay Guard', () => {
         cy.contains('Nova despesa neste cartão').click();
         cy.get('#description').type('Compra Filtro B');
         cy.get('#value').type('200');
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
+        cy.selectCombobox('#category_id', 'Sem Categoria');
         cy.contains('Criar Despesa').click({ force: true });
         cy.assertToast('success', 'criada');
 
@@ -200,8 +195,7 @@ describe('Card Expense Pay Guard', () => {
         cy.contains('Nova despesa neste cartão').click();
         cy.get('#description').type('Compra Filtro Fatura');
         cy.get('#value').type('350');
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
+        cy.selectCombobox('#category_id', 'Sem Categoria');
         cy.contains('Criar Despesa').click({ force: true });
         cy.assertToast('success', 'criada');
 

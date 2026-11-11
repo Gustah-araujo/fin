@@ -33,8 +33,7 @@ describe('Category CRUD', () => {
         cy.url().should('include', '/categories/create');
 
         cy.get('#name').type('Alimentação');
-        cy.get('#type').click();
-        cy.contains('[role="option"]', 'Despesa').click();
+        cy.selectCombobox('#type', 'Despesa');
         cy.contains('Criar Categoria').click({ force: true });
         cy.assertToast('success', 'criada');
 
@@ -70,8 +69,7 @@ describe('Category CRUD', () => {
         cy.get('[data-testid="sidebar-categories"]').click();
         cy.contains('Nova Categoria').click({ force: true });
         cy.get('#name').type('Para Excluir');
-        cy.get('#type').click();
-        cy.contains('[role="option"]', 'Despesa').click();
+        cy.selectCombobox('#type', 'Despesa');
         cy.contains('Criar Categoria').click({ force: true });
         cy.assertToast('success', 'criada');
 

@@ -16,8 +16,7 @@ describe('Card Recurrence', () => {
             cy.get('[data-testid="sidebar-accounts"]').click();
             cy.contains('Nova Conta').click();
             cy.get('#name').type('Conta Principal');
-            cy.get('#type').click();
-            cy.contains('Corrente').click();
+            cy.selectCombobox('#type', 'Corrente');
             cy.get('#initial_balance').type('10000');
             cy.contains('Criar Conta').click({ force: true });
             cy.assertToast('success', 'criada');
@@ -57,16 +56,14 @@ describe('Card Recurrence', () => {
         cy.contains('button', 'Cartão de crédito').click();
 
         // Select the card
-        cy.get('#credit_card_id').click();
-        cy.contains('[role="option"]', 'Nubank Recorrente').click();
+        cy.selectCombobox('#credit_card_id', 'Nubank Recorrente');
 
         // Fill description and value
         cy.get('#description').type('Streaming Mensal');
         cy.get('#value').type('59.90');
 
         // Select category
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
+        cy.selectCombobox('#category_id', 'Sem Categoria');
 
         // Enable recurrence
         cy.get('#is_recurring').click();
@@ -108,8 +105,7 @@ describe('Card Recurrence', () => {
         cy.contains('button', 'Cartão de crédito').click();
 
         // Select card
-        cy.get('#credit_card_id').click();
-        cy.contains('[role="option"]', 'Nubank Block Test').click();
+        cy.selectCombobox('#credit_card_id', 'Nubank Block Test');
 
         // Enable recurrence first — this should lock installments to 1
         cy.get('#is_recurring').click();
@@ -121,8 +117,7 @@ describe('Card Recurrence', () => {
         // Fill required fields and submit
         cy.get('#description').type('Recorrência com Parcela');
         cy.get('#value').type('300');
-        cy.get('#category_id').click();
-        cy.contains('[role="option"]', 'Sem Categoria').click();
+        cy.selectCombobox('#category_id', 'Sem Categoria');
 
         // Submit — should succeed because installments is locked to 1
         cy.contains('Criar Despesa').click({ force: true });
@@ -154,8 +149,7 @@ describe('Card Recurrence', () => {
             cy.contains('a, button', 'Nova despesa neste cartão').click();
             cy.get('#description').type('Despesa para Fatura');
             cy.get('#value').type('200');
-            cy.get('#category_id').click();
-            cy.contains('[role="option"]', 'Sem Categoria').click();
+            cy.selectCombobox('#category_id', 'Sem Categoria');
             cy.contains('Criar Despesa').click({ force: true });
             cy.assertToast('success', 'criada');
 
@@ -179,8 +173,10 @@ describe('Card Recurrence', () => {
             // Pay the bill via UI
             cy.contains('Marcar fatura como paga').click();
             cy.contains('Confirmar Pagamento').should('be.visible');
-            cy.get('[data-slot="select-trigger"]').click();
-            cy.contains('[role="option"]', 'Conta Principal').click();
+            cy.selectCombobox(
+                '[data-slot="select-trigger"]',
+                'Conta Principal',
+            );
             cy.contains('Confirmar Pagamento').click();
             cy.contains('Paga').should('be.visible');
 
@@ -202,16 +198,14 @@ describe('Card Recurrence', () => {
             cy.contains('button', 'Cartão de crédito').click();
 
             // Select card
-            cy.get('#credit_card_id').click();
-            cy.contains('[role="option"]', 'Nubank PaidBill').click();
+            cy.selectCombobox('#credit_card_id', 'Nubank PaidBill');
 
             // Fill description and value
             cy.get('#description').type('Recorrência Colisão');
             cy.get('#value').type('100');
 
             // Select category
-            cy.get('#category_id').click();
-            cy.contains('[role="option"]', 'Sem Categoria').click();
+            cy.selectCombobox('#category_id', 'Sem Categoria');
 
             // Enable recurrence
             cy.get('#is_recurring').click();
