@@ -266,23 +266,25 @@ export default function FinIndex({
     }, [activeId, workspace.uuid]);
 
     const handlePollingCompleted = useCallback(async (): Promise<void> => {
+        setIsProcessing(false);
+        setPendingRunId(null);
+
         if (activeId) {
             await loadConversation(activeId);
             await syncTitleWithRetry();
         }
-        setIsProcessing(false);
-        setPendingRunId(null);
     }, [activeId, loadConversation, syncTitleWithRetry]);
 
     const handlePollingFailed = useCallback(async (): Promise<void> => {
-        if (activeId) {
-            await loadConversation(activeId);
-            await syncTitleWithRetry();
-        }
         setIsProcessing(false);
         setPendingRunId(null);
         toast.error('Fin não conseguiu responder.');
         dispatchToast('error', 'Fin não conseguiu responder.');
+
+        if (activeId) {
+            await loadConversation(activeId);
+            await syncTitleWithRetry();
+        }
     }, [activeId, loadConversation, syncTitleWithRetry]);
 
     useFinPolling(
