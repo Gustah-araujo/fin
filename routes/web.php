@@ -40,6 +40,7 @@ use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
+use Laravel\Ai\Models\Conversation;
 
 // Guest routes
 Route::middleware('guest')->group(function () {
@@ -258,11 +259,12 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
 
                 $message = request()->input('message');
                 $responseText = (string) request()->input('response', 'Resposta simulada do Fin para fins de teste.');
-                $title = (string) request()->input('title', 'Nova conversa');
+                $title = (string) request()->input('title', '');
+                $conversationId = request()->input('conversation_id');
                 $fail = (bool) request()->input('fail', false);
 
                 if (is_string($message) && $message !== '') {
-                    $conversation = $service->createConversation($workspace, $user, $title);
+                    $conversation = $service->createConversation($workspace, $user, $title !== '' ? $title : 'Nova conversa');
 
                     FinancialAssistantAgent::fake([$responseText]);
 
@@ -272,10 +274,15 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
                     return response()->json(['conversation_id' => $conversation->id]);
                 }
 
-                $runs = FinAssistantRun::query()
+                $runsQuery = FinAssistantRun::query()
                     ->where('workspace_id', $workspace->id)
-                    ->where('status', FinRunStatus::Pending)
-                    ->get();
+                    ->where('status', FinRunStatus::Pending);
+
+                if ($conversationId !== null) {
+                    $runsQuery->where('conversation_id', $conversationId);
+                }
+
+                $runs = $runsQuery->get();
 
                 FinancialAssistantAgent::fake([$responseText]);
 
@@ -288,6 +295,18 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
                     } else {
                         $service->run($run);
                     }
+                }
+
+                if ($title !== '') {
+                    $titleConversationIds = $conversationId !== null
+                        ? collect([$conversationId])
+                        : $runs->pluck('conversation_id')->unique()->values();
+
+                    Conversation::query()
+                        ->whereIn('id', $titleConversationIds)
+                        ->where('participant_type', Workspace::class)
+                        ->where('participant_id', $workspace->id)
+                        ->update(['title' => $title]);
                 }
 
                 return response()->json(['completed' => $runs->count()]);

@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import MarkdownContent from '@/Components/Fin/MarkdownContent';
 import type { FinMessage } from '@/types/fin';
 
 interface Props {
@@ -13,13 +14,17 @@ export default function MessageBubble({ message }: Props) {
             data-testid="message-bubble"
             data-role={message.role}
             className={cn(
-                'max-w-[75%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap break-words',
+                'max-w-[85%] rounded-2xl px-4 py-2 text-sm break-words',
                 isUser
-                    ? 'self-end bg-primary text-primary-foreground'
+                    ? 'self-end bg-primary text-primary-foreground whitespace-pre-wrap'
                     : 'self-start bg-muted text-foreground',
             )}
         >
-            {message.content}
+            {isUser ? (
+                message.content
+            ) : (
+                <MarkdownContent content={message.content} />
+            )}
         </div>
     );
 }

@@ -51,12 +51,59 @@ export default function FinIndex({
 
                 const data = (await response.json()) as FinConversation;
                 setMessages(data.messages ?? []);
+                setConversations((prev) =>
+                    prev.map((conversation) =>
+                        conversation.id === id
+                            ? { ...conversation, title: data.title }
+                            : conversation,
+                    ),
+                );
             } catch {
                 // Silently ignore — loading messages is best-effort.
             }
         },
         [workspace.uuid],
     );
+
+    const fetchConversations = useCallback(async (): Promise<
+        FinConversation[] | null
+    > => {
+        try {
+            const response = await fetch(
+                route('fin.conversations.index', {
+                    workspace: workspace.uuid,
+                }),
+            );
+
+            if (!response.ok) {
+                return null;
+            }
+
+            const list = (await response.json()) as FinConversation[];
+            setConversations(list);
+            return list;
+        } catch {
+            // Silently ignore — refreshing the list is best-effort.
+            return null;
+        }
+    }, [workspace.uuid]);
+
+    const syncTitleWithRetry = useCallback(async (): Promise<void> => {
+        let list = await fetchConversations();
+
+        for (let attempt = 0; attempt < 3; attempt++) {
+            const active = activeId
+                ? list?.find((conversation) => conversation.id === activeId)
+                : null;
+
+            if (!active || active.title !== 'Nova conversa') {
+                break;
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+            list = (await fetchConversations()) ?? list;
+        }
+    }, [activeId, fetchConversations]);
 
     const handleSelect = useCallback(
         async (id: string): Promise<void> => {
@@ -219,22 +266,26 @@ export default function FinIndex({
     }, [activeId, workspace.uuid]);
 
     const handlePollingCompleted = useCallback(async (): Promise<void> => {
-        if (activeId) {
-            await loadConversation(activeId);
-        }
         setIsProcessing(false);
         setPendingRunId(null);
-    }, [activeId, loadConversation]);
 
-    const handlePollingFailed = useCallback(async (): Promise<void> => {
         if (activeId) {
             await loadConversation(activeId);
+            await syncTitleWithRetry();
         }
+    }, [activeId, loadConversation, syncTitleWithRetry]);
+
+    const handlePollingFailed = useCallback(async (): Promise<void> => {
         setIsProcessing(false);
         setPendingRunId(null);
         toast.error('Fin não conseguiu responder.');
         dispatchToast('error', 'Fin não conseguiu responder.');
-    }, [activeId, loadConversation]);
+
+        if (activeId) {
+            await loadConversation(activeId);
+            await syncTitleWithRetry();
+        }
+    }, [activeId, loadConversation, syncTitleWithRetry]);
 
     useFinPolling(
         workspace.uuid,

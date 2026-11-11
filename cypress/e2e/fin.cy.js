@@ -84,6 +84,50 @@ describe('Fin AI Assistant', () => {
         cy.assertToast('error', 'não conseguiu responder');
     });
 
+    // 6b. Assistant Markdown response renders formatted elements
+    it('renders Markdown formatting in assistant responses', () => {
+        cy.finResponse(workspaceUuid, {
+            message: 'Qual é o meu saldo?',
+            response: 'Seu saldo é **R$ 5.000,00**.\n\n- Item 1\n- Item 2',
+            title: 'Markdown',
+        });
+
+        cy.visit(`/w/${workspaceUuid}/fin`);
+
+        cy.contains('[data-testid="fin-conversation-item"]', 'Markdown').click();
+
+        cy.get('[data-testid="message-bubble"][data-role="assistant"]')
+            .find('strong')
+            .should('contain', 'R$ 5.000,00');
+
+        cy.get('[data-testid="message-bubble"][data-role="assistant"]')
+            .find('li')
+            .should('have.length.at.least', 2);
+    });
+
+    // 6c. Sidebar title updates without a page refresh
+    it('updates the conversation title in the sidebar without a refresh', () => {
+        cy.intercept('POST', '**/fin/conversations/*/messages').as('sendMessage');
+
+        cy.get('[data-testid="fin-new-conversation"]').click();
+        cy.get('[data-testid="fin-input"]').type('Qual é o meu saldo?');
+        cy.get('[data-testid="fin-send"]').click();
+
+        cy.wait('@sendMessage');
+        cy.get('[data-testid="fin-input"]').should('be.disabled');
+
+        cy.finResponse(workspaceUuid, {
+            response: 'Seu saldo é **R$ 5.000,00**.',
+            title: 'Meu saldo',
+        });
+
+        cy.contains('[data-testid="fin-conversation-item"]', 'Meu saldo', {
+            timeout: 10000,
+        }).should('be.visible');
+
+        cy.get('[data-testid="fin-input"]').should('not.be.disabled');
+    });
+
     // 6. Delete conversation + toast
     it('deletes a conversation and shows a success toast', () => {
         cy.get('[data-testid="fin-new-conversation"]').click();

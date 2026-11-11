@@ -85,7 +85,8 @@ class FinAssistantService
                 }
             }
 
-            $agent = new FinancialAssistantAgent($workspace, $conversation->id, $run->user_id);
+            $user = User::findOrFail($run->user_id);
+            $agent = new FinancialAssistantAgent($workspace, $conversation->id, $user);
             $response = $agent->withMessages($historyMessages)->prompt($promptContent);
 
             $assistantMessage = $this->persistAssistantMessage($conversation, $workspace, $response->text);
