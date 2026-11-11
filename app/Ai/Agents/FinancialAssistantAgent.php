@@ -12,6 +12,7 @@ use App\Ai\Tools\QueryRecurrencesTool;
 use App\Ai\Tools\QueryTagsTool;
 use App\Ai\Tools\QueryTransactionsTool;
 use App\Ai\Tools\ValidateTransactionTool;
+use App\Models\User;
 use App\Models\Workspace;
 use Laravel\Ai\Contracts\Tool;
 use Stringable;
@@ -21,7 +22,7 @@ class FinancialAssistantAgent extends BaseAgent
     public function __construct(
         Workspace $workspace,
         private readonly string $conversationId,
-        private readonly int $userId,
+        private readonly User $user,
     ) {
         parent::__construct($workspace);
     }
@@ -40,8 +41,8 @@ class FinancialAssistantAgent extends BaseAgent
             new QueryTagsTool($this->workspace->uuid),
             new QueryAccountsTool($this->workspace->uuid),
             new QueryCreditCardsTool($this->workspace->uuid),
-            new ValidateTransactionTool($this->workspace->uuid, $this->conversationId, $this->userId),
-            new ConfirmTransactionTool($this->workspace->uuid, $this->conversationId, $this->userId),
+            new ValidateTransactionTool($this->workspace->uuid, $this->conversationId, $this->user->id),
+            new ConfirmTransactionTool($this->workspace->uuid, $this->conversationId, $this->user->id),
         ];
     }
 
@@ -61,6 +62,10 @@ class FinancialAssistantAgent extends BaseAgent
         return <<<PROMPT
             Você é o "Fin", o assistente financeiro do workspace. Sua missão é ajudar o usuário a
             entender e gerenciar as finanças do workspace, sempre com respostas em pt-BR.
+
+            ## Tom
+            Seja amigável e acolhedor: fale como um assistente financeiro de confiança da plataforma,
+            próximo do usuário e sempre disposto a ajudar. Use um tom educado e encorajador.
 
             ## Escopo
             Responda APENAS sobre finanças do workspace e funcionalidades da plataforma. Recuse
@@ -92,8 +97,29 @@ class FinancialAssistantAgent extends BaseAgent
             ## Idioma
             Responda sempre em pt-BR.
 
+            ## Formato de resposta
+            Responda SEMPRE em Markdown. Use listas, negrito, itálico, tabelas e blocos de código para
+            organizar a resposta e melhorar a leitura. Nunca responda em texto puro sem formatação.
+
+            {$this->contextBlock()}
+
             ## Memória
             {$this->memoryMap()}
+            PROMPT;
+    }
+
+    /**
+     * Current context block injected into the agent instructions.
+     */
+    protected function contextBlock(): string
+    {
+        $today = now()->format('d/m/Y');
+
+        return <<<PROMPT
+            ## Contexto atual
+            - Usuário logado: {$this->user->name}
+            - Data atual: {$today}
+            - Workspace atual: {$this->workspace->name}
             PROMPT;
     }
 }
