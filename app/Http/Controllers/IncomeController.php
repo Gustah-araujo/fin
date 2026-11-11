@@ -31,7 +31,7 @@ class IncomeController extends Controller
 {
     use PersistsTableState;
 
-    public function index(Workspace $workspace): Response
+    public function index(Workspace $workspace, Request $request, TransactionService $transactionService): Response
     {
         $this->authorize('viewAny', [Transaction::class, $workspace]);
 
@@ -49,6 +49,7 @@ class IncomeController extends Controller
             ),
             'tags' => TagResource::collection($workspace->tags()->orderBy('name')->get()),
             'initialState' => $state,
+            'totals' => $transactionService->monthlyIncomeTotals($workspace, $request->query('month')),
         ]);
     }
 
@@ -67,6 +68,13 @@ class IncomeController extends Controller
         $query = $workspace->transactions()
             ->where('type', TransactionType::Income)
             ->with(['account', 'category', 'tags', 'recurrence']);
+
+        $month = $request->input('month');
+        if (is_string($month) && preg_match('/^\d{4}-\d{2}$/', $month)) {
+            [$year, $monthNum] = explode('-', $month);
+            $query->whereYear('date', (int) $year)
+                ->whereMonth('date', (int) $monthNum);
+        }
 
         return app(DatatableService::class)->paginate($query, $request, $this->datatableConfig());
     }
