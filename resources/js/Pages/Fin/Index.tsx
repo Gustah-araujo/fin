@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { toast } from 'sonner';
 import { dispatchToast } from '@/lib/toast';
+import { attachmentKind } from '@/lib/fin-attachments';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useFinPolling } from '@/hooks/use-fin-polling';
 import ConversationSidebar from '@/Components/Fin/ConversationSidebar';
@@ -142,8 +143,18 @@ export default function FinIndex({
     }, [workspace.uuid, handleSelect]);
 
     const handleSend = useCallback(
-        async (content: string): Promise<void> => {
+        async (content: string, files: File[]): Promise<void> => {
             if (!activeId) {
+                return;
+            }
+
+            const trimmedContent = content.trim();
+            const attachments = files.map((file) => ({
+                name: file.name,
+                kind: attachmentKind(file.name),
+            }));
+
+            if (trimmedContent === '' && attachments.length === 0) {
                 return;
             }
 
@@ -153,13 +164,20 @@ export default function FinIndex({
                 {
                     id: tempId,
                     role: 'user',
-                    content,
+                    content: trimmedContent,
+                    attachments,
                     created_at: new Date().toISOString(),
                 },
             ]);
             setIsProcessing(true);
 
             try {
+                const formData = new FormData();
+                if (trimmedContent !== '') {
+                    formData.append('content', trimmedContent);
+                }
+                files.forEach((file) => formData.append('attachments[]', file));
+
                 const response = await fetch(
                     route('fin.conversations.messages.store', {
                         workspace: workspace.uuid,
@@ -167,8 +185,12 @@ export default function FinIndex({
                     }),
                     {
                         method: 'POST',
-                        headers: jsonHeaders(),
-                        body: JSON.stringify({ content }),
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': getCsrfToken(),
+                            Accept: 'application/json',
+                        },
+                        body: formData,
                     },
                 );
 

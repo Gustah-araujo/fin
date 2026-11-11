@@ -22,7 +22,13 @@ class FinMessageController extends Controller
 
         $this->authorize('view', [$conversation, $workspace]);
 
-        $run = $service->sendMessage($workspace, $request->user(), $conversation, $request->validated('content'));
+        $run = $service->sendMessage(
+            $workspace,
+            $request->user(),
+            $conversation,
+            $request->validated('content'),
+            $request->file('attachments', []),
+        );
 
         return response()->json(new FinRunResource($run), 201);
     }
