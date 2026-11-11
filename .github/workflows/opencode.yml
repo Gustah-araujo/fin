@@ -145,4 +145,4 @@ jobs:
               }
             }
         with:
-          model: opencode-go/deepseek-v4-pro
+          model: glm-5.3
