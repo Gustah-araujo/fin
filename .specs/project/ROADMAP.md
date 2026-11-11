@@ -32,5 +32,5 @@
 | Dashboard            | DASH-01  | 🔴     |
 | Despesas Futuras     | FUTX-01  | 🔴     |
 | Insights IA          | INSG-01  | 🔴     |
-| Chat IA              | CHAT-01  | 🔴     |
+| Chat IA              | CHAT-01  | 🟢     |
 | Importação Extratos  | IMPT-01  | 🔴     |
