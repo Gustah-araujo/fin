@@ -145,4 +145,4 @@ jobs:
               }
             }
         with:
-          model: glm-5.3
+          model: opencode-go/glm-5.3
