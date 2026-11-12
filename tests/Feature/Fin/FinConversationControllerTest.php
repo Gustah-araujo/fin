@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Tests\Feature\Fin;
 
 use App\Enums\WorkspaceRole;
+use App\Jobs\TitleConversationJob;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\FinAssistantService;
+use Illuminate\Support\Facades\Queue;
 use Laravel\Ai\Models\Conversation;
 use Tests\TestCase;
 
@@ -35,19 +37,48 @@ class FinConversationControllerTest extends TestCase
         return $this->service->createConversation($this->workspace, $this->user, 'Orçamento');
     }
 
-    public function test_store_creates_conversation_scoped_to_workspace(): void
+    public function test_store_creates_conversation_from_first_message(): void
     {
+        Queue::fake();
+
         $response = $this->actingAs($this->user)
-            ->postJson(route('fin.conversations.store', $this->workspace), ['title' => 'Orçamento']);
+            ->postJson(route('fin.conversations.store', $this->workspace), ['content' => 'Qual o meu saldo?']);
 
         $response->assertStatus(201);
-        $response->assertJson(['title' => 'Orçamento']);
+        $response->assertJsonStructure([
+            'conversation' => ['id', 'title', 'created_at', 'updated_at'],
+            'run' => ['id', 'status', 'created_at'],
+        ]);
+        $response->assertJsonPath('conversation.title', 'Nova conversa');
+        $response->assertJsonPath('run.status', 'pending');
+
+        $conversationId = $response->json('conversation.id');
 
         $this->assertDatabaseHas('agent_conversations', [
+            'id' => $conversationId,
             'participant_type' => Workspace::class,
             'participant_id' => $this->workspace->id,
-            'title' => 'Orçamento',
+            'title' => 'Nova conversa',
         ]);
+
+        $this->assertDatabaseHas('agent_conversation_messages', [
+            'conversation_id' => $conversationId,
+            'role' => 'user',
+            'content' => 'Qual o meu saldo?',
+        ]);
+
+        Queue::assertPushed(TitleConversationJob::class, function (TitleConversationJob $job) use ($conversationId): bool {
+            return $job->conversationId === $conversationId;
+        });
+    }
+
+    public function test_store_returns_422_without_content_or_attachments(): void
+    {
+        $response = $this->actingAs($this->user)
+            ->postJson(route('fin.conversations.store', $this->workspace), []);
+
+        $response->assertStatus(422);
+        $this->assertDatabaseCount('agent_conversations', 0);
     }
 
     public function test_store_denied_for_non_member(): void
@@ -55,7 +86,7 @@ class FinConversationControllerTest extends TestCase
         $outsider = User::factory()->create();
 
         $response = $this->actingAs($outsider)
-            ->postJson(route('fin.conversations.store', $this->workspace), ['title' => 'Orçamento']);
+            ->postJson(route('fin.conversations.store', $this->workspace), ['content' => 'Qual o meu saldo?']);
 
         $response->assertStatus(403);
     }

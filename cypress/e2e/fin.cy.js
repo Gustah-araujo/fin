@@ -24,14 +24,19 @@ describe('Fin AI Assistant', () => {
     it('renders the Fin assistant page without crashing', () => {
         cy.get('[data-testid="sidebar-fin"]').should('be.visible');
         cy.contains('Assistente Fin').should('be.visible');
-        cy.contains('Selecione uma conversa ou crie uma nova.').should('be.visible');
+        cy.contains('Selecione uma conversa ou crie uma nova.').should(
+            'be.visible',
+        );
     });
 
-    // 2. Navigation: create a new conversation
-    it('creates a new conversation', () => {
+    // 2. Lazy persistence: clicking "Nova conversa" never persists anything
+    it('does not create a sidebar item until the first message is sent', () => {
         cy.get('[data-testid="fin-new-conversation"]').click();
-        cy.get('[data-testid="fin-conversation-item"]').should('have.length.at.least', 1);
+        cy.get('[data-testid="fin-new-conversation"]').click();
+        cy.get('[data-testid="fin-new-conversation"]').click();
+
         cy.get('[data-testid="fin-input"]').should('be.visible');
+        cy.get('[data-testid="fin-conversation-item"]').should('not.exist');
     });
 
     // 3. Full flow: seeded conversation renders user + assistant messages
@@ -51,13 +56,19 @@ describe('Fin AI Assistant', () => {
 
     // 4. Input blocking + polling completion
     it('blocks the input while processing and re-enables after completion', () => {
-        cy.intercept('POST', '**/fin/conversations/*/messages').as('sendMessage');
+        cy.intercept('POST', '**/fin/conversations').as('startConversation');
 
         cy.get('[data-testid="fin-new-conversation"]').click();
-        cy.get('[data-testid="fin-input"]').type('Quanto gastei em alimentação?');
+        cy.get('[data-testid="fin-input"]').type(
+            'Quanto gastei em alimentação?',
+        );
         cy.get('[data-testid="fin-send"]').click();
 
-        cy.wait('@sendMessage');
+        cy.wait('@startConversation');
+        cy.get('[data-testid="fin-conversation-item"]').should(
+            'have.length',
+            1,
+        );
         cy.get('[data-testid="fin-input"]').should('be.disabled');
         cy.get('[data-testid="fin-typing"]').should('be.visible');
 
@@ -65,19 +76,25 @@ describe('Fin AI Assistant', () => {
             response: 'Você gastou R$ 150,00 em alimentação.',
         });
 
-        cy.contains('Você gastou R$ 150,00 em alimentação.', { timeout: 10000 }).should('be.visible');
+        cy.contains('Você gastou R$ 150,00 em alimentação.', {
+            timeout: 10000,
+        }).should('be.visible');
         cy.get('[data-testid="fin-input"]').should('not.be.disabled');
     });
 
     // 5. Error toast on failed run
     it('shows an error toast when the assistant run fails', () => {
-        cy.intercept('POST', '**/fin/conversations/*/messages').as('sendMessage');
+        cy.intercept('POST', '**/fin/conversations').as('startConversation');
 
         cy.get('[data-testid="fin-new-conversation"]').click();
         cy.get('[data-testid="fin-input"]').type('Teste de falha');
         cy.get('[data-testid="fin-send"]').click();
 
-        cy.wait('@sendMessage');
+        cy.wait('@startConversation');
+        cy.get('[data-testid="fin-conversation-item"]').should(
+            'have.length',
+            1,
+        );
 
         cy.finResponse(workspaceUuid, { fail: true });
 
@@ -94,7 +111,10 @@ describe('Fin AI Assistant', () => {
 
         cy.visit(`/w/${workspaceUuid}/fin`);
 
-        cy.contains('[data-testid="fin-conversation-item"]', 'Markdown').click();
+        cy.contains(
+            '[data-testid="fin-conversation-item"]',
+            'Markdown',
+        ).click();
 
         cy.get('[data-testid="message-bubble"][data-role="assistant"]')
             .find('strong')
@@ -107,13 +127,17 @@ describe('Fin AI Assistant', () => {
 
     // 6c. Sidebar title updates without a page refresh
     it('updates the conversation title in the sidebar without a refresh', () => {
-        cy.intercept('POST', '**/fin/conversations/*/messages').as('sendMessage');
+        cy.intercept('POST', '**/fin/conversations').as('startConversation');
 
         cy.get('[data-testid="fin-new-conversation"]').click();
         cy.get('[data-testid="fin-input"]').type('Qual é o meu saldo?');
         cy.get('[data-testid="fin-send"]').click();
 
-        cy.wait('@sendMessage');
+        cy.wait('@startConversation');
+        cy.get('[data-testid="fin-conversation-item"]').should(
+            'have.length',
+            1,
+        );
         cy.get('[data-testid="fin-input"]').should('be.disabled');
 
         cy.finResponse(workspaceUuid, {
@@ -130,11 +154,26 @@ describe('Fin AI Assistant', () => {
 
     // 6. Delete conversation + toast
     it('deletes a conversation and shows a success toast', () => {
-        cy.get('[data-testid="fin-new-conversation"]').click();
+        cy.finResponse(workspaceUuid, {
+            message: 'Conversa para excluir',
+            response: 'Resposta da conversa para excluir.',
+            title: 'Excluir esta',
+        });
+
+        cy.visit(`/w/${workspaceUuid}/fin`);
+
+        cy.contains(
+            '[data-testid="fin-conversation-item"]',
+            'Excluir esta',
+        ).click();
         cy.get('[data-testid="fin-delete"]').click();
         cy.get('[data-testid="fin-delete-confirm"]').click();
 
         cy.assertToast('success', 'excluída');
+        cy.contains(
+            '[data-testid="fin-conversation-item"]',
+            'Excluir esta',
+        ).should('not.exist');
     });
 
     // 7. File upload: stage via hidden input, send with text, chip cleared
@@ -148,8 +187,10 @@ describe('Fin AI Assistant', () => {
         cy.get('[data-testid="fin-new-conversation"]').click();
         cy.get('[data-testid="fin-input"]').should('be.visible');
 
-        cy.get('[data-testid="fin-attachment-input"]')
-            .selectFile('cypress/fixtures/sample.pdf', { force: true });
+        cy.get('[data-testid="fin-attachment-input"]').selectFile(
+            'cypress/fixtures/sample.pdf',
+            { force: true },
+        );
 
         cy.get('[data-testid="fin-attachment-chip"]')
             .should('be.visible')
@@ -159,11 +200,19 @@ describe('Fin AI Assistant', () => {
         cy.get('[data-testid="fin-send"]').click();
 
         cy.wait('@pollRun');
+        cy.get('[data-testid="fin-conversation-item"]').should(
+            'have.length',
+            1,
+        );
         cy.get('[data-testid="fin-attachment-chip"]').should('not.exist');
 
-        cy.finResponse(workspaceUuid, { response: 'Analisei o arquivo em anexo.' });
+        cy.finResponse(workspaceUuid, {
+            response: 'Analisei o arquivo em anexo.',
+        });
 
-        cy.contains('Analisei o arquivo em anexo.', { timeout: 10000 }).should('be.visible');
+        cy.contains('Analisei o arquivo em anexo.', { timeout: 10000 }).should(
+            'be.visible',
+        );
         cy.get('[data-testid="fin-message-attachments"]')
             .should('be.visible')
             .and('contain', 'sample.pdf');
@@ -195,11 +244,19 @@ describe('Fin AI Assistant', () => {
         cy.get('[data-testid="fin-send"]').click();
 
         cy.wait('@pollRun');
+        cy.get('[data-testid="fin-conversation-item"]').should(
+            'have.length',
+            1,
+        );
         cy.get('[data-testid="fin-attachment-chip"]').should('not.exist');
 
-        cy.finResponse(workspaceUuid, { response: 'Arquivo recebido com sucesso.' });
+        cy.finResponse(workspaceUuid, {
+            response: 'Arquivo recebido com sucesso.',
+        });
 
-        cy.contains('Arquivo recebido com sucesso.', { timeout: 10000 }).should('be.visible');
+        cy.contains('Arquivo recebido com sucesso.', { timeout: 10000 }).should(
+            'be.visible',
+        );
         cy.get('[data-testid="fin-message-attachments"]')
             .should('be.visible')
             .and('contain', 'sample.png');
@@ -209,8 +266,10 @@ describe('Fin AI Assistant', () => {
     it('rejects a file with a non-permitted extension and shows an error toast', () => {
         cy.get('[data-testid="fin-new-conversation"]').click();
 
-        cy.get('[data-testid="fin-attachment-input"]')
-            .selectFile('cypress/fixtures/blocked.exe', { force: true });
+        cy.get('[data-testid="fin-attachment-input"]').selectFile(
+            'cypress/fixtures/blocked.exe',
+            { force: true },
+        );
 
         cy.get('[data-testid="fin-attachment-chip"]').should('not.exist');
         cy.get('[data-testid="fin-send"]').should('be.disabled');
@@ -224,8 +283,10 @@ describe('Fin AI Assistant', () => {
     it('removes a staged attachment via the chip remove button', () => {
         cy.get('[data-testid="fin-new-conversation"]').click();
 
-        cy.get('[data-testid="fin-attachment-input"]')
-            .selectFile('cypress/fixtures/sample.pdf', { force: true });
+        cy.get('[data-testid="fin-attachment-input"]').selectFile(
+            'cypress/fixtures/sample.pdf',
+            { force: true },
+        );
 
         cy.get('[data-testid="fin-attachment-chip"]')
             .should('be.visible')

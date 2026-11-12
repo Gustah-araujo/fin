@@ -12,6 +12,7 @@ use App\Models\FinAssistantRun;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\Ai\Enums\MessageStatus;
 use Laravel\Ai\Files\File;
@@ -41,6 +42,22 @@ class FinAssistantService
             'title' => $title,
             'created_by' => $user->id,
         ]);
+    }
+
+    /**
+     * Create a conversation and persist its first message in a single transaction.
+     *
+     * @param  array<int, UploadedFile>  $attachments
+     * @return array{Conversation, FinAssistantRun}
+     */
+    public function startConversation(Workspace $workspace, User $user, string $title, ?string $content, array $attachments = []): array
+    {
+        return DB::transaction(function () use ($workspace, $user, $title, $content, $attachments): array {
+            $conversation = $this->createConversation($workspace, $user, $title);
+            $run = $this->sendMessage($workspace, $user, $conversation, $content, $attachments);
+
+            return [$conversation, $run];
+        });
     }
 
     /**

@@ -31,3 +31,8 @@ export interface FinRun {
     result_message_id: string | null;
     created_at: string;
 }
+
+export interface FinConversationStart {
+    conversation: FinConversation;
+    run: FinRun;
+}

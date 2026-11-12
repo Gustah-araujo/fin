@@ -6,7 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Workspace;
 use App\Services\Datatable\TableStateService;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
@@ -18,7 +18,7 @@ class DatatableStateController extends Controller
         'recurrences' => 'recurrences',
     ];
 
-    public function destroy(Request $request, Workspace $workspace, string $entity): JsonResponse
+    public function destroy(Request $request, Workspace $workspace, string $entity): RedirectResponse
     {
         if (! Gate::allows('view', $workspace)) {
             abort(404);
@@ -28,6 +28,6 @@ class DatatableStateController extends Controller
 
         app(TableStateService::class)->clear($request, $tableKey);
 
-        return response()->json(['message' => 'Estado limpo.']);
+        return redirect()->back();
     }
 }

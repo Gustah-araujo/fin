@@ -47,6 +47,7 @@ export default function ChatArea({
                         Selecione uma conversa ou crie uma nova.
                     </p>
                 </div>
+                <ChatInput disabled={isProcessing} onSend={onSend} />
             </div>
         );
     }

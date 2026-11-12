@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreFinConversationRequest;
 use App\Http\Requests\UpdateFinConversationRequest;
 use App\Http\Resources\FinConversationResource;
+use App\Http\Resources\FinRunResource;
 use App\Models\Workspace;
 use App\Services\FinAssistantService;
 use Illuminate\Http\JsonResponse;
@@ -31,11 +32,18 @@ class FinConversationController extends Controller
     {
         $this->authorize('create', [Conversation::class, $workspace]);
 
-        $title = $request->validated('title') ?: 'Nova conversa';
+        [$conversation, $run] = $service->startConversation(
+            $workspace,
+            $request->user(),
+            'Nova conversa',
+            $request->validated('content'),
+            $request->file('attachments', []),
+        );
 
-        $conversation = $service->createConversation($workspace, $request->user(), $title);
-
-        return response()->json(new FinConversationResource($conversation), 201);
+        return response()->json([
+            'conversation' => new FinConversationResource($conversation),
+            'run' => new FinRunResource($run),
+        ], 201);
     }
 
     public function show(Workspace $workspace, Conversation $conversation): JsonResponse

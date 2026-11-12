@@ -41,13 +41,14 @@ class DatatableStateControllerTest extends TestCase
         $service->save($request, 'transactions', ['category' => 'uuid-cat'], 'date', 'desc');
 
         $response = $this->actingAs($this->user)
-            ->deleteJson(route('datatable.state.destroy', [
+            ->delete(route('datatable.state.destroy', [
                 'workspace' => $this->workspace->uuid,
                 'entity' => 'transactions',
             ]));
 
-        $response->assertOk();
-        $response->assertJson(['message' => 'Estado limpo.']);
+        // Inertia visits must receive a redirect, not raw JSON
+        $response->assertRedirect();
+        $this->assertStringNotContainsString('Estado limpo.', (string) $response->getContent());
 
         // Verify session was cleared
         $state = $service->restore($request, 'transactions');
@@ -57,7 +58,7 @@ class DatatableStateControllerTest extends TestCase
 
     public function test_destroy_requires_authentication(): void
     {
-        $response = $this->deleteJson(route('datatable.state.destroy', [
+        $response = $this->delete(route('datatable.state.destroy', [
             'workspace' => $this->workspace->uuid,
             'entity' => 'transactions',
         ]));
@@ -68,7 +69,7 @@ class DatatableStateControllerTest extends TestCase
     public function test_destroy_returns_404_for_invalid_entity(): void
     {
         $response = $this->actingAs($this->user)
-            ->deleteJson(route('datatable.state.destroy', [
+            ->delete(route('datatable.state.destroy', [
                 'workspace' => $this->workspace->uuid,
                 'entity' => 'invalid-entity',
             ]));
@@ -81,7 +82,7 @@ class DatatableStateControllerTest extends TestCase
         $nonMember = User::factory()->create();
 
         $response = $this->actingAs($nonMember)
-            ->deleteJson(route('datatable.state.destroy', [
+            ->delete(route('datatable.state.destroy', [
                 'workspace' => $this->workspace->uuid,
                 'entity' => 'transactions',
             ]));
@@ -100,12 +101,12 @@ class DatatableStateControllerTest extends TestCase
         $service->save($request, 'incomes', ['origin' => 'recurring'], 'value', 'asc');
 
         $response = $this->actingAs($this->user)
-            ->deleteJson(route('datatable.state.destroy', [
+            ->delete(route('datatable.state.destroy', [
                 'workspace' => $this->workspace->uuid,
                 'entity' => 'transactions',
             ]));
 
-        $response->assertOk();
+        $response->assertRedirect();
 
         // Transactions cleared
         $txState = $service->restore($request, 'transactions');
