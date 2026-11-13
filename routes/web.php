@@ -32,6 +32,7 @@ use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\WorkspaceMemberController;
 use App\Models\FinAssistantRun;
+use App\Models\FinPendingMutation;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\FinancialAnalysisService;
@@ -41,6 +42,7 @@ use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Laravel\Ai\Models\Conversation;
+use Laravel\Ai\Models\ConversationMessage;
 
 // Guest routes
 Route::middleware('guest')->group(function () {
@@ -311,6 +313,34 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
 
                 return response()->json(['completed' => $runs->count()]);
             })->name('testing.fin-response');
+
+            Route::delete('testing/fin-response', function (Workspace $workspace) {
+                // Attachments persisted on disk (FinAttachmentService::store)
+                // are intentionally left in place — deleting the DB rows is
+                // enough for E2E cleanup.
+                $conversationIds = Conversation::query()
+                    ->where('participant_type', Workspace::class)
+                    ->where('participant_id', $workspace->id)
+                    ->pluck('id');
+
+                ConversationMessage::query()
+                    ->whereIn('conversation_id', $conversationIds)
+                    ->delete();
+
+                FinAssistantRun::query()
+                    ->where('workspace_id', $workspace->id)
+                    ->delete();
+
+                FinPendingMutation::query()
+                    ->where('workspace_id', $workspace->id)
+                    ->delete();
+
+                Conversation::query()
+                    ->whereIn('id', $conversationIds)
+                    ->delete();
+
+                return response()->json(['deleted' => true]);
+            })->name('testing.fin-response.destroy');
         }
     });
 });

@@ -265,3 +265,15 @@ Cypress.Commands.add('finResponse', (workspaceUuid, body = {}) => {
         });
     });
 });
+
+Cypress.Commands.add('finCleanup', (workspaceUuid) => {
+    return cy.get('meta[name="csrf-token"]').then((meta) => {
+        return cy.request({
+            method: 'DELETE',
+            url: `/w/${workspaceUuid}/testing/fin-response`,
+            headers: {
+                'X-CSRF-TOKEN': meta.attr('content'),
+            },
+        });
+    });
+});

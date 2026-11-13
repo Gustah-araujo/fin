@@ -7,7 +7,12 @@ import { useWorkspace } from '@/hooks/useWorkspace';
 import { useFinPolling } from '@/hooks/use-fin-polling';
 import ConversationSidebar from '@/Components/Fin/ConversationSidebar';
 import ChatArea from '@/Components/Fin/ChatArea';
-import type { FinConversation, FinMessage, FinRun } from '@/types/fin';
+import type {
+    FinConversation,
+    FinConversationStart,
+    FinMessage,
+    FinRun,
+} from '@/types/fin';
 
 interface Props {
     conversations: FinConversation[];
@@ -116,38 +121,17 @@ export default function FinIndex({
         [loadConversation],
     );
 
-    const handleCreate = useCallback(async (): Promise<void> => {
-        try {
-            const response = await fetch(
-                route('fin.conversations.store', {
-                    workspace: workspace.uuid,
-                }),
-                {
-                    method: 'POST',
-                    headers: jsonHeaders(),
-                    body: JSON.stringify({}),
-                },
-            );
-
-            if (!response.ok) {
-                return;
-            }
-
-            const conversation = (await response.json()) as FinConversation;
-            setConversations((prev) => [conversation, ...prev]);
-            await handleSelect(conversation.id);
-        } catch {
-            toast.error('Erro ao criar conversa.');
-            dispatchToast('error', 'Erro ao criar conversa.');
+    const handleCreate = useCallback((): void => {
+        if (activeId === null) {
+            return;
         }
-    }, [workspace.uuid, handleSelect]);
+
+        setActiveId(null);
+        setMessages([]);
+    }, [activeId]);
 
     const handleSend = useCallback(
         async (content: string, files: File[]): Promise<void> => {
-            if (!activeId) {
-                return;
-            }
-
             const trimmedContent = content.trim();
             const attachments = files.map((file) => ({
                 name: file.name,
@@ -157,6 +141,8 @@ export default function FinIndex({
             if (trimmedContent === '' && attachments.length === 0) {
                 return;
             }
+
+            const isDraft = activeId === null;
 
             const tempId = crypto.randomUUID();
             setMessages((prev) => [
@@ -178,29 +164,40 @@ export default function FinIndex({
                 }
                 files.forEach((file) => formData.append('attachments[]', file));
 
-                const response = await fetch(
-                    route('fin.conversations.messages.store', {
-                        workspace: workspace.uuid,
-                        conversation: activeId,
-                    }),
-                    {
-                        method: 'POST',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'X-CSRF-TOKEN': getCsrfToken(),
-                            Accept: 'application/json',
-                        },
-                        body: formData,
+                const url = isDraft
+                    ? route('fin.conversations.store', {
+                          workspace: workspace.uuid,
+                      })
+                    : route('fin.conversations.messages.store', {
+                          workspace: workspace.uuid,
+                          conversation: activeId,
+                      });
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': getCsrfToken(),
+                        Accept: 'application/json',
                     },
-                );
+                    body: formData,
+                });
 
                 if (!response.ok) {
                     setIsProcessing(false);
                     return;
                 }
 
-                const run = (await response.json()) as FinRun;
-                setPendingRunId(run.id);
+                if (isDraft) {
+                    const data =
+                        (await response.json()) as FinConversationStart;
+                    setConversations((prev) => [data.conversation, ...prev]);
+                    setActiveId(data.conversation.id);
+                    setPendingRunId(data.run.id);
+                } else {
+                    const run = (await response.json()) as FinRun;
+                    setPendingRunId(run.id);
+                }
             } catch {
                 setIsProcessing(false);
                 toast.error('Erro ao enviar mensagem.');

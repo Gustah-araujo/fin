@@ -98,6 +98,34 @@ describe('DataTable State Persistence', () => {
         cy.contains('Filtros ativos').should('not.exist');
     });
 
+    it('clears filters without showing the Inertia debug modal', () => {
+        cy.get('[data-testid="sidebar-transactions"]').click();
+        cy.contains('Despesas').should('be.visible');
+
+        // Apply description text filter
+        cy.get('table thead tr').eq(1)
+            .find('input[placeholder="Filtrar descrição…"]')
+            .type('Conta');
+
+        // Wait for badge to appear
+        cy.contains('Filtros ativos').should('be.visible');
+        cy.contains('Descrição: Conta').should('be.visible');
+
+        // Click "Limpar Filtros"
+        cy.contains('button', 'Limpar Filtros').click({ force: true });
+
+        // Table resets: filter input cleared
+        cy.get('table thead tr').eq(1)
+            .find('input[placeholder="Filtrar descrição…"]')
+            .should('have.value', '');
+
+        // Badge disappears
+        cy.contains('Filtros ativos').should('not.exist');
+
+        // NO Inertia debug modal ("All Inertia requests must receive a valid Inertia response")
+        cy.contains('All Inertia requests must receive a valid Inertia response').should('not.exist');
+    });
+
     it('removes individual filter via badge X button', () => {
         cy.get('[data-testid="sidebar-transactions"]').click();
         cy.contains('Despesas').should('be.visible');
