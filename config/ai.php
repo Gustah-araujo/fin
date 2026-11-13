@@ -30,4 +30,9 @@ return [
         'pending_ttl' => env('FIN_PENDING_TTL', 30),
         'context_window' => env('FIN_CONTEXT_WINDOW', 20),
     ],
+
+    'memories' => [
+        'prompt_limit' => env('AI_MEMORY_PROMPT_LIMIT', 20),
+        'content_max_chars' => env('AI_MEMORY_CONTENT_MAX_CHARS', 400),
+    ],
 ];

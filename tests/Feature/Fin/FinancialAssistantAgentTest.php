@@ -6,6 +6,7 @@ namespace Tests\Feature\Fin;
 
 use App\Ai\Agents\FinancialAssistantAgent;
 use App\Enums\WorkspaceRole;
+use App\Models\AgentMemory;
 use App\Models\User;
 use App\Models\Workspace;
 use Carbon\Carbon;
@@ -74,6 +75,43 @@ class FinancialAssistantAgentTest extends TestCase
         $this->assertStringContainsString('## Formato de resposta', $instructions);
         $this->assertStringContainsString('Markdown', $instructions);
         $this->assertStringContainsString('## Contexto atual', $instructions);
+    }
+
+    public function test_agent_instructions_inject_workspace_memories(): void
+    {
+        AgentMemory::factory()->for($this->workspace)->create([
+            'title' => 'Meta: quitar dívidas',
+            'content' => 'Usuário quer quitar dívidas até 2027',
+        ]);
+
+        $agent = new FinancialAssistantAgent($this->workspace, 'conv-test-id', $this->user);
+
+        $instructions = (string) $agent->instructions();
+
+        $this->assertStringContainsString('## Memória', $instructions);
+        $this->assertStringContainsString('Meta: quitar dívidas', $instructions);
+        $this->assertStringContainsString('Usuário quer quitar dívidas até 2027', $instructions);
+    }
+
+    public function test_agent_instructions_contain_memory_writing_guidance(): void
+    {
+        $agent = new FinancialAssistantAgent($this->workspace, 'conv-test-id', $this->user);
+
+        $instructions = (string) $agent->instructions();
+
+        $this->assertStringContainsString('create_memory', $instructions);
+        $this->assertStringContainsString('update_memory', $instructions);
+        $this->assertStringContainsString('duplicat', $instructions);
+    }
+
+    public function test_agent_instructions_contain_memory_scope_guardrail(): void
+    {
+        $agent = new FinancialAssistantAgent($this->workspace, 'conv-test-id', $this->user);
+
+        $instructions = (string) $agent->instructions();
+
+        $this->assertStringContainsString('NUNCA registre assuntos fora do escopo', $instructions);
+        $this->assertStringContainsString('sensíveis', $instructions);
     }
 
     public function test_agent_instructions_contain_context_info(): void

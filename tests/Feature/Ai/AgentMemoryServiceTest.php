@@ -132,4 +132,43 @@ class AgentMemoryServiceTest extends TestCase
 
         $this->assertSame('Nenhuma memória registrada.', $prompt);
     }
+
+    public function test_format_for_prompt_respects_the_memory_limit(): void
+    {
+        foreach (range(1, 25) as $index) {
+            $memory = AgentMemory::factory()->for($this->workspace)->create([
+                'title' => sprintf('Memory %02d', $index),
+            ]);
+
+            AgentMemory::query()->where('id', $memory->id)->update([
+                'created_at' => now()->subSeconds(100 - $index),
+            ]);
+        }
+
+        $prompt = (new AgentMemoryService)->formatForPrompt($this->workspace);
+
+        $this->assertStringContainsString('Memory 25', $prompt);
+        $this->assertStringNotContainsString('Memory 01', $prompt);
+        $this->assertSame(20, preg_match_all('/\[\d+\]/', $prompt));
+        $this->assertMatchesRegularExpression('/\[1\] \(.*\) Memory 25/', $prompt);
+    }
+
+    public function test_format_for_prompt_truncates_long_content(): void
+    {
+        AgentMemory::factory()->for($this->workspace)->create([
+            'title' => 'Long content memory',
+            'content' => str_repeat('a', 1000),
+        ]);
+
+        $prompt = (new AgentMemoryService)->formatForPrompt($this->workspace);
+
+        $this->assertTrue(str_contains($prompt, str_repeat('a', 400)));
+        $this->assertFalse(str_contains($prompt, str_repeat('a', 401)));
+    }
+
+    public function test_memory_config_defaults_are_present(): void
+    {
+        $this->assertSame(20, config('ai.memories.prompt_limit'));
+        $this->assertSame(400, config('ai.memories.content_max_chars'));
+    }
 }

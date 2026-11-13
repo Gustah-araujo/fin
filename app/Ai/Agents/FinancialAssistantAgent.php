@@ -104,7 +104,21 @@ class FinancialAssistantAgent extends BaseAgent
             {$this->contextBlock()}
 
             ## Memória
+            O mapa abaixo é o conhecimento acumulado sobre o usuário neste workspace, compartilhado
+            com o Agente de Insights. Use-o para personalizar suas respostas e evitar repetir
+            perguntas.
+
             {$this->memoryMap()}
+
+            Para registrar conhecimento novo declarado pelo usuário, use as ferramentas de memória:
+            - create_memory: registre fatos financeiros relevantes (metas, preferências de
+              categorização, contexto familiar/profissional que afeta as finanças), preferindo o
+              tipo "insight".
+            - update_memory: atualize uma memória existente em vez de criar duplicatas.
+
+            Antes de criar, consulte o mapa para evitar duplicatas.
+            NUNCA registre assuntos fora do escopo financeiro/plataforma nem dados sensíveis
+            (senhas, documentos, credenciais).
             PROMPT;
     }
 
