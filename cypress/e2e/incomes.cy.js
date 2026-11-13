@@ -110,6 +110,51 @@ describe('Income CRUD', () => {
         cy.contains('Recorrente').should('be.visible');
     });
 
+    it('has no parcelamento option in the income form', () => {
+        cy.get('[data-testid="sidebar-incomes"]').click();
+        cy.contains('Nova Receita').click();
+        cy.get('#description').should('be.visible');
+
+        // Income form keeps the Avulsa/Recorrente Switch — no expense
+        // ModalitySelector with Parcelamento
+        cy.contains('Parcelamento').should('not.exist');
+        cy.get('#modality-installment').should('not.exist');
+    });
+
+    it('creates a recurring income with a data final', () => {
+        // Recurrence runs until one year from today
+        const endDate = new Date();
+        endDate.setFullYear(endDate.getFullYear() + 1);
+        const untilDate = endDate.toISOString().split('T')[0];
+
+        cy.get('[data-testid="sidebar-incomes"]').click();
+        cy.contains('Nova Receita').click();
+        cy.get('#description').type('Aluguel Recebido');
+        cy.get('#value').type('1200');
+
+        cy.selectCombobox('#account_id', 'Conta Principal');
+
+        cy.selectCombobox('#category_id', 'Sem Categoria');
+
+        // Recorrente via the (unchanged) Switch
+        cy.get('#is_recurring').click();
+        cy.contains('Frequência').should('be.visible');
+
+        // Define a data final
+        cy.get('#has_until_date').click();
+        cy.get('#until_date').type(untilDate);
+
+        cy.contains('Criar Receita').click({ force: true });
+        cy.assertToast('success', 'criada');
+
+        cy.url().should('include', '/incomes');
+        cy.contains('Aluguel Recebido').should('be.visible');
+
+        // Recurrence appears in the recurrences list
+        cy.get('[data-testid="sidebar-recurrences"]').click();
+        cy.contains('Aluguel Recebido').should('be.visible');
+    });
+
     it('edits an income', () => {
         cy.get('[data-testid="sidebar-incomes"]').click();
 

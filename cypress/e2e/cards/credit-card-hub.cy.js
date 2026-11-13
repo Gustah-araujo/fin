@@ -120,12 +120,31 @@ describe('Credit Card Hub', () => {
         // Select the card
         cy.selectCombobox('#credit_card_id', 'Nubank Installments');
 
-        // Set installments to 12
-        cy.get('#installments').type('{selectall}12');
+        // Select the "Parcelamento" modality — card installments now come
+        // from the shared InstallmentFields component
+        cy.get('#modality-installment').click();
 
-        // Set total value (installments > 1 replaces "Valor" with "Valor total")
+        // Set installments to 12. The input clamps values below 2 on every
+        // keystroke, so typing "12" can bounce ("1" → 2 → "22"). Set the
+        // value through the native setter (React-compatible) instead.
+        cy.get('#installments').then(($input) => {
+            const el = $input[0];
+            const setter = Object.getOwnPropertyDescriptor(
+                window.HTMLInputElement.prototype,
+                'value',
+            ).set;
+            setter.call(el, '12');
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+
+        // Set total value (Parcelamento hides "Valor" and shows "Valor total")
         cy.get('#value').should('not.exist');
         cy.get('#total_value').type('1200');
+
+        // Reactive preview confirms 12x of 100
+        cy.contains('Serão lançadas 12 parcelas de R$ 100,00').should(
+            'be.visible',
+        );
 
         // Fill description
         cy.get('#description').type('Notebook Dell');

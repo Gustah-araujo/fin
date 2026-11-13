@@ -121,7 +121,7 @@ class CardExpenseEditingTest extends CardTestCase
                 'total_value' => 300.00,
             ]);
 
-        $transactions = Transaction::where('description', 'Parcela Original')
+        $transactions = Transaction::where('description', 'like', 'Parcela Original%')
             ->whereNull('deleted_at')
             ->orderBy('installment_number')
             ->get();
@@ -141,16 +141,16 @@ class CardExpenseEditingTest extends CardTestCase
 
         $response->assertRedirect();
 
-        // Installments 2 and 3 should be updated
+        // Installments 2 and 3 should be updated with the per-row suffix
         $updated2 = Transaction::find($target->id);
-        $this->assertEquals('Parcela Atualizada', $updated2->description);
+        $this->assertEquals('Parcela Atualizada (2/3)', $updated2->description);
 
         $updated3 = Transaction::find($transactions[2]->id);
-        $this->assertEquals('Parcela Atualizada', $updated3->description);
+        $this->assertEquals('Parcela Atualizada (3/3)', $updated3->description);
 
         // Installment 1 should remain unchanged
         $unchanged1 = Transaction::find($transactions[0]->id);
-        $this->assertEquals('Parcela Original', $unchanged1->description);
+        $this->assertEquals('Parcela Original (1/3)', $unchanged1->description);
     }
 
     public function test_editing_expense_on_paid_bill_blocked(): void

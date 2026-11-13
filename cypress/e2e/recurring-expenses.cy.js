@@ -30,6 +30,11 @@ describe('Recurring Expenses E2E', () => {
     });
 
     it('creates a recurring expense and sees it in the recurrence list', () => {
+        // Recurrence runs until one year from today
+        const endDate = new Date();
+        endDate.setFullYear(endDate.getFullYear() + 1);
+        const untilDate = endDate.toISOString().split('T')[0];
+
         // Navigate to expenses (Despesas) and create recurring expense
         cy.get('[data-testid="sidebar-transactions"]').click();
         cy.contains('Nova Despesa').click();
@@ -41,13 +46,17 @@ describe('Recurring Expenses E2E', () => {
 
         cy.selectCombobox('#category_id', 'Sem Categoria');
 
-        // Toggle recurrence ON
-        cy.get('#is_recurring').click();
+        // Select the "Recorrência" modality (replaces the old #is_recurring Switch)
+        cy.get('#modality-recurrence').click();
 
         // Verify frequency fields appear
         cy.contains('Frequência').should('be.visible');
 
         // Default frequency is monthly — leave as is
+
+        // Set a data final to exercise the bounded recurrence flow
+        cy.get('#has_until_date').click();
+        cy.get('#until_date').type(untilDate);
 
         // Submit
         cy.contains('Criar Despesa').click({ force: true });
@@ -118,8 +127,8 @@ describe('Recurring Expenses E2E', () => {
 
         cy.selectCombobox('#category_id', 'Sem Categoria');
 
-        // Toggle recurrence ON
-        cy.get('#is_recurring').click();
+        // Select the "Recorrência" modality
+        cy.get('#modality-recurrence').click();
 
         // Submit
         cy.contains('Criar Despesa').click({ force: true });

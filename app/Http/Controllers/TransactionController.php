@@ -155,6 +155,10 @@ class TransactionController extends Controller
                 $recurrenceService->createWithBuffer($workspace, $data, $request->user());
 
                 Toast::success('Recorrência criada com sucesso.');
+            } elseif (! empty($data['installments']) && $data['installments'] > 1) {
+                $transactionService->createAccountInstallment($workspace, $request->user(), $data);
+
+                Toast::success('Despesa parcelada criada com sucesso.');
             } else {
                 $data['type'] = TransactionType::Expense->value;
                 $transactionService->create($workspace, $request->user(), $data);

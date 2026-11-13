@@ -51,8 +51,25 @@ class StoreIncomeRequest extends FormRequest
                 $validator->errors()->add('credit_card_id', 'Uma receita não pode estar vinculada a um cartão de crédito.');
             }
 
+            $this->validateInstallmentRejection($validator);
+
             $this->validateFrequencyDay($validator);
         });
+    }
+
+    private function validateInstallmentRejection($validator): void
+    {
+        if ($this->filled('installments') && (int) $this->input('installments') > 1) {
+            $validator->errors()->add('installments', 'Receitas não podem ser parceladas.');
+        }
+
+        if ($this->filled('total_value')) {
+            $validator->errors()->add('total_value', 'Receitas não podem ser parceladas.');
+        }
+
+        if ($this->filled('installment_day')) {
+            $validator->errors()->add('installment_day', 'Receitas não podem ser parceladas.');
+        }
     }
 
     private function validateAccount($validator, $workspace): void
