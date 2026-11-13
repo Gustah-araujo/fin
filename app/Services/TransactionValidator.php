@@ -22,7 +22,8 @@ class TransactionValidator
         self::validateSourceMutualExclusion($validator, $request);
         self::validateCreditCard($validator, $request, $workspace);
         self::validateInstallmentsTotalValue($validator, $request);
-        self::validateRecurrenceCardInstallments($validator, $request);
+        self::validateRecurrenceInstallments($validator, $request);
+        self::validateInstallmentDay($validator, $request);
         self::validateAccountBelongsToWorkspace($validator, $request, $workspace);
         self::validateCategory($validator, $request, $workspace);
         self::validateTags($validator, $request, $workspace);
@@ -74,14 +75,40 @@ class TransactionValidator
         }
     }
 
-    private static function validateRecurrenceCardInstallments(Validator $validator, FormRequest $request): void
+    private static function validateRecurrenceInstallments(Validator $validator, FormRequest $request): void
     {
         $installments = (int) $request->input('installments', 1);
         $isRecurring = $request->boolean('is_recurring');
-        $creditCardId = $request->input('credit_card_id');
 
-        if ($isRecurring && $creditCardId && $installments > 1) {
-            $validator->errors()->add('installments', 'Despesas recorrentes em cartão não podem ser parceladas.');
+        if (! $isRecurring) {
+            return;
+        }
+
+        if ($installments > 1) {
+            $validator->errors()->add('installments', 'Recorrências não podem ser parceladas. Escolha entre Recorrência ou Parcelamento.');
+        }
+
+        if ($request->filled('total_value')) {
+            $validator->errors()->add('total_value', 'Parcelamento não é compatível com recorrência.');
+        }
+
+        if ($request->filled('installment_day')) {
+            $validator->errors()->add('installment_day', 'Parcelamento não é compatível com recorrência.');
+        }
+    }
+
+    private static function validateInstallmentDay(Validator $validator, FormRequest $request): void
+    {
+        $installments = (int) $request->input('installments', 1);
+
+        if ($installments <= 1 || ! $request->filled('installment_day')) {
+            return;
+        }
+
+        $day = (int) $request->input('installment_day');
+
+        if ($day < 1 || $day > 31) {
+            $validator->errors()->add('installment_day', 'Dia do mês inválido.');
         }
     }
 

@@ -65,8 +65,8 @@ describe('Card Recurrence', () => {
         // Select category
         cy.selectCombobox('#category_id', 'Sem Categoria');
 
-        // Enable recurrence
-        cy.get('#is_recurring').click();
+        // Select the "Recorrência" modality (replaces the old #is_recurring Switch)
+        cy.get('#modality-recurrence').click();
 
         // Verify frequency fields appear
         cy.contains('Frequência').should('be.visible');
@@ -84,8 +84,8 @@ describe('Card Recurrence', () => {
         cy.contains('Streaming Mensal').should('be.visible');
     });
 
-    // ── Block card recurrence with installments ─────────────────
-    it('blocks card recurrence with installments', () => {
+    // ── Recurrence and installments are mutually exclusive ───────
+    it('keeps recurrence and installment modalities exclusive', () => {
         // Create card
         cy.get('[data-testid="sidebar-cards"]').click();
         cy.contains('Novo Cartão').click();
@@ -107,19 +107,20 @@ describe('Card Recurrence', () => {
         // Select card
         cy.selectCombobox('#credit_card_id', 'Nubank Block Test');
 
-        // Enable recurrence first — this should lock installments to 1
-        cy.get('#is_recurring').click();
-        cy.contains('Frequência').should('be.visible');
-
-        // Try to set installments to 3 (should be locked/disabled when recurring)
-        cy.get('#installments').should('have.attr', 'disabled');
-
-        // Fill required fields and submit
+        // Fill description and value
         cy.get('#description').type('Recorrência com Parcela');
         cy.get('#value').type('300');
         cy.selectCombobox('#category_id', 'Sem Categoria');
 
-        // Submit — should succeed because installments is locked to 1
+        // Select the "Recorrência" modality — recurrence fields appear and
+        // installment fields must NOT be rendered (no lock/disabled state
+        // anymore: modalities are mutually exclusive in ModalitySelector)
+        cy.get('#modality-recurrence').click();
+        cy.contains('Frequência').should('be.visible');
+        cy.get('#installments').should('not.exist');
+        cy.get('#total_value').should('not.exist');
+
+        // Submit — succeeds because recurrence cannot carry installments
         cy.contains('Criar Despesa').click({ force: true });
 
         // Verify redirect happened (catches 422/500 before vague toast timeout)
@@ -207,8 +208,8 @@ describe('Card Recurrence', () => {
             // Select category
             cy.selectCombobox('#category_id', 'Sem Categoria');
 
-            // Enable recurrence
-            cy.get('#is_recurring').click();
+            // Select the "Recorrência" modality
+            cy.get('#modality-recurrence').click();
 
             // Set date to current month (which has a paid bill)
             const today = new Date();

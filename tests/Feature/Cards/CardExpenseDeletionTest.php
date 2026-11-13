@@ -73,7 +73,7 @@ class CardExpenseDeletionTest extends CardTestCase
                 'total_value' => 500.00,
             ]);
 
-        $transactions = Transaction::where('description', 'Parcela group delete')
+        $transactions = Transaction::where('description', 'like', 'Parcela group delete%')
             ->whereNull('deleted_at')
             ->orderBy('installment_number')
             ->get();

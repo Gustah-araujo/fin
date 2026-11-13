@@ -63,12 +63,13 @@ class CardUnifiedExpenseCreationTest extends CardTestCase
 
         $response->assertRedirect(route('transactions.index', $workspace));
 
-        $transactions = Transaction::where('description', 'Notebook parcelado')
+        $transactions = Transaction::where('description', 'like', 'Notebook parcelado%')
             ->whereNull('deleted_at')
             ->orderBy('installment_number')
             ->get();
 
         $this->assertEquals(12, $transactions->count());
+        $this->assertEquals('Notebook parcelado (1/12)', $transactions[0]->description);
 
         $groupId = $transactions->first()->installment_group_id;
         $this->assertNotNull($groupId);
@@ -102,7 +103,7 @@ class CardUnifiedExpenseCreationTest extends CardTestCase
                 'total_value' => 100.00,
             ]);
 
-        $transactions = Transaction::where('description', 'Parcela com resto')
+        $transactions = Transaction::where('description', 'like', 'Parcela com resto%')
             ->whereNull('deleted_at')
             ->orderBy('installment_number')
             ->get();

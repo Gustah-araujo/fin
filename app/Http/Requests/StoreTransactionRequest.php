@@ -35,6 +35,7 @@ class StoreTransactionRequest extends FormRequest
             'buffer_ahead' => ['sometimes', 'integer', 'min:1', 'max:120'],
             'installments' => ['nullable', 'integer', 'min:1', 'max:48'],
             'total_value' => ['nullable', 'numeric', 'min:0.01'],
+            'installment_day' => ['nullable', 'integer', 'min:1', 'max:31'],
         ];
     }
 
@@ -68,6 +69,8 @@ class StoreTransactionRequest extends FormRequest
             'total_value.min' => 'O valor total deve ser maior que zero.',
             'installments.max' => 'O número máximo de parcelas é 48.',
             'installments.min' => 'O número mínimo de parcelas é 1.',
+            'installment_day.min' => 'O dia do mês deve ser maior que zero.',
+            'installment_day.max' => 'O dia do mês não pode ser maior que 31.',
         ];
     }
 }

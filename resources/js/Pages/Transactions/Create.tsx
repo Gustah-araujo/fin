@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     Select,
@@ -15,8 +14,11 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { PaymentMethodSelector } from '@/Components/Transactions/PaymentMethodSelector';
+import { ModalitySelector } from '@/Components/Transactions/ModalitySelector';
+import type { ExpenseModality } from '@/Components/Transactions/ModalitySelector';
 import { AccountFields } from '@/Components/Transactions/AccountFields';
 import { CardExpenseFields } from '@/Components/Transactions/CardExpenseFields';
+import { InstallmentFields } from '@/Components/Transactions/InstallmentFields';
 import { ValueField } from '@/Components/Transactions/ValueField';
 
 interface AccountItem {
@@ -82,14 +84,16 @@ export default function Create({ accounts, cards, categories, tags }: Props) {
         account_id: '',
         category_id: '',
         tags: [] as string[],
-        is_recurring: false,
+        modality: 'single' as ExpenseModality,
         frequency: 'monthly' as 'weekly' | 'monthly',
         frequency_day: 1,
         until_date: '',
+        start_date: '',
         has_until_date: false,
         buffer_ahead: 12,
         credit_card_id: isCardFromUrl ? cardIdParam : '',
-        installments: 1,
+        installments: 2,
+        installment_day: '',
         total_value: '',
         payment_method: (isCardFromUrl ? 'card' : 'account') as
             'account' | 'card',
@@ -100,22 +104,45 @@ export default function Create({ accounts, cards, categories, tags }: Props) {
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
 
-        const isCard = data.payment_method === 'card';
-        const isInstallment =
-            isCard && !data.is_recurring && data.installments > 1;
-
         // When installment purchase, the #value field is hidden and data.value
         // stays empty. Compute per-installment value from total_value inside a
         // transform so the POST payload gets the computed value synchronously
         // (setData is async and the request would otherwise fire before it lands).
-        if (isInstallment) {
-            form.transform((formData) => ({
-                ...formData,
-                value: (
+        form.transform((formData) => {
+            const payload: Record<string, unknown> = {
+                description: formData.description,
+                value: formData.value,
+                date: formData.date,
+                payment_method: formData.payment_method,
+                account_id: formData.account_id,
+                credit_card_id: formData.credit_card_id,
+                category_id: formData.category_id,
+                tags: formData.tags,
+            };
+
+            if (formData.modality === 'recurrence') {
+                payload.is_recurring = true;
+                payload.frequency = formData.frequency;
+                payload.frequency_day = formData.frequency_day;
+                payload.buffer_ahead = formData.buffer_ahead;
+                if (formData.has_until_date) {
+                    payload.until_date = formData.until_date;
+                }
+            }
+
+            if (formData.modality === 'installment') {
+                payload.installments = formData.installments;
+                payload.total_value = formData.total_value;
+                payload.value = (
                     parseFloat(formData.total_value) / formData.installments
-                ).toFixed(2),
-            }));
-        }
+                ).toFixed(2);
+                if (formData.installment_day !== '') {
+                    payload.installment_day = Number(formData.installment_day);
+                }
+            }
+
+            return payload;
+        });
 
         form.post(route('transactions.store', { workspace: workspace.uuid }));
     }
@@ -139,7 +166,7 @@ export default function Create({ accounts, cards, categories, tags }: Props) {
                         Nova Despesa
                     </h1>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Registre uma despesa avulsa ou recorrente
+                        Registre uma despesa avulsa, recorrente ou parcelada
                     </p>
                 </div>
 
@@ -167,10 +194,7 @@ export default function Create({ accounts, cards, categories, tags }: Props) {
                             </div>
 
                             <ValueField
-                                hidden={
-                                    data.payment_method === 'card' &&
-                                    data.installments > 1
-                                }
+                                hidden={data.modality === 'installment'}
                                 value={data.value}
                                 error={errors.value}
                                 onChange={(value) => setData('value', value)}
@@ -178,9 +202,9 @@ export default function Create({ accounts, cards, categories, tags }: Props) {
 
                             <div className="space-y-2">
                                 <Label htmlFor="date">
-                                    {data.is_recurring
-                                        ? 'Data de início'
-                                        : 'Data'}
+                                    {data.modality === 'single'
+                                        ? 'Data'
+                                        : 'Data de início'}
                                 </Label>
                                 <Input
                                     id="date"
@@ -200,6 +224,14 @@ export default function Create({ accounts, cards, categories, tags }: Props) {
                                         {errors.start_date}
                                     </p>
                                 )}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Modalidade</Label>
+                                <ModalitySelector
+                                    value={data.modality}
+                                    onChange={(val) => setData('modality', val)}
+                                />
                             </div>
 
                             <PaymentMethodSelector
@@ -228,8 +260,14 @@ export default function Create({ accounts, cards, categories, tags }: Props) {
                                         available_limit: c.available_limit,
                                     }))}
                                     form={form}
-                                    locked={data.is_recurring}
                                     preselectedCardId={cardIdParam}
+                                />
+                            )}
+
+                            {data.modality === 'installment' && (
+                                <InstallmentFields
+                                    description={data.description}
+                                    form={form}
                                 />
                             )}
 
@@ -262,25 +300,7 @@ export default function Create({ accounts, cards, categories, tags }: Props) {
                                 )}
                             </div>
 
-                            <div className="flex items-center justify-between rounded-lg border p-3">
-                                <div className="space-y-0.5">
-                                    <Label htmlFor="is_recurring">
-                                        É recorrente?
-                                    </Label>
-                                    <p className="text-xs text-muted-foreground">
-                                        Repetir esta despesa automaticamente
-                                    </p>
-                                </div>
-                                <Switch
-                                    id="is_recurring"
-                                    checked={data.is_recurring}
-                                    onCheckedChange={(checked) =>
-                                        setData('is_recurring', checked)
-                                    }
-                                />
-                            </div>
-
-                            {data.is_recurring && (
+                            {data.modality === 'recurrence' && (
                                 <div className="space-y-4 rounded-lg border p-3">
                                     <div className="space-y-2">
                                         <Label>Frequência</Label>

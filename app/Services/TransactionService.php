@@ -265,7 +265,12 @@ class TransactionService
 
             foreach ($group as $row) {
                 if (isset($data['description'])) {
-                    $row->description = $data['description'];
+                    $total = (int) ($row->installments_total ?? 1);
+                    $base = preg_replace('/ \(\d+\/\d+\)$/u', '', $data['description']);
+
+                    $row->description = $total > 1
+                        ? $this->installmentDescription($base, (int) ($row->installment_number ?? 1), $total)
+                        : $base;
                 }
                 if (isset($data['category_id'])) {
                     $row->category_id = $this->resolveCategoryId($installment->workspace, $data['category_id']);
@@ -388,8 +393,17 @@ class TransactionService
                 ->where('workspace_id', $workspace->id)
                 ->firstOrFail();
 
+            $installmentDay = isset($data['installment_day']) && is_numeric($data['installment_day'])
+                ? (int) $data['installment_day']
+                : null;
+
             for ($i = 1; $i <= $count; $i++) {
                 $installmentDate = $firstDate->copy()->addMonthsNoOverflow($i - 1);
+
+                if ($installmentDay !== null) {
+                    $installmentDate->day = min($installmentDay, $installmentDate->daysInMonth);
+                }
+
                 $value = $i === $count ? $baseValue + $remainder : $baseValue;
                 $bill = $this->resolveBill($card, $installmentDate, $creator->id);
 
@@ -401,7 +415,7 @@ class TransactionService
                     'credit_card_bill_id' => $bill->id,
                     'category_id' => $categoryId,
                     'type' => 'expense',
-                    'description' => $data['description'],
+                    'description' => $this->installmentDescription($data['description'], $i, $count),
                     'value' => $value,
                     'date' => $installmentDate->toDateString(),
                     'installment_number' => $i,
@@ -417,6 +431,60 @@ class TransactionService
             }
 
             $this->creditCardService->recalculateAvailableLimit($card->fresh());
+        });
+
+        return $groupId;
+    }
+
+    public function createAccountInstallment(Workspace $workspace, User $creator, array $data): string
+    {
+        $groupId = Str::orderedUuid()->toString();
+        $totalValue = (float) $data['total_value'];
+        $count = (int) $data['installments'];
+        $baseValue = round($totalValue / $count, 2);
+        $remainder = round($totalValue - ($baseValue * $count), 2);
+        $firstDate = Carbon::parse($data['date']);
+        $categoryId = $this->resolveCategoryId($workspace, $data['category_id']);
+
+        DB::transaction(function () use ($workspace, $creator, $data, $groupId, $baseValue, $remainder, $count, $firstDate, $categoryId) {
+            $accountId = Account::where('uuid', $data['account_id'])
+                ->where('workspace_id', $workspace->id)
+                ->firstOrFail()
+                ->id;
+
+            $installmentDay = isset($data['installment_day']) && is_numeric($data['installment_day'])
+                ? (int) $data['installment_day']
+                : null;
+
+            for ($i = 1; $i <= $count; $i++) {
+                $installmentDate = $firstDate->copy()->addMonthsNoOverflow($i - 1);
+
+                if ($installmentDay !== null) {
+                    $installmentDate->day = min($installmentDay, $installmentDate->daysInMonth);
+                }
+
+                $value = $i === $count ? $baseValue + $remainder : $baseValue;
+
+                $transaction = Transaction::create([
+                    'uuid' => Str::orderedUuid()->toString(),
+                    'workspace_id' => $workspace->id,
+                    'account_id' => $accountId,
+                    'credit_card_id' => null,
+                    'credit_card_bill_id' => null,
+                    'category_id' => $categoryId,
+                    'type' => 'expense',
+                    'description' => $this->installmentDescription($data['description'], $i, $count),
+                    'value' => $value,
+                    'date' => $installmentDate->toDateString(),
+                    'installment_number' => $i,
+                    'installments_total' => $count,
+                    'installment_group_id' => $groupId,
+                    'paid_at' => null,
+                    'created_by' => $creator->id,
+                ]);
+
+                $this->syncTags($transaction, $data['tags'] ?? []);
+            }
         });
 
         return $groupId;
@@ -456,6 +524,14 @@ class TransactionService
             ->where('workspace_id', $workspace->id)
             ->firstOrFail()
             ->id;
+    }
+
+    private function installmentDescription(string $base, int $number, int $total): string
+    {
+        $suffix = " ({$number}/{$total})";
+        $maxBaseLen = 255 - mb_strlen($suffix);
+
+        return rtrim(mb_substr($base, 0, $maxBaseLen)).$suffix;
     }
 
     private function recalculateAfterUpdate(Transaction $transaction, bool $wasPaid, float $oldValue, ?int $oldAccountId, array $data): void
