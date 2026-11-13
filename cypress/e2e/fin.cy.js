@@ -20,6 +20,13 @@ describe('Fin AI Assistant', () => {
         cy.visit(`/w/${workspaceUuid}/fin`);
     });
 
+    // Each test shares one workspace + DB. Delete all Fin conversations after
+    // every test so sidebar-count assertions ('have.length', 1) never see
+    // conversations accumulated by previous tests.
+    afterEach(() => {
+        cy.finCleanup(workspaceUuid);
+    });
+
     // 1. Smoke test: page renders without crashing
     it('renders the Fin assistant page without crashing', () => {
         cy.get('[data-testid="sidebar-fin"]').should('be.visible');
