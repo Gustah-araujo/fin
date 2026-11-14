@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\AgentMemory;
 use App\Models\Workspace;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Str;
 
 class AgentMemoryService
 {
@@ -39,19 +40,22 @@ class AgentMemoryService
 
     public function formatForPrompt(Workspace $workspace): string
     {
-        $memories = $this->list($workspace);
+        $memories = $this->list($workspace)
+            ->take((int) config('ai.memories.prompt_limit', 20));
 
         if ($memories->isEmpty()) {
             return 'Nenhuma memória registrada.';
         }
 
-        return $memories->map(function (AgentMemory $memory, int $index): string {
+        $maxChars = (int) config('ai.memories.content_max_chars', 400);
+
+        return $memories->map(function (AgentMemory $memory, int $index) use ($maxChars): string {
             return sprintf(
                 "[%d] (%s) %s\n    %s",
                 $index + 1,
                 $memory->type->label(),
-                $memory->title,
-                $memory->content,
+                Str::limit($memory->title, $maxChars),
+                Str::limit($memory->content, $maxChars),
             );
         })->implode("\n");
     }
