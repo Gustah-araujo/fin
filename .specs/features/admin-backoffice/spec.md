@@ -2,7 +2,7 @@
 
 **Source:** GitHub issue "[Feature] Área Administrativa Global (Backoffice `/admin`)"
 **Phase:** New — Global Administration
-**Status:** Spec — pending approval (see Open Questions)
+**Status:** Approved — Open Questions resolved by user (2026-11-15, see Decisions)
 
 ## Problem Statement
 
@@ -32,13 +32,16 @@ The entire system operates inside a workspace context; there is no global admini
 | Authorization | Middleware `EnsureUserIsAdmin` (alias `ensure.admin`) calling `abort(403)`, NOT a Policy | Single global rule, not model-scoped; policies are per-model in this codebase |
 | Route group | `Route::middleware(['auth','verified','ensure.admin'])->prefix('admin')` with `admin.*` route names, OUTSIDE the `ensure.has.workspace` group | Existing `EnsureHasWorkspace` only applies to its own group; separate group guarantees workspace-independence |
 | Route binding | UUID binding (`admin/users/{user}`, `admin/workspaces/{workspace}`) via `getRouteKeyName()` | Project convention (UUIDs everywhere) |
-| Users table | Reuse existing `DataTable` component + new JSON endpoint `GET admin/users.datatable` | DataTable is JSON/axios-based and supports custom `cell` renderers (verified in code) — matches issue's "DataTable" requirement |
+| Users table | Reuse existing `DataTable` component + new JSON endpoint `GET admin/users.datatable` | DataTable is JSON/axios-based and supports custom `cell` renderers (verified in code) — **CONFIRMED by user (Q4)** |
 | Dropdown | New shared `Components/DropdownButton.tsx` composing shadcn `DropdownMenu` + `Button` | No reusable wrapper exists today (only inline usages in `UserMenu`/`WorkspaceSwitcher`); issue requires a reusable component |
 | Toasts on /admin | `AdminLayout` mounts sonner `Toaster` + consumes `flash.success/error` (same pattern as `AuthenticatedLayout`) | Flash toast consumption currently lives only in `AuthenticatedLayout`; admin pages must not depend on it |
-| Widget "Usuários Ativos" | Count of users with `email_verified_at !== null` | "Active" = confirmed account (pending user answer — see Open Questions) |
-| Workspace owner | Workspace detail shows all members with `role = admin` as "Proprietário/Administrador" | `workspaces` table has NO `owner_id`; ownership is implicit via pivot role |
-| Post-login redirect | In `AuthenticatedSessionController::store()`: unverified users → `verification.notice` (unchanged); verified admins → `/admin`; verified customers → current behavior | E-mail verification flow takes precedence (existing rule) |
-| Cypress admin seeding | New non-production testing endpoint `POST /testing/create-admin` (in the existing `testing.*` block) | Cypress has no way to promote a user to admin via UI (by design) |
+| Widget "Usuários Ativos" | Count of users with `email_verified_at !== null` | **CONFIRMED by user (Q1)**: "ativo" = e-mail verificado |
+| Workspace detail members | Workspace detail shows all members with their `role` in the workspace — NO "owner" concept displayed | **DECIDED by user (Q3)**: no owner identification needed; members + roles only |
+| Post-login redirect | In `AuthenticatedSessionController::store()`: unverified users → `verification.notice` (unchanged); verified admins → `/admin`; verified customers → current behavior | E-mail verification flow takes precedence (existing rule) — **CONFIRMED (Q2)** |
+| Verified-user actions | Support actions (resend/manual verify) are NOT rendered for already-verified users (UI-level, mirrors listing rule); backend endpoints keep a defensive 422 guard | **DECIDED by user (Q5)**: don't offer actions for verified users instead of 422+flash as UX |
+| Cypress admin seeding | New non-production testing endpoint `POST /testing/create-admin` (in the existing `testing.*` block) | **CONFIRMED by user (Q6)** |
+| Cypress admin seeding | New non-production testing endpoint `POST /testing/create-admin` (in the existing `testing.*` block) | **CONFIRMED by user (Q6)** |
+| Resend throttle | `throttle:6,1` on the admin resend endpoint (same pattern as the existing self-resend) | **CONFIRMED by user (Q7)** |
 
 ## Out of Scope
 
@@ -174,7 +177,7 @@ The entire system operates inside a workspace context; there is no global admini
 
 1. WHEN the admin triggers "Reenviar e-mail de confirmação" for an unverified user THEN system SHALL POST to a dedicated admin endpoint that sends the verification e-mail **synchronously** (no queue) to that user's e-mail and flash a success toast ("E-mail de verificação reenviado.").
 2. WHEN the admin triggers "Marcar como verificado manualmente" THEN system SHALL POST to a dedicated admin endpoint that sets `email_verified_at = now()` for that user and flash a success toast ("Usuário marcado como verificado.").
-3. WHEN either action targets an already-verified user THEN system SHALL reject gracefully (HTTP 422 or no-op with informative flash) — not silently duplicate work.
+3. WHEN the target user is already verified THEN the system SHALL NOT offer the support actions anywhere in the UI (listing and detail pages); the backend endpoints SHALL still defensively reject such requests with HTTP 422 (no toast design required — UI never triggers this path).
 4. WHEN any of these endpoints is hit by a `customer` THEN system SHALL return 403.
 5. WHEN the action succeeds THEN the table/page SHALL refresh reflecting the new status.
 6. WHEN the actions mutate state THEN they SHALL go through Service classes (not inline controller logic), per project convention.
@@ -218,7 +221,7 @@ The entire system operates inside a workspace context; there is no global admini
 
 **Acceptance Criteria**:
 
-1. WHEN an admin accesses `/admin/workspaces/{workspace}` THEN system SHALL render exclusively registration metadata: **nome**, **data de criação**, **proprietário(s)/criador(es)** (members with `role=admin` — no `owner_id` column exists).
+1. WHEN an admin accesses `/admin/workspaces/{workspace}` THEN system SHALL render exclusively registration metadata: **nome**, **data de criação** (NO owner/creator identification — user decision Q3).
 2. WHEN the page loads THEN it SHALL render a "Usuários do Workspace" widget listing every member with: **Nome**, **E-mail**, **Papel/Role** no workspace, and a clickable link to `/admin/users/{user}`.
 3. WHEN the page renders THEN it SHALL NOT include any financial data (accounts, transactions, incomes, expenses, balances) or AI conversations — metadata only.
 4. WHEN the data is returned THEN it SHALL pass through ApiResources.
@@ -258,22 +261,22 @@ The entire system operates inside a workspace context; there is no global admini
 - WHEN a `customer` tries to guess an admin action URL (POST) THEN the middleware aborts 403 before controller logic runs.
 - WHEN the admin resends verification to a Google-OAuth user (auto-verified) THEN the action is not offered (row is verified).
 - WHEN a user belongs to a workspace but is not in the listing's search results THEN pagination/search must not break on unicode names.
-- WHEN the workspace has multiple members with `role=admin` THEN the detail page shows all of them as owners (no single-owner assumption).
+- WHEN the workspace has multiple members with `role=admin` THEN the detail page lists all of them in the members widget (each with its role) — no owner emphasis.
 - WHEN the admin is also a regular app user THEN both areas remain fully usable (no data interference between contexts).
 
 ---
 
-## Open Questions (pending user confirmation)
+## Open Questions (RESOLVED — 2026-11-15)
 
-| # | Question | Proposed answer (used in this spec) |
-|---|----------|-------------------------------------|
-| Q1 | What exactly counts as "Total de Usuários Ativos"? All registered users? Verified users? Users with recent activity (login)? | Users with `email_verified_at !== null` |
-| Q2 | Should the `/admin` route group require e-mail verification (`verified` middleware)? An admin whose e-mail is unverified would land on the verification screen after login. | Yes, keep `verified` — consistent with the rest of the authenticated app |
-| Q3 | Workspace "proprietário/criador": there is no `owner_id` on `workspaces` — show all `role=admin` members as owners? | Yes, list all admin-role members |
-| Q4 | Users table: reuse the existing JSON-based `DataTable` component with a new `admin/users.datatable` endpoint (project precedent), or build a simpler Inertia server-filtered table? | Reuse existing `DataTable` |
-| Q5 | Manual verification / resend on an already-verified user (defensive backend): reject with 422 or no-op success? | Reject with 422 + informative flash |
-| Q6 | Cypress needs a new non-production endpoint `POST /testing/create-admin` (promotes/creates an admin and logs in) since admins can't be produced via the UI. Acceptable? | Yes, inside the existing `testing.*` block |
-| Q7 | Admin support actions: throttle (e.g. `throttle:6,1` like the existing self-resend) or unthrottled? | Apply `throttle:6,1` to resend |
+| # | Question | Resolved answer |
+|---|----------|-----------------|
+| Q1 | What exactly counts as "Total de Usuários Ativos"? | ✅ Users with `email_verified_at !== null` |
+| Q2 | Should the `/admin` route group require e-mail verification? | ✅ Yes, keep `verified` in the group |
+| Q3 | Workspace "proprietário/criador": show `role=admin` members as owners, or add `owner_id`? | ✅ Neither — do NOT display owner identity; show only users and their roles in the workspace |
+| Q4 | Reuse existing JSON `DataTable` or build simpler Inertia table? | ✅ Reuse existing `DataTable` |
+| Q5 | Already-verified user + support actions: 422+flash or silent no-op? | ✅ Do NOT render the actions for verified users (backend keeps a defensive 422 guard) |
+| Q6 | New non-production `POST /testing/create-admin` endpoint for Cypress? | ✅ Acceptable, inside the existing `testing.*` block |
+| Q7 | Throttle on admin resend? | ✅ `throttle:6,1` (same pattern as existing self-resend) |
 
 ---
 
