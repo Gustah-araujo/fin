@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Enums\UserType;
 use App\Http\Resources\WorkspaceResource;
 use App\Models\User;
 use App\Models\Workspace;
@@ -26,6 +27,7 @@ class HandleInertiaRequests extends Middleware
                     'name' => $user->name,
                     'email' => $user->email,
                     'avatar' => $user->avatar,
+                    'type' => $user->type?->value ?? UserType::Customer->value,
                 ],
             ];
             $shared['workspaces'] = WorkspaceResource::collection(

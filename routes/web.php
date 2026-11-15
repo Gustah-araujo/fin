@@ -3,7 +3,11 @@
 use App\Ai\Agents\FinancialAssistantAgent;
 use App\Ai\Agents\ScheduledFinancialAnalysisAgent;
 use App\Enums\FinRunStatus;
+use App\Enums\UserType;
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Admin\AdminWorkspaceController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
@@ -39,6 +43,8 @@ use App\Services\FinancialAnalysisService;
 use App\Services\FinAssistantService;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Laravel\Ai\Models\Conversation;
@@ -84,6 +90,44 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('workspace/select', [WorkspaceController::class, 'select'])->name('workspace.select');
     Route::post('workspace/activate', [WorkspaceController::class, 'activate'])->name('workspace.activate');
 });
+
+// Admin backoffice routes (workspace-independent)
+Route::middleware(['auth', 'verified', 'ensure.admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+    Route::get('users', [AdminUserController::class, 'index'])->name('users.index');
+    Route::get('users.datatable', [AdminUserController::class, 'datatable'])->name('users.datatable');
+    Route::get('users/{user}', [AdminUserController::class, 'show'])->name('users.show');
+    Route::post('users/{user}/resend-verification', [AdminUserController::class, 'resendVerification'])
+        ->name('users.resend-verification')->middleware('throttle:6,1');
+    Route::post('users/{user}/verify', [AdminUserController::class, 'verify'])->name('users.verify');
+
+    Route::get('workspaces', [AdminWorkspaceController::class, 'index'])->name('workspaces.index');
+    Route::get('workspaces/{workspace}', [AdminWorkspaceController::class, 'show'])->name('workspaces.show');
+});
+
+// Test-only admin seeding endpoint (non-production only)
+if (! app()->environment('production')) {
+    Route::post('testing/create-admin', function () {
+        $user = User::firstOrCreate(
+            ['email' => (string) request()->input('email')],
+            [
+                'uuid' => (string) Str::uuid(),
+                'name' => (string) request()->input('name', 'Admin E2E'),
+                'password' => Hash::make((string) request()->input('password', 'password123')),
+            ],
+        );
+
+        $user->forceFill([
+            'type' => UserType::Admin,
+            'email_verified_at' => now(),
+        ])->save();
+
+        Auth::login($user);
+
+        return response()->json(['created' => true]);
+    })->name('testing.create-admin');
+}
 
 // Routes requiring a workspace
 Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function () {

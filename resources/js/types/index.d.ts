@@ -1,3 +1,5 @@
+import type { UserType } from './admin';
+
 declare module '@inertiajs/core' {
     interface PageProps {
         auth: {
@@ -6,6 +8,7 @@ declare module '@inertiajs/core' {
                 name: string;
                 email: string;
                 avatar?: string;
+                type: UserType;
             } | null;
         };
         workspaces: Array<{

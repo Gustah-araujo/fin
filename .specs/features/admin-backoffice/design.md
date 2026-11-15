@@ -1,7 +1,7 @@
 # Admin Backoffice — Design
 
 **Spec:** `.specs/features/admin-backoffice/spec.md`
-**Status:** Draft
+**Status:** Implemented
 
 ---
 
@@ -107,7 +107,7 @@ Dois fluxos de requisição coexistem, como no resto do app:
   - `index(Request): InertiaResponse` — shell da página (nenhum dado de linha; DataTable busca lazy).
   - `datatable(Request): JsonResponse` — `User::query()->withCount('workspaces')` + `DatatableService::paginate()`; config: `searchable(['name', 'email'])`, `Filter::select('email_verified_at', closure not-null vs null)`, `sortable(['name', 'email', 'created_at'])`, `defaultSort('created_at', 'desc')`, resource `AdminUserResource`.
   - `show(User $user): InertiaResponse` — `new AdminUserResource($user)` + `workspaces` via `$user->workspaces()->withPivot('role')->get()` (WorkspaceResource::collection, `role` já incluído via `whenPivotLoaded`).
-  - `resendVerification(User $user): RedirectResponse` — `AdminUserService::resendVerification($user)` + `Toast::success('E-mail de verificação reenviado.')` + `back()`; service lança `ValidationException` (422) se já verificado.
+  - `resendVerification(User $user): RedirectResponse` — `AdminUserService::resendVerification($user)` + `Toast::success('E-mail de verificação reenviado.')` + `back()`; service lança `HttpException` (422) se já verificado.
   - `verify(User $user): RedirectResponse` — `AdminUserService::manuallyVerify($user)` + `Toast::success('Usuário marcado como verificado.')` + `back()`.
 - **Dependencies:** `DatatableService`, `AdminUserService`.
 - **Reuses:** `DatatableService`, `Toast`, pattern `back()` com flash.
@@ -118,7 +118,7 @@ Dois fluxos de requisição coexistem, como no resto do app:
 - **Location:** `app/Services/Admin/AdminUserService.php`
 - **Interfaces:**
   - `activeUsersCount(): int` — `User::whereNotNull('email_verified_at')->count()`.
-  - `resendVerification(User $user): void` — **guard**: se `email_verified_at !== null` → `ValidationException::withMessages(['user' => 'Usuário já verificado.'])`; senão `$user->notifyNow(new VerifyEmail)` (síncrono garantido).
+  - `resendVerification(User $user): void` — **guard**: se `email_verified_at !== null` → `throw new HttpException(422, 'Usuário já verificado.')`; senão `$user->notifyNow(new VerifyEmail)` (síncrono garantido).
   - `manuallyVerify(User $user): void` — mesmo guard; senão `$user->forceFill(['email_verified_at' => now()])->save()`.
 - **Reuses:** Nada especial; `notifyNow` força sync sem depender de queue config.
 
@@ -280,7 +280,7 @@ interface AdminMember {
 | Não autenticado em `/admin` | `auth` middleware | Redirect ao login (comportamento padrão) |
 | Admin com e-mail não verificado em `/admin` | `verified` middleware | Tela de verificação (Q2) |
 | Admin com zero workspaces | Grupo fora de `ensure.has.workspace` | 200 — backoffice funciona (spec ADMB-02 AC4) |
-| Ação de suporte sobre usuário já verificado (defensiva) | Service lança `ValidationException` → 422 | UI nunca dispara (ações ocultas); guard é backstop (Q5) |
+| Ação de suporte sobre usuário já verificado (defensiva) | Service lança `HttpException` → 422 | UI nunca dispara (ações ocultas); guard é backstop (Q5) |
 | Reenvio além do throttle | `throttle:6,1` → 429 | Sem toast especial; usuário aguarda (mesmo padrão do self-resend) |
 | Busca por nomes com unicode/acentos | LIKE padrão do `DatatableService` (mesmo comportamento das tabelas existentes) | Sem quebra de paginação |
 
@@ -293,7 +293,7 @@ interface AdminMember {
 | Reenvio síncrono | `$user->notifyNow(new VerifyEmail)` | `sendEmailVerificationNotification()` respeita `ShouldQueue`; `notifyNow` garante sync em qualquer `QUEUE_CONNECTION` (ADMB-08 AC1) |
 | Toast flash compartilhado | Extrair `useFlashToasts` e usar nos dois layouts | Evita duplicar ~40 linhas de lógica de flash (incl. `consumedRef` + buffer do Cypress); regressão coberta por Cypress existente |
 | Estado de tabela admin | **Sem** `PersistsTableState` (v1) | `DatatableStateController` é workspace-scoped (Gate + ENTITY_MAP); persistência de filtros admin não é requisito — evita tocar código do app |
-| Guard 422 defensivo | `ValidationException::withMessages` no Service | UI não oferece as ações para verificados (Q5); o guard é backstop contra chamadas manuais |
+| Guard 422 defensivo | `HttpException(422)` no Service (padrão do codebase) | UI não oferece as ações para verificados (Q5); o guard é backstop contra chamadas manuais |
 | `users.datatable` antes de `users/{user}` | Ordem explícita de registro | Evita `{user}` capturar "users.datatable" (mesma precaução do grupo `w/{workspace}`) |
 | Endpoint de teste fora do `w/{workspace}` | `POST /testing/create-admin` no nível raiz | Workspace-independent por natureza; mesmo guard não-produção do bloco existente |
 | Botão "Voltar para o App" → `workspace.select` | Rota fora de `ensure.has.workspace` | Funciona para admin com zero workspaces (edge case da spec) |

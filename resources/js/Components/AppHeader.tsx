@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Menu } from 'lucide-react';
+import { Link } from '@inertiajs/react';
 import UserMenu from '@/Components/UserMenu';
 import NotificationBell from '@/Components/NotificationBell';
 import { usePage } from '@inertiajs/react';
@@ -28,6 +29,7 @@ export default function AppHeader({ onToggle, sidebar }: Props) {
     const homeHref = workspaceUuid
         ? route('dashboard', { workspace: workspaceUuid })
         : '/';
+    const isAdmin = props.auth?.user?.type === 'admin';
 
     return (
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background px-4">
@@ -66,6 +68,16 @@ export default function AppHeader({ onToggle, sidebar }: Props) {
             </Breadcrumb>
 
             <div className="ml-auto flex items-center gap-2">
+                {isAdmin && (
+                    <Button variant="outline" asChild>
+                        <Link
+                            href={route('admin.dashboard')}
+                            data-testid="admin-header-entry"
+                        >
+                            Área Admin
+                        </Link>
+                    </Button>
+                )}
                 <NotificationBell />
                 <UserMenu />
             </div>

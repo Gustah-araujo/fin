@@ -1,10 +1,9 @@
 import { TooltipProvider } from '@/components/ui/tooltip';
 import AppSidebar from '@/Components/AppSidebar';
 import AppHeader from '@/Components/AppHeader';
-import { dispatchToast } from '@/lib/toast';
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { usePage, router } from '@inertiajs/react';
-import { Toaster, toast } from 'sonner';
+import { useFlashToasts } from '@/hooks/use-flash-toasts';
+import { useState, useCallback, useEffect } from 'react';
+import { Toaster } from 'sonner';
 
 interface Props {
     children: React.ReactNode;
@@ -14,53 +13,14 @@ const COLLAPSED_WIDTH = '68px';
 const EXPANDED_WIDTH = '240px';
 
 export default function AuthenticatedLayout({ children }: Props) {
-    const { flash } = usePage().props;
+    useFlashToasts();
     const [collapsed, setCollapsed] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
-    const consumedFlashRef = useRef<Set<string>>(new Set());
     const toggleCollapsed = useCallback(
         () => setCollapsed((prev) => !prev),
         [],
     );
-
-    useEffect(() => {
-        if (flash?.success) {
-            const key = `success:${flash.success}`;
-            if (!consumedFlashRef.current.has(key)) {
-                consumedFlashRef.current.add(key);
-                toast.success(flash.success);
-                dispatchToast('success', flash.success);
-            }
-        }
-        if (flash?.error) {
-            const key = `error:${flash.error}`;
-            if (!consumedFlashRef.current.has(key)) {
-                consumedFlashRef.current.add(key);
-                toast.error(flash.error);
-                dispatchToast('error', flash.error);
-            }
-        }
-    }, [flash?.success, flash?.error]);
-
-    // Dismiss sonner toasts on SPA navigation — prevents toasts from persisting
-    // across Inertia visits (flash messages would otherwise re-show on every
-    // navigation since the Toaster component stays mounted).
-    useEffect(() => {
-        const handleNavigate = (): void => {
-            toast.dismiss();
-            // Clear consumed flash keys so that a new page visit with the
-            // same flash message (e.g. "Conta criada com sucesso.") can
-            // dispatch its toast again. Without this, the ref persists
-            // across SPA navigations and blocks legitimate re-dispatches.
-            consumedFlashRef.current.clear();
-        };
-        // Inertia's router.on() returns the unsubscribe function.
-        const unsubscribe = router.on('before', handleNavigate);
-        return () => {
-            unsubscribe();
-        };
-    }, []);
 
     // Radix UI (and similar libraries) can leave a scroll-lock on <body>
     // after a Dialog closes (pointer-events: none + data-scroll-locked),

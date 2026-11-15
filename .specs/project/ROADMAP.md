@@ -41,4 +41,4 @@
 
 | Feature              | Story    | Status |
 | -------------------- | -------- | ------ |
-| Admin Backoffice     | ADMB     | 🟡 Spec+Design aprovados, tasks prontas |
+| Admin Backoffice     | ADMB     | ✅ Concluído — ADMB-01..11 entregues (16 tasks) |
