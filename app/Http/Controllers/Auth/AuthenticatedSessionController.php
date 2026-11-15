@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\UserType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Services\AuthService;
@@ -32,6 +33,10 @@ class AuthenticatedSessionController extends Controller
 
         if (! $request->user()?->hasVerifiedEmail()) {
             return redirect()->route('verification.notice');
+        }
+
+        if ($request->user()->type === UserType::Admin) {
+            return redirect()->route('admin.dashboard');
         }
 
         return redirect()->intended(route('workspace.select', absolute: false));

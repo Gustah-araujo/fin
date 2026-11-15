@@ -34,3 +34,11 @@
 | Insights IA          | INSG-01  | 🔴     |
 | Chat IA              | CHAT-01  | 🟢     |
 | Importação Extratos  | IMPT-01  | 🔴     |
+
+## Milestone: Administração Global
+
+**Meta:** Backoffice `/admin` para operações e suporte da plataforma, desacoplado do escopo de workspace.
+
+| Feature              | Story    | Status |
+| -------------------- | -------- | ------ |
+| Admin Backoffice     | ADMB     | ✅ Concluído — ADMB-01..11 entregues (16 tasks) |

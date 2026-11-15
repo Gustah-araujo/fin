@@ -277,3 +277,31 @@ Cypress.Commands.add('finCleanup', (workspaceUuid) => {
         });
     });
 });
+
+Cypress.Commands.add('createAdminSession', (email = 'admin@example.com') => {
+    cy.session(`admin-${email}`, () => {
+        cy.request('GET', '/login').then((loginPage) => {
+            const match = loginPage.body.match(
+                /name=["']csrf-token["'][^>]*content=["']([^"']+)["']/,
+            );
+            if (!match) {
+                throw new Error('CSRF token not found on login page');
+            }
+
+            return cy.request({
+                method: 'POST',
+                url: '/testing/create-admin',
+                headers: {
+                    'X-CSRF-TOKEN': match[1],
+                },
+                body: {
+                    email,
+                    name: 'Admin E2E',
+                    password: 'password123',
+                },
+            });
+        });
+    });
+
+    cy.visit('/admin');
+});
