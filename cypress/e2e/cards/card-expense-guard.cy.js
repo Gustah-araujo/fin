@@ -1,3 +1,24 @@
+/**
+ * Opens the select filter of a column, located by its header text instead
+ * of a positional index (column order changes must not break the spec).
+ */
+function openColumnFilter(columnName) {
+    return cy
+        .get('table thead tr')
+        .eq(0)
+        .contains('th', columnName)
+        .then(($th) => {
+            const columnIndex = $th.index();
+            return cy
+                .get('table thead tr')
+                .eq(1)
+                .children('th')
+                .eq(columnIndex)
+                .find('[data-slot="select-trigger"]')
+                .click();
+        });
+}
+
 describe('Card Expense Pay Guard', () => {
     let workspaceUuid;
 
@@ -163,14 +184,8 @@ describe('Card Expense Pay Guard', () => {
         cy.contains('Compra Filtro A').should('be.visible');
         cy.contains('Compra Filtro B').should('be.visible');
 
-        // Filter by card using the Cartão column filter
-        // The filter row uses select triggers in thead
-        // Select-trigger order: [0]=Conta, [1]=Cartão, [2]=Fatura, [3]=Categoria, [4]=Status
-        cy.get('table thead tr')
-            .eq(1)
-            .find('[data-slot="select-trigger"]')
-            .eq(1) // Cartão is the 2nd select-trigger (0-indexed: 1)
-            .click();
+        // Filter by card using the Cartão column filter (located by header)
+        openColumnFilter('Cartão');
 
         cy.contains('[role="option"]', 'Nubank Filter A').click();
 
@@ -205,13 +220,8 @@ describe('Card Expense Pay Guard', () => {
         // Expense should be visible
         cy.contains('Compra Filtro Fatura').should('be.visible');
 
-        // Filter by bill using the Fatura column filter
-        // Select-trigger order: [0]=Conta, [1]=Cartão, [2]=Fatura, [3]=Categoria, [4]=Status
-        cy.get('table thead tr')
-            .eq(1)
-            .find('[data-slot="select-trigger"]')
-            .eq(2) // Fatura is the 3rd select-trigger (0-indexed: 2)
-            .click();
+        // Filter by bill using the Fatura column filter (located by header)
+        openColumnFilter('Fatura');
 
         // Select the first bill option for this card (skip "Todos" which is always first)
         cy.contains('[role="option"]', 'Nubank BillFilter').first().click();

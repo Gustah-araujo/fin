@@ -23,6 +23,31 @@ Issue: `[Feature] Estratificação Macro de Gastos (ExpenseGroup) e Visualizaç�
 6. **E2E Cypress** — specs: CRUD de grupos + toasts; override/herança na tabela de despesas + filtro; dashboard com estratificação.
 7. **Verificação final** — `php artisan test`, `composer quality`, `npm run quality`, correções.
 
+## Status
+
+- [x] 1. Backend ExpenseGroup — migrations, model/factory/relações, Resource, FormRequests, Service, Policy, Controller, rotas, feature tests (CRUD, nullOnDelete, isolamento, smoke)
+- [x] 2. Frontend gestão de grupos — `ExpenseGroups/{Index,Create,Edit}`, sidebar, card/atalho em Categories
+- [x] 3. Vínculo em categorias — Select em `Categories/{Create,Edit}`, indicador no card, tests
+- [x] 4. Override em despesas + coluna/filtro Grupo — herança/override, filtro com "Sem Grupo", `meta.totals` filtrado, seletor em `Transactions/{Create,Edit}`, tests
+- [x] 5. Dashboard — `DashboardController` + `DashboardService` (KPIs, agregação por grupo efetivo, ranking), `Home.tsx` com charts e empty state, tests
+- [x] 6. E2E Cypress — `expense-groups/crud.cy.js` (5), `transactions/expense-group.cy.js` (8), `dashboard/expense-groups.cy.js` (5)
+- [x] 7. Verificação final — gates verdes: PHPUnit 799/799, Cypress 167/167, `composer quality`, `npm run quality`
+
+### Ajustes feitos na verificação final (Task 7)
+
+A adição da coluna "Grupo" como primeira coluna da tabela de Despesas deslocou os
+índices posicionais de select-triggers usados por specs E2E pré-existentes. Specs
+foram atualizadas para localizar o filtro pelo **texto do header da coluna**
+(helper `openColumnFilter(columnName)`) em vez de índice posicional — robusto a
+mudanças de ordem de colunas:
+
+- `cypress/e2e/datatable/state-persistence.cy.js` — 4 seletores posicionais substituídos
+- `cypress/e2e/cards/card-expense-guard.cy.js` — 2 seletores posicionais substituídos (Cartão, Fatura)
+- Demais usos de `select-trigger` auditados: diálogos/outras tabelas, não afetados
+
+Nota de ambiente: rodar `php artisan migrate` (DB E2E MySQL) e `npm run build`
+(manifest Vite) antes do `npx cypress run`; o binary do Cypress exige `npx cypress install`.
+
 ## Convenções aplicadas
 
 - UUIDs em rotas; ApiResource obrigatório; FormRequests por ação; Services para lógica; Policy por model; Toast (Sonner/flash) nas mutações; factories exigem `workspace_id`/`created_by` explícitos; smoke test por rota GET.
