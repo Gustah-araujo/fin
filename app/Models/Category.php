@@ -22,6 +22,7 @@ class Category extends Model
         'icon',
         'position',
         'is_system',
+        'expense_group_id',
     ];
 
     protected function casts(): array
@@ -45,5 +46,10 @@ class Category extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function expenseGroup(): BelongsTo
+    {
+        return $this->belongsTo(ExpenseGroup::class);
     }
 }

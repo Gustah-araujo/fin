@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Datatable;
 
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\JsonResponse;
@@ -11,7 +12,7 @@ use Illuminate\Http\Request;
 
 final class DatatableService
 {
-    public function paginate(Builder|Relation $query, Request $request, DatatableConfig $config): JsonResponse
+    public function paginate(Builder|Relation $query, Request $request, DatatableConfig $config, ?Closure $totals = null): JsonResponse
     {
         if ($query instanceof Relation) {
             $query = $query->getQuery();
@@ -20,6 +21,10 @@ final class DatatableService
         $this->applySearch($query, $request, $config);
         $this->applyFilters($query, $request, $config);
         $this->applySort($query, $request, $config);
+
+        $totalsData = $totals !== null
+            ? $totals((clone $query)->reorder())
+            : null;
 
         $paginator = $query->paginate($config->perPageValue());
 
@@ -32,6 +37,7 @@ final class DatatableService
                 'last_page' => $paginator->lastPage(),
                 'from' => $paginator->firstItem(),
                 'to' => $paginator->lastItem(),
+                'totals' => $totalsData,
             ],
         ]);
     }

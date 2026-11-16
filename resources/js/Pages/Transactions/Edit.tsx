@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ValueField } from '@/Components/Transactions/ValueField';
+import { ExpenseGroupField } from '@/Components/Transactions/ExpenseGroupField';
+import { TagsSelector } from '@/Components/Transactions/TagsSelector';
+import { resolveGroupDisplay } from '@/lib/expense-groups';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
     Select,
@@ -29,6 +32,7 @@ interface CategoryItem {
     type: string;
     color: string;
     icon: string | null;
+    expense_group?: { uuid: string; name: string; color: string } | null;
 }
 
 interface TagItem {
@@ -44,6 +48,12 @@ interface CardItem {
     available_limit: number;
 }
 
+interface ExpenseGroupItem {
+    uuid: string;
+    name: string;
+    color: string;
+}
+
 interface TransactionItem {
     uuid: string;
     description: string;
@@ -57,6 +67,7 @@ interface TransactionItem {
     tags: TagItem[];
     is_installment: boolean;
     installment_label: string | null;
+    expense_group?: ExpenseGroupItem | null;
 }
 
 interface Props {
@@ -64,6 +75,7 @@ interface Props {
     accounts: AccountItem[];
     categories: CategoryItem[];
     tags: TagItem[];
+    expenseGroups: ExpenseGroupItem[];
 }
 
 function PaymentSection({
@@ -171,6 +183,7 @@ export default function Edit({
     accounts,
     categories,
     tags,
+    expenseGroups,
 }: Props) {
     const workspace = useWorkspace();
     const isCard = !!transaction.credit_card_id;
@@ -186,10 +199,19 @@ export default function Edit({
         installments: 1,
         total_value: '',
         category_id: transaction.category?.uuid ?? '',
+        expense_group_id: transaction.expense_group?.uuid ?? '',
         tags: transaction.tags.map((t) => t.uuid),
     });
 
     const { data, setData, put, processing, errors } = form;
+
+    const selectedCategory = categories.find(
+        (c) => c.uuid === data.category_id,
+    );
+    const groupDisplay = resolveGroupDisplay(
+        data.expense_group_id,
+        selectedCategory,
+    );
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -199,6 +221,7 @@ export default function Edit({
             value: data.value,
             date: data.date,
             category_id: data.category_id,
+            expense_group_id: data.expense_group_id,
             tags: data.tags,
         };
 
@@ -342,40 +365,22 @@ export default function Edit({
                                 )}
                             </div>
 
-                            {tags.length > 0 && (
-                                <div className="space-y-2">
-                                    <Label>Tags</Label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {tags.map((tag) => (
-                                            <div
-                                                key={tag.uuid}
-                                                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md border cursor-pointer text-sm transition-colors ${
-                                                    data.tags.includes(tag.uuid)
-                                                        ? 'bg-primary text-primary-foreground border-primary'
-                                                        : 'bg-background hover:bg-accent'
-                                                }`}
-                                                onClick={() =>
-                                                    toggleTag(tag.uuid)
-                                                }
-                                            >
-                                                <span
-                                                    className="w-2.5 h-2.5 rounded-full"
-                                                    style={{
-                                                        backgroundColor:
-                                                            tag.color,
-                                                    }}
-                                                />
-                                                {tag.name}
-                                            </div>
-                                        ))}
-                                    </div>
-                                    {errors.tags && (
-                                        <p className="text-sm text-destructive">
-                                            {errors.tags}
-                                        </p>
-                                    )}
-                                </div>
-                            )}
+                            <ExpenseGroupField
+                                value={groupDisplay.value}
+                                onChange={(value) =>
+                                    setData('expense_group_id', value)
+                                }
+                                groups={expenseGroups}
+                                hint={groupDisplay.hint}
+                                error={errors.expense_group_id}
+                            />
+
+                            <TagsSelector
+                                tags={tags}
+                                selected={data.tags}
+                                onToggle={toggleTag}
+                                error={errors.tags}
+                            />
 
                             <div className="flex items-center gap-3 pt-2">
                                 <Button type="submit" disabled={processing}>

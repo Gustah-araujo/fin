@@ -12,6 +12,7 @@ use App\Http\Resources\AccountResource;
 use App\Http\Resources\CategoryResource;
 use App\Http\Resources\CreditCardBillResource;
 use App\Http\Resources\CreditCardResource;
+use App\Http\Resources\ExpenseGroupResource;
 use App\Http\Resources\TagResource;
 use App\Http\Resources\TransactionResource;
 use App\Models\CreditCard;
@@ -49,16 +50,17 @@ class TransactionController extends Controller
             'categories' => CategoryResource::collection($workspace->categories()->orderBy('name')->get()),
             'tags' => TagResource::collection($workspace->tags()->orderBy('name')->get()),
             'bills' => CreditCardBillResource::collection($workspace->creditCardBills()->with('creditCard')->get()),
+            'expenseGroups' => ExpenseGroupResource::collection($workspace->expenseGroups()->orderBy('name')->get()),
             'initialState' => $state,
             'totals' => $transactionService->monthlyTotals($workspace, $request->query('month')),
         ]);
     }
 
-    public function datatable(Workspace $workspace, Request $request): JsonResponse
+    public function datatable(Workspace $workspace, Request $request, TransactionService $transactionService): JsonResponse
     {
         $this->authorize('viewAny', [Transaction::class, $workspace]);
 
-        $state = $this->resolveTableState($request, 'transactions', $this->datatableConfig());
+        $state = $this->resolveTableState($request, 'transactions', $this->datatableConfig($workspace));
 
         $request->merge([
             'sort' => $state['sort'],
@@ -67,7 +69,7 @@ class TransactionController extends Controller
         ]);
 
         $query = $workspace->transactions()
-            ->with(['account', 'creditCard', 'bill', 'category', 'tags'])
+            ->with(['account', 'creditCard', 'bill', 'category.expenseGroup', 'expenseGroup', 'tags'])
             ->where('type', TransactionType::Expense);
 
         $filters = $state['filters'];
@@ -82,10 +84,15 @@ class TransactionController extends Controller
             }
         }
 
-        return app(DatatableService::class)->paginate($query, $request, $this->datatableConfig());
+        return app(DatatableService::class)->paginate(
+            $query,
+            $request,
+            $this->datatableConfig($workspace),
+            fn (Builder $totalsQuery) => $transactionService->totalsForQuery($totalsQuery),
+        );
     }
 
-    private function datatableConfig(): DatatableConfig
+    private function datatableConfig(Workspace $workspace): DatatableConfig
     {
         return DatatableConfig::make(TransactionResource::class)
             ->filter('description', Filter::text('description'))
@@ -96,6 +103,34 @@ class TransactionController extends Controller
             ->filter('status', Filter::select(fn (Builder $q, string $v) => $v === 'paid' ? $q->whereNotNull('paid_at') : $q->whereNull('paid_at')))
             ->filter('credit_card_id', Filter::select(fn (Builder $q, string $v) => $q->where('credit_card_id', CreditCard::where('uuid', $v)->value('id'))))
             ->filter('credit_card_bill_id', Filter::select(fn (Builder $q, string $v) => $q->where('credit_card_bill_id', CreditCardBill::where('uuid', $v)->value('id'))))
+            ->filter('expense_group', Filter::select(function (Builder $query, string $value) use ($workspace): void {
+                if ($value === 'none') {
+                    $query->whereNull('transactions.expense_group_id')
+                        ->whereDoesntHave(
+                            'category',
+                            fn (Builder $category) => $category->whereNotNull('categories.expense_group_id'),
+                        );
+
+                    return;
+                }
+
+                $group = $workspace->expenseGroups()->where('uuid', $value)->first();
+
+                if ($group === null) {
+                    return;
+                }
+
+                $query->where(function (Builder $q) use ($group): void {
+                    $q->where('transactions.expense_group_id', $group->id)
+                        ->orWhere(function (Builder $inherited) use ($group): void {
+                            $inherited->whereNull('transactions.expense_group_id')
+                                ->whereHas(
+                                    'category',
+                                    fn (Builder $category) => $category->where('categories.expense_group_id', $group->id),
+                                );
+                        });
+                });
+            }))
             ->sortable(['date', 'value', 'description'])
             ->defaultSort('date', 'desc')
             ->perPage(25);
@@ -111,10 +146,12 @@ class TransactionController extends Controller
             'categories' => CategoryResource::collection(
                 $workspace->categories()
                     ->whereIn('type', [TransactionType::Expense->value, TransactionType::Both->value])
+                    ->with('expenseGroup')
                     ->orderBy('name')
                     ->get()
             ),
             'tags' => TagResource::collection($workspace->tags()->orderBy('name')->get()),
+            'expenseGroups' => ExpenseGroupResource::collection($workspace->expenseGroups()->orderBy('name')->get()),
         ]);
     }
 
@@ -176,7 +213,7 @@ class TransactionController extends Controller
 
         $this->authorize('update', [$transaction, $workspace]);
 
-        $transaction->load(['account', 'category', 'tags', 'creditCard']);
+        $transaction->load(['account', 'category.expenseGroup', 'expenseGroup', 'tags', 'creditCard']);
 
         return inertia('Transactions/Edit', [
             'transaction' => new TransactionResource($transaction),
@@ -185,10 +222,12 @@ class TransactionController extends Controller
             'categories' => CategoryResource::collection(
                 $workspace->categories()
                     ->whereIn('type', [TransactionType::Expense->value, TransactionType::Both->value])
+                    ->with('expenseGroup')
                     ->orderBy('name')
                     ->get()
             ),
             'tags' => TagResource::collection($workspace->tags()->orderBy('name')->get()),
+            'expenseGroups' => ExpenseGroupResource::collection($workspace->expenseGroups()->orderBy('name')->get()),
         ]);
     }
 

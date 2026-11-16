@@ -1,7 +1,49 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import CategoriesChart from '@/Components/Dashboard/CategoriesChart';
+import ExpenseGroupsChart from '@/Components/Dashboard/ExpenseGroupsChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatCurrency } from '@/lib/format-currency';
 
-export default function Home() {
+interface ExpenseGroupSlice {
+    uuid: string | null;
+    name: string;
+    color: string;
+    total: number;
+    percent: number;
+}
+
+interface CategorySlice {
+    uuid: string | null;
+    name: string;
+    color: string;
+    group_color: string | null;
+    group_name: string | null;
+    total: number;
+    percent: number;
+}
+
+interface Kpis {
+    balance: number;
+    income: number;
+    expenses: number;
+    pending_count: number;
+    pending_value: number;
+}
+
+interface Props {
+    month: string;
+    kpis: Kpis;
+    expenseGroups: ExpenseGroupSlice[];
+    categories: CategorySlice[];
+    hasGroups: boolean;
+}
+
+export default function Home({
+    kpis,
+    expenseGroups,
+    categories,
+    hasGroups,
+}: Props) {
     return (
         <AuthenticatedLayout>
             <div className="space-y-6">
@@ -17,7 +59,9 @@ export default function Home() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-2xl font-semibold">R$ 0,00</p>
+                            <p className="text-2xl font-semibold">
+                                {formatCurrency(kpis.balance)}
+                            </p>
                         </CardContent>
                     </Card>
 
@@ -29,7 +73,7 @@ export default function Home() {
                         </CardHeader>
                         <CardContent>
                             <p className="text-2xl font-semibold text-emerald-600">
-                                R$ 0,00
+                                {formatCurrency(kpis.income)}
                             </p>
                         </CardContent>
                     </Card>
@@ -42,7 +86,7 @@ export default function Home() {
                         </CardHeader>
                         <CardContent>
                             <p className="text-2xl font-semibold text-rose-600">
-                                R$ 0,00
+                                {formatCurrency(kpis.expenses)}
                             </p>
                         </CardContent>
                     </Card>
@@ -55,10 +99,21 @@ export default function Home() {
                         </CardHeader>
                         <CardContent>
                             <p className="text-2xl font-semibold text-amber-600">
-                                0
+                                {kpis.pending_count}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                {formatCurrency(kpis.pending_value)}
                             </p>
                         </CardContent>
                     </Card>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                    <ExpenseGroupsChart
+                        groups={expenseGroups}
+                        hasGroups={hasGroups}
+                    />
+                    <CategoriesChart categories={categories} />
                 </div>
             </div>
         </AuthenticatedLayout>

@@ -18,6 +18,7 @@ class CategoryResource extends JsonResource
             'position' => $this->position,
             'is_system' => $this->is_system,
             'workspace' => new WorkspaceResource($this->whenLoaded('workspace')),
+            'expense_group' => new ExpenseGroupResource($this->whenLoaded('expenseGroup')),
             'created_at' => $this->created_at?->toISOString(),
         ];
     }

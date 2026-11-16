@@ -11,6 +11,7 @@ import {
     ChevronLeft,
     ChevronRight,
     Tags,
+    Shapes,
     Folders,
     FileUp,
     Bot,
@@ -125,6 +126,14 @@ export default function AppSidebar({ collapsed, onToggle }: Props) {
                     }),
                     icon: Folders,
                     testId: 'sidebar-categories',
+                },
+                {
+                    label: 'Grupos de Despesa',
+                    href: route('expense-groups.index', {
+                        workspace: workspaceUuid,
+                    }),
+                    icon: Shapes,
+                    testId: 'sidebar-expense-groups',
                 },
                 {
                     label: 'Tags',

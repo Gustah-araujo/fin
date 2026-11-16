@@ -12,6 +12,7 @@ import { useDataTable } from '@/hooks/use-data-table';
 import type {
     DataTableColumn,
     DataTableParams,
+    PaginatedMeta,
     TableState,
 } from '@/types/datatable';
 import ActiveFilters, { type ActiveFilter } from './ActiveFilters';
@@ -27,6 +28,7 @@ interface DataTableProps<T> {
     reloadTrigger?: number;
     initialState?: TableState;
     onStateChange?: (state: DataTableParams) => void;
+    onMetaChange?: (meta: PaginatedMeta | null) => void;
     activeFilters?: ActiveFilter[];
     onRemoveFilter?: (key: string) => void;
     onClearAll?: () => void;
@@ -43,6 +45,7 @@ export function DataTable<T extends { uuid: string }>({
     reloadTrigger,
     initialState,
     onStateChange,
+    onMetaChange,
     activeFilters,
     onRemoveFilter,
     onClearAll,
@@ -79,6 +82,11 @@ export function DataTable<T extends { uuid: string }>({
     useEffect(() => {
         onFiltersChange?.(params.filters);
     }, [params.filters, onFiltersChange]);
+
+    // Notify parent when meta changes (e.g. filtered totals)
+    useEffect(() => {
+        onMetaChange?.(meta);
+    }, [meta, onMetaChange]);
 
     const hasAnyFilter = useMemo(
         () => columns.some((column) => column.filter !== undefined),

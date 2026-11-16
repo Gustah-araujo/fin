@@ -23,19 +23,32 @@ interface CategoryData {
     icon: string | null;
     position: number | null;
     created_at: string;
+    expense_group?: {
+        uuid: string;
+        name: string;
+        color: string;
+    } | null;
+}
+
+interface ExpenseGroupItem {
+    uuid: string;
+    name: string;
+    color: string;
 }
 
 interface Props {
     category: CategoryData;
+    expenseGroups: ExpenseGroupItem[];
 }
 
-export default function Edit({ category }: Props) {
+export default function Edit({ category, expenseGroups }: Props) {
     const workspace = useWorkspace();
     const { data, setData, put, processing, errors } = useForm({
         name: category.name,
         type: category.type,
         color: category.color,
         icon: category.icon ?? '',
+        expense_group_id: category.expense_group?.uuid ?? '',
     });
 
     function handleSubmit(e: React.FormEvent) {
@@ -123,6 +136,40 @@ export default function Edit({ category }: Props) {
                                 {errors.color && (
                                     <p className="text-sm text-destructive">
                                         {errors.color}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="expense_group_id">
+                                    Grupo de Despesa
+                                </Label>
+                                <Select
+                                    value={data.expense_group_id}
+                                    onValueChange={(value) =>
+                                        setData('expense_group_id', value)
+                                    }
+                                >
+                                    <SelectTrigger id="expense_group_id">
+                                        <SelectValue placeholder="Selecione o grupo" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">
+                                            Sem grupo
+                                        </SelectItem>
+                                        {expenseGroups.map((group) => (
+                                            <SelectItem
+                                                key={group.uuid}
+                                                value={group.uuid}
+                                            >
+                                                {group.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {errors.expense_group_id && (
+                                    <p className="text-sm text-destructive">
+                                        {errors.expense_group_id}
                                     </p>
                                 )}
                             </div>

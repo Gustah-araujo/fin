@@ -1,11 +1,16 @@
 import { Link, router, useForm, usePage } from '@inertiajs/react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Banknote, CheckCircle2, Circle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { DataTable } from '@/Components/DataTable/DataTable';
 import { MonthPicker } from '@/Components/MonthPicker';
 import type { ActiveFilter } from '@/Components/DataTable/ActiveFilters';
@@ -14,6 +19,7 @@ import { getCurrentMonth } from '@/lib/month';
 import type {
     DataTableColumn,
     DataTableParams,
+    PaginatedMeta,
     SelectOption,
     TableState,
 } from '@/types/datatable';
@@ -54,6 +60,12 @@ interface BillItem {
     credit_card_name: string;
 }
 
+interface ExpenseGroupItem {
+    uuid: string;
+    name: string;
+    color: string;
+}
+
 interface TransactionItem {
     uuid: string;
     description: string;
@@ -67,6 +79,8 @@ interface TransactionItem {
     credit_card_id?: string | null;
     credit_card_bill_id?: string | null;
     bill?: { uuid: string; period_label: string; status: string } | null;
+    expense_group?: ExpenseGroupItem | null;
+    effective_expense_group?: ExpenseGroupItem | null;
 }
 
 interface Totals {
@@ -81,6 +95,7 @@ interface Props {
     tags: TagItem[];
     cards: CardItem[];
     bills: BillItem[];
+    expenseGroups: ExpenseGroupItem[];
     initialState: TableState;
     totals: Totals;
 }
@@ -93,67 +108,56 @@ function getTagStyle(color: string): string {
     return `background-color: ${color}20; color: ${color}; border-color: ${color}40`;
 }
 
+interface FilterContext {
+    accounts: AccountItem[];
+    categories: CategoryItem[];
+    cards: CardItem[];
+    bills: BillItem[];
+    groups: ExpenseGroupItem[];
+}
+
 function buildActiveFilters(
     filters: Record<string, string>,
     accounts: AccountItem[],
     categories: CategoryItem[],
     cards: CardItem[],
     bills: BillItem[],
+    groups: ExpenseGroupItem[],
 ): ActiveFilter[] {
-    const result: ActiveFilter[] = [];
+    const context: FilterContext = {
+        accounts,
+        categories,
+        cards,
+        bills,
+        groups,
+    };
 
-    for (const [key, value] of Object.entries(filters)) {
-        if (value === '') continue;
+    const resolvers: Record<string, (value: string) => string> = {
+        account: (value) =>
+            `Conta: ${context.accounts.find((a) => a.uuid === value)?.name ?? value}`,
+        category: (value) =>
+            `Categoria: ${context.categories.find((c) => c.uuid === value)?.name ?? value}`,
+        status: (value) => `Status: ${value === 'paid' ? 'Paga' : 'Não paga'}`,
+        description: (value) => `Descrição: ${value}`,
+        value: (value) => `Valor: ${value}`,
+        date: (value) => `Data: ${value}`,
+        credit_card_id: (value) =>
+            `Cartão: ${context.cards.find((c) => c.uuid === value)?.name ?? value}`,
+        credit_card_bill_id: (value) => {
+            const bill = context.bills.find((b) => b.uuid === value);
+            return `Fatura: ${bill ? `${bill.credit_card_name} — ${bill.period_label}` : value}`;
+        },
+        expense_group: (value) =>
+            `Grupo: ${value === 'none' ? 'Sem Grupo' : (context.groups.find((g) => g.uuid === value)?.name ?? value)}`,
+    };
 
-        let label = '';
-
-        switch (key) {
-            case 'account': {
-                const account = accounts.find((a) => a.uuid === value);
-                label = `Conta: ${account?.name ?? value}`;
-                break;
-            }
-            case 'category': {
-                const category = categories.find((c) => c.uuid === value);
-                label = `Categoria: ${category?.name ?? value}`;
-                break;
-            }
-            case 'status': {
-                label = `Status: ${value === 'paid' ? 'Paga' : 'Não paga'}`;
-                break;
-            }
-            case 'description': {
-                label = `Descrição: ${value}`;
-                break;
-            }
-            case 'value': {
-                label = `Valor: ${value}`;
-                break;
-            }
-            case 'date': {
-                label = `Data: ${value}`;
-                break;
-            }
-            case 'credit_card_id': {
-                const card = cards.find((c) => c.uuid === value);
-                label = `Cartão: ${card?.name ?? value}`;
-                break;
-            }
-            case 'credit_card_bill_id': {
-                const bill = bills.find((b) => b.uuid === value);
-                label = `Fatura: ${bill ? `${bill.credit_card_name} — ${bill.period_label}` : value}`;
-                break;
-            }
-            default: {
-                label = `${key}: ${value}`;
-                break;
-            }
-        }
-
-        result.push({ key, label, value });
-    }
-
-    return result;
+    return Object.entries(filters)
+        .filter(([, value]) => value !== '')
+        .map(([key, value]) => ({
+            key,
+            label: resolvers[key]?.(value) ?? `${key}: ${value}`,
+            value,
+        }));
 }
 
 export default function Index({
@@ -161,6 +165,7 @@ export default function Index({
     categories,
     cards,
     bills,
+    expenseGroups,
     initialState,
     totals,
 }: Props) {
@@ -171,6 +176,7 @@ export default function Index({
         () => urlParams.get('month') ?? getCurrentMonth(),
     );
     const [reloadTrigger, setReloadTrigger] = useState(0);
+    const [liveTotals, setLiveTotals] = useState<Totals>(totals);
     const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>(() =>
         buildActiveFilters(
             initialState.filters,
@@ -178,9 +184,29 @@ export default function Index({
             categories,
             cards,
             bills,
+            expenseGroups,
         ),
     );
     const clearState = useForm();
+
+    // Reset live totals whenever the server-side totals prop refreshes
+    // (month change or full page reload)
+    useEffect(() => {
+        setLiveTotals(totals);
+    }, [totals]);
+
+    const handleMetaChange = useCallback((meta: PaginatedMeta | null): void => {
+        const next = meta?.totals;
+        if (!next) return;
+
+        setLiveTotals((prev) =>
+            prev.total === next.total &&
+            prev.paid === next.paid &&
+            prev.pending === next.pending
+                ? prev
+                : next,
+        );
+    }, []);
 
     function handleMonthChange(newMonth: string) {
         setMonth(newMonth);
@@ -200,10 +226,17 @@ export default function Index({
     const syncActiveFilters = useCallback(
         (filters: Record<string, string>): void => {
             setActiveFilters(
-                buildActiveFilters(filters, accounts, categories, cards, bills),
+                buildActiveFilters(
+                    filters,
+                    accounts,
+                    categories,
+                    cards,
+                    bills,
+                    expenseGroups,
+                ),
             );
         },
-        [accounts, categories, cards, bills],
+        [accounts, categories, cards, bills, expenseGroups],
     );
 
     const handleStateChange = useCallback(
@@ -247,7 +280,40 @@ export default function Index({
         value: bill.uuid,
     }));
 
+    const groupOptions: SelectOption[] = [
+        ...expenseGroups.map((group) => ({
+            label: group.name,
+            value: group.uuid,
+        })),
+        { label: 'Sem Grupo', value: 'none' },
+    ];
+
     const columns: DataTableColumn<TransactionItem>[] = [
+        {
+            key: 'expense_group',
+            header: 'Grupo',
+            filter: { type: 'select', options: groupOptions },
+            cell: (row) =>
+                row.effective_expense_group ? (
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <span
+                                data-testid="group-dot"
+                                className="inline-block h-2.5 w-2.5 rounded-full"
+                                style={{
+                                    backgroundColor:
+                                        row.effective_expense_group.color,
+                                }}
+                            />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            {row.effective_expense_group.name}
+                        </TooltipContent>
+                    </Tooltip>
+                ) : (
+                    <span className="text-muted-foreground">—</span>
+                ),
+        },
         {
             key: 'description',
             header: 'Descrição',
@@ -420,7 +486,7 @@ export default function Index({
                                 className="text-2xl font-semibold"
                                 data-testid="total-expenses"
                             >
-                                {formatCurrency(totals.total)}
+                                {formatCurrency(liveTotals.total)}
                             </p>
                         </CardContent>
                     </Card>
@@ -437,7 +503,7 @@ export default function Index({
                                 className="text-2xl font-semibold text-emerald-600"
                                 data-testid="total-paid"
                             >
-                                {formatCurrency(totals.paid)}
+                                {formatCurrency(liveTotals.paid)}
                             </p>
                         </CardContent>
                     </Card>
@@ -454,7 +520,7 @@ export default function Index({
                                 className="text-2xl font-semibold text-amber-600"
                                 data-testid="total-pending"
                             >
-                                {formatCurrency(totals.pending)}
+                                {formatCurrency(liveTotals.pending)}
                             </p>
                         </CardContent>
                     </Card>
@@ -471,6 +537,7 @@ export default function Index({
                             columns={columns}
                             initialState={initialState}
                             onStateChange={handleStateChange}
+                            onMetaChange={handleMetaChange}
                             activeFilters={activeFilters}
                             onRemoveFilter={(key) => {
                                 setActiveFilters((prev) =>

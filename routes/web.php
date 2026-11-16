@@ -20,7 +20,9 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CreditCardBillController;
 use App\Http\Controllers\CreditCardController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DatatableStateController;
+use App\Http\Controllers\ExpenseGroupController;
 use App\Http\Controllers\FinController;
 use App\Http\Controllers\FinConversationController;
 use App\Http\Controllers\FinMessageController;
@@ -145,9 +147,7 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
     });
 
     Route::prefix('w/{workspace}')->group(function () {
-        Route::get('/', function (Workspace $workspace) {
-            return inertia('Home');
-        })->name('dashboard');
+        Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
         Route::get('members', [WorkspaceMemberController::class, 'index'])->name('workspace.members.index');
         Route::delete('members/{user}', [WorkspaceMemberController::class, 'destroy'])->name('workspace.members.destroy');
@@ -177,6 +177,7 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
 
         Route::resource('accounts', AccountController::class);
         Route::resource('categories', CategoryController::class);
+        Route::resource('expense-groups', ExpenseGroupController::class);
         Route::resource('tags', TagController::class);
         Route::resource('transactions', TransactionController::class);
         Route::post('transactions/{transaction}/pay', [TransactionController::class, 'pay'])

@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Enums\TransactionType;
 use App\Models\Category;
+use App\Models\ExpenseGroup;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Support\Str;
@@ -49,6 +50,7 @@ class CategoryService
             'color' => $this->normalizeColor($data['color']),
             'icon' => $data['icon'] ?? null,
             'position' => $data['position'] ?? null,
+            'expense_group_id' => $this->resolveExpenseGroupId($workspace->id, $data['expense_group_id'] ?? null),
         ]);
     }
 
@@ -68,6 +70,9 @@ class CategoryService
         }
         if (array_key_exists('position', $data)) {
             $category->position = $data['position'];
+        }
+        if (array_key_exists('expense_group_id', $data)) {
+            $category->expense_group_id = $this->resolveExpenseGroupId($category->workspace_id, $data['expense_group_id']);
         }
 
         $category->save();
@@ -115,6 +120,17 @@ class CategoryService
             'icon' => 'folder',
             'position' => 0,
         ]);
+    }
+
+    private function resolveExpenseGroupId(int $workspaceId, ?string $uuid): ?int
+    {
+        if (empty($uuid)) {
+            return null;
+        }
+
+        return ExpenseGroup::where('uuid', $uuid)
+            ->where('workspace_id', $workspaceId)
+            ->first()?->id;
     }
 
     private function normalizeColor(string $color): string

@@ -8,6 +8,7 @@ use App\Enums\RecurrenceFrequency;
 use App\Rules\AfterOrEqualDateRule;
 use App\Services\TransactionValidator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 
 class StoreTransactionRequest extends FormRequest
@@ -26,6 +27,10 @@ class StoreTransactionRequest extends FormRequest
             'account_id' => ['nullable', 'exists:accounts,uuid'],
             'credit_card_id' => ['nullable', 'exists:credit_cards,uuid'],
             'category_id' => ['required', 'exists:categories,uuid'],
+            'expense_group_id' => ['nullable', Rule::exists('expense_groups', 'uuid')->where(
+                'workspace_id',
+                (string) ($this->route('workspace')?->getKey() ?? ''),
+            )],
             'tags' => ['sometimes', 'array'],
             'tags.*' => ['string', 'exists:tags,uuid'],
             'is_recurring' => ['sometimes', 'boolean'],
@@ -61,6 +66,7 @@ class StoreTransactionRequest extends FormRequest
             'credit_card_id.required_without' => 'Uma transação deve ter uma conta ou cartão selecionado.',
             'category_id.required' => 'A categoria é obrigatória.',
             'category_id.exists' => 'A categoria selecionada é inválida.',
+            'expense_group_id.exists' => 'O grupo de despesa selecionado é inválido.',
             'tags.*.exists' => 'Tag inválida.',
             'frequency.required_if' => 'A frequência é obrigatória para despesas recorrentes.',
             'frequency_day.required_if' => 'O dia da recorrência é obrigatório.',
