@@ -52,5 +52,23 @@ export default tseslint.config(
             ],
         },
     },
+    {
+        files: ['cypress/**/*.{js,ts}'],
+        languageOptions: {
+            globals: {
+                ...globals.browser,
+                cy: 'readonly',
+                Cypress: 'readonly',
+                describe: 'readonly',
+                context: 'readonly',
+                it: 'readonly',
+                before: 'readonly',
+                beforeEach: 'readonly',
+                after: 'readonly',
+                afterEach: 'readonly',
+                expect: 'readonly',
+            },
+        },
+    },
     prettier,
 );

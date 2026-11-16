@@ -1032,7 +1032,12 @@ class RecurrenceService
 
     private function recalculateAccounts(array $accountIds): void
     {
-        foreach (array_unique($accountIds) as $accountId) {
+        $accountIds = array_filter(
+            array_unique($accountIds),
+            static fn ($accountId): bool => $accountId !== null,
+        );
+
+        foreach ($accountIds as $accountId) {
             $account = Account::find($accountId);
             if ($account) {
                 $this->accountService->recalculateBalance($account);

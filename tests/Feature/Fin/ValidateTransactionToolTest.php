@@ -8,9 +8,11 @@ use App\Ai\Tools\ValidateTransactionTool;
 use App\Enums\WorkspaceRole;
 use App\Models\Account;
 use App\Models\Category;
+use App\Models\FinPendingMutation;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Workspace;
+use Illuminate\Support\Str;
 use Laravel\Ai\Tools\Request;
 use Tests\TestCase;
 
@@ -145,5 +147,61 @@ class ValidateTransactionToolTest extends TestCase
 
         $this->assertArrayHasKey('error', $response);
         $this->assertDatabaseCount('fin_pending_mutations', 0);
+    }
+
+    public function test_validate_rejects_unknown_account_uuid(): void
+    {
+        $response = json_decode($this->tool()->handle(new Request($this->validArgs([
+            'account_id' => Str::orderedUuid()->toString(),
+        ]))), true);
+
+        $this->assertSame('Conta não encontrada neste workspace.', $response['error']);
+        $this->assertDatabaseCount('fin_pending_mutations', 0);
+    }
+
+    public function test_validate_creates_pending_mutation_without_account(): void
+    {
+        $args = $this->validArgs();
+        unset($args['account_id']);
+
+        $response = json_decode($this->tool()->handle(new Request($args)), true);
+
+        $this->assertArrayNotHasKey('error', $response);
+        $this->assertArrayHasKey('pending_id', $response);
+        $this->assertNull($response['account']);
+
+        $pending = FinPendingMutation::query()
+            ->where('workspace_id', $this->workspace->id)
+            ->firstOrFail();
+
+        $this->assertArrayNotHasKey('account_id', $pending->payload);
+    }
+
+    public function test_validate_persists_is_paid_in_pending_payload(): void
+    {
+        $response = json_decode($this->tool()->handle(new Request($this->validArgs([
+            'is_paid' => true,
+        ]))), true);
+
+        $this->assertArrayNotHasKey('error', $response);
+
+        $pending = FinPendingMutation::query()
+            ->where('workspace_id', $this->workspace->id)
+            ->firstOrFail();
+
+        $this->assertTrue($pending->payload['is_paid']);
+    }
+
+    public function test_validate_does_not_persist_is_paid_when_absent(): void
+    {
+        $response = json_decode($this->tool()->handle(new Request($this->validArgs())), true);
+
+        $this->assertArrayNotHasKey('error', $response);
+
+        $pending = FinPendingMutation::query()
+            ->where('workspace_id', $this->workspace->id)
+            ->firstOrFail();
+
+        $this->assertArrayNotHasKey('is_paid', $pending->payload);
     }
 }

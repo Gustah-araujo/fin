@@ -46,7 +46,19 @@ class TransactionValidator
 
         if ($accountId && $creditCardId) {
             $validator->errors()->add('account_id', 'Uma transação deve ter conta OU cartão, nunca ambos.');
-        } elseif (! $accountId && ! $creditCardId) {
+
+            return;
+        }
+
+        if ($accountId || $creditCardId) {
+            return;
+        }
+
+        // Recurring transactions and installments still require an account or card;
+        // single one-off transactions may have no source at all.
+        $installments = (int) $request->input('installments', 1);
+
+        if ($request->boolean('is_recurring') || $installments > 1) {
             $validator->errors()->add('account_id', 'Uma transação deve ter uma conta ou cartão selecionado.');
         }
     }

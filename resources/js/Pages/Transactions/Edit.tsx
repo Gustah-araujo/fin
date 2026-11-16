@@ -164,6 +164,7 @@ function PaymentSection({
                     <SelectValue placeholder="Selecione a conta" />
                 </SelectTrigger>
                 <SelectContent>
+                    <SelectItem value="">Sem conta</SelectItem>
                     {accounts.map((account) => (
                         <SelectItem key={account.uuid} value={account.uuid}>
                             {account.name}
@@ -228,7 +229,7 @@ export default function Edit({
         if (isCard) {
             payload.scope = scope;
         } else {
-            payload.account_id = data.account_id;
+            payload.account_id = data.account_id || null;
         }
 
         put(

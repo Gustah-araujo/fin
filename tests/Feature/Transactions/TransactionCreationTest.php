@@ -64,7 +64,7 @@ class TransactionCreationTest extends TestCase
         $response = $this->actingAs($user)
             ->post(route('transactions.store', $workspace), []);
 
-        $response->assertSessionHasErrors(['description', 'value', 'date', 'account_id', 'category_id']);
+        $response->assertSessionHasErrors(['description', 'value', 'date', 'category_id']);
     }
 
     public function test_transaction_with_zero_value_is_rejected(): void

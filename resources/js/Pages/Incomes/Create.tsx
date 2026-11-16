@@ -64,6 +64,7 @@ export default function Create({ accounts, categories, tags }: Props) {
         account_id: '',
         category_id: '',
         tags: [] as string[],
+        is_paid: false,
         is_recurring: false,
         frequency: 'monthly' as 'weekly' | 'monthly',
         frequency_day: 1,
@@ -79,11 +80,15 @@ export default function Create({ accounts, categories, tags }: Props) {
             description: data.description,
             value: data.value,
             date: data.date,
-            account_id: data.account_id,
+            account_id: data.account_id || null,
             category_id: data.category_id,
             tags: data.tags,
             is_recurring: data.is_recurring,
         };
+
+        if (!data.is_recurring) {
+            payload.is_paid = data.is_paid;
+        }
 
         if (data.is_recurring) {
             payload.frequency = data.frequency;
@@ -196,6 +201,9 @@ export default function Create({ accounts, categories, tags }: Props) {
                                         <SelectValue placeholder="Selecione a conta" />
                                     </SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="">
+                                            Sem conta
+                                        </SelectItem>
                                         {accounts.map((account) => (
                                             <SelectItem
                                                 key={account.uuid}
@@ -212,6 +220,26 @@ export default function Create({ accounts, categories, tags }: Props) {
                                     </p>
                                 )}
                             </div>
+
+                            {!data.is_recurring && (
+                                <div className="flex items-center justify-between rounded-lg border p-3">
+                                    <div className="space-y-0.5">
+                                        <Label htmlFor="is_paid">
+                                            Já foi recebida?
+                                        </Label>
+                                        <p className="text-xs text-muted-foreground">
+                                            Marcar como recebida hoje
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        id="is_paid"
+                                        checked={data.is_paid}
+                                        onCheckedChange={(checked) =>
+                                            setData('is_paid', checked)
+                                        }
+                                    />
+                                </div>
+                            )}
 
                             <div className="space-y-2">
                                 <Label htmlFor="category_id">Categoria</Label>

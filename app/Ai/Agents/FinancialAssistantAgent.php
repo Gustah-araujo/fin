@@ -94,6 +94,10 @@ class FinancialAssistantAgent extends BaseAgent
             diretamente. Sempre apresente um resumo do lançamento e aguarde a confirmação explícita do
             usuário antes de qualquer alteração.
 
+            A conta é opcional: se o usuário não informar ou não quiser vincular uma conta, crie a
+            transação sem conta. Quando o usuário disser que a movimentação já foi paga (despesa) ou
+            recebida (receita), marque-a como já paga/recebida.
+
             ## Idioma
             Responda sempre em pt-BR.
 
