@@ -1,5 +1,11 @@
 import type { ReactNode } from 'react';
 
+export interface PaginatedTotals {
+    total: number;
+    paid: number;
+    pending: number;
+}
+
 export interface PaginatedMeta {
     current_page: number;
     per_page: number;
@@ -7,6 +13,7 @@ export interface PaginatedMeta {
     last_page: number;
     from: number | null;
     to: number | null;
+    totals?: PaginatedTotals | null;
 }
 
 export interface Paginated<T> {

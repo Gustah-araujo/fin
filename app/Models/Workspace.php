@@ -71,6 +71,11 @@ class Workspace extends Model
         return $this->hasMany(Recurrence::class);
     }
 
+    public function expenseGroups(): HasMany
+    {
+        return $this->hasMany(ExpenseGroup::class);
+    }
+
     public function agentMemories(): HasMany
     {
         return $this->hasMany(AgentMemory::class);

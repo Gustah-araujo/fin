@@ -23,6 +23,10 @@ class StoreCategoryRequest extends FormRequest
             'color' => ['required', 'string', 'size:7', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'icon' => ['nullable', 'string', 'max:50'],
             'position' => ['nullable', 'integer', 'min:0'],
+            'expense_group_id' => ['nullable', Rule::exists('expense_groups', 'uuid')->where(
+                'workspace_id',
+                (string) ($this->route('workspace')?->getKey() ?? ''),
+            )],
         ];
     }
 
@@ -35,6 +39,7 @@ class StoreCategoryRequest extends FormRequest
             'color.required' => 'A cor é obrigatória.',
             'color.size' => 'Cor inválida. Use o formato #RRGGBB.',
             'color.regex' => 'Cor inválida. Use o formato #RRGGBB.',
+            'expense_group_id.exists' => 'O grupo de despesa selecionado é inválido.',
         ];
     }
 }

@@ -15,13 +15,24 @@ import {
 } from '@/components/ui/select';
 import { ColorPicker } from '@/components/ui/color-picker';
 
-export default function Create() {
+interface ExpenseGroupItem {
+    uuid: string;
+    name: string;
+    color: string;
+}
+
+interface Props {
+    expenseGroups: ExpenseGroupItem[];
+}
+
+export default function Create({ expenseGroups }: Props) {
     const workspace = useWorkspace();
     const { data, setData, post, processing, errors } = useForm({
         name: '',
         type: 'expense',
         color: '#9CA3AF',
         icon: '',
+        expense_group_id: '',
     });
 
     function handleSubmit(e: React.FormEvent) {
@@ -105,6 +116,40 @@ export default function Create() {
                                 {errors.color && (
                                     <p className="text-sm text-destructive">
                                         {errors.color}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="expense_group_id">
+                                    Grupo de Despesa
+                                </Label>
+                                <Select
+                                    value={data.expense_group_id}
+                                    onValueChange={(value) =>
+                                        setData('expense_group_id', value)
+                                    }
+                                >
+                                    <SelectTrigger id="expense_group_id">
+                                        <SelectValue placeholder="Selecione o grupo" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">
+                                            Sem grupo
+                                        </SelectItem>
+                                        {expenseGroups.map((group) => (
+                                            <SelectItem
+                                                key={group.uuid}
+                                                value={group.uuid}
+                                            >
+                                                {group.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {errors.expense_group_id && (
+                                    <p className="text-sm text-destructive">
+                                        {errors.expense_group_id}
                                     </p>
                                 )}
                             </div>

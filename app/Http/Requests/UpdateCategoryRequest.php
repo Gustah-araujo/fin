@@ -23,6 +23,10 @@ class UpdateCategoryRequest extends FormRequest
             'color' => ['sometimes', 'string', 'size:7', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'icon' => ['sometimes', 'nullable', 'string', 'max:50'],
             'position' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            'expense_group_id' => ['sometimes', 'nullable', Rule::exists('expense_groups', 'uuid')->where(
+                'workspace_id',
+                (string) ($this->route('workspace')?->getKey() ?? ''),
+            )],
         ];
     }
 
@@ -32,6 +36,7 @@ class UpdateCategoryRequest extends FormRequest
             'name.max' => 'O nome deve ter no máximo 255 caracteres.',
             'color.size' => 'Cor inválida. Use o formato #RRGGBB.',
             'color.regex' => 'Cor inválida. Use o formato #RRGGBB.',
+            'expense_group_id.exists' => 'O grupo de despesa selecionado é inválido.',
         ];
     }
 }

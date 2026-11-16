@@ -33,6 +33,8 @@ class TransactionResource extends JsonResource
                 ? "{$this->installment_number}/{$this->installments_total}"
                 : null,
             'category' => new CategoryResource($this->whenLoaded('category')),
+            'expense_group' => new ExpenseGroupResource($this->whenLoaded('expenseGroup')),
+            'effective_expense_group' => ($eg = $this->resource->effectiveExpenseGroup()) ? new ExpenseGroupResource($eg) : null,
             'tags' => TagResource::collection($this->whenLoaded('tags')),
             'created_by' => new UserResource($this->whenLoaded('creator')),
             'created_at' => $this->created_at?->toISOString(),

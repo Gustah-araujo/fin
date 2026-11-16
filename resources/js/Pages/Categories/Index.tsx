@@ -15,10 +15,23 @@ interface CategoryItem {
     icon: string | null;
     position: number | null;
     created_at: string;
+    expense_group?: {
+        uuid: string;
+        name: string;
+        color: string;
+    } | null;
+}
+
+interface ExpenseGroupItem {
+    uuid: string;
+    name: string;
+    color: string;
+    created_at: string;
 }
 
 interface Props {
     categories: CategoryItem[];
+    expenseGroups: ExpenseGroupItem[];
 }
 
 const typeLabels: Record<string, string> = {
@@ -27,7 +40,7 @@ const typeLabels: Record<string, string> = {
     both: 'Ambos',
 };
 
-export default function Index({ categories }: Props) {
+export default function Index({ categories, expenseGroups }: Props) {
     const workspace = useWorkspace();
     const { delete: destroy } = useForm();
 
@@ -156,6 +169,26 @@ export default function Index({ categories }: Props) {
                                                         <CardTitle className="text-base font-medium truncate">
                                                             {category.name}
                                                         </CardTitle>
+                                                        {category.expense_group && (
+                                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                                <span
+                                                                    className="inline-block h-2 w-2 rounded-full shrink-0"
+                                                                    style={{
+                                                                        backgroundColor:
+                                                                            category
+                                                                                .expense_group
+                                                                                .color,
+                                                                    }}
+                                                                />
+                                                                <span className="text-xs text-muted-foreground truncate">
+                                                                    {
+                                                                        category
+                                                                            .expense_group
+                                                                            .name
+                                                                    }
+                                                                </span>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     {isDefault && (
                                                         <Badge
@@ -210,6 +243,51 @@ export default function Index({ categories }: Props) {
                         </div>
                     );
                 })}
+
+                <Card>
+                    <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg font-semibold">
+                                Grupos de Despesa
+                            </CardTitle>
+                            <Button variant="outline" size="sm" asChild>
+                                <Link
+                                    href={route('expense-groups.index', {
+                                        workspace: workspace.uuid,
+                                    })}
+                                >
+                                    Gerenciar grupos
+                                </Link>
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        {expenseGroups.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                                Nenhum grupo de despesa cadastrado
+                            </p>
+                        ) : (
+                            <div className="space-y-1">
+                                {expenseGroups.map((group) => (
+                                    <div
+                                        key={group.uuid}
+                                        className="flex items-center gap-2"
+                                    >
+                                        <div
+                                            className="size-2 shrink-0 rounded-full"
+                                            style={{
+                                                backgroundColor: group.color,
+                                            }}
+                                        />
+                                        <span className="text-sm truncate">
+                                            {group.name}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
             </div>
         </AuthenticatedLayout>
     );

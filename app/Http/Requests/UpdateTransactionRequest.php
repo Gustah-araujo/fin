@@ -6,6 +6,7 @@ namespace App\Http\Requests;
 
 use App\Services\TransactionValidator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateTransactionRequest extends FormRequest
 {
@@ -22,6 +23,10 @@ class UpdateTransactionRequest extends FormRequest
             'value' => ['sometimes', 'required', 'numeric', 'gt:0', 'max:999999999.99'],
             'date' => ['sometimes', 'required', 'date'],
             'category_id' => ['sometimes', 'required', 'exists:categories,uuid'],
+            'expense_group_id' => ['sometimes', 'nullable', Rule::exists('expense_groups', 'uuid')->where(
+                'workspace_id',
+                (string) ($this->route('workspace')?->getKey() ?? ''),
+            )],
             'tags' => ['sometimes', 'array'],
             'tags.*' => ['string', 'exists:tags,uuid'],
             'paid_at' => ['sometimes', 'nullable', 'date'],
@@ -49,6 +54,7 @@ class UpdateTransactionRequest extends FormRequest
             'date.date' => 'A data informada é inválida.',
             'category_id.required' => 'A categoria é obrigatória.',
             'category_id.exists' => 'A categoria selecionada é inválida.',
+            'expense_group_id.exists' => 'O grupo de despesa selecionado é inválido.',
             'tags.*.exists' => 'Tag inválida.',
             'scope.in' => 'O escopo deve ser "single" ou "group".',
         ];

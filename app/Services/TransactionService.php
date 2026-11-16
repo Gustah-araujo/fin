@@ -10,11 +10,13 @@ use App\Models\Account;
 use App\Models\Category;
 use App\Models\CreditCard;
 use App\Models\CreditCardBill;
+use App\Models\ExpenseGroup;
 use App\Models\Tag;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Workspace;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -55,6 +57,7 @@ class TransactionService
             'created_by' => $creator->id,
             'account_id' => $accountId,
             'category_id' => $categoryId,
+            'expense_group_id' => $this->resolveExpenseGroupId($workspace, $data['expense_group_id'] ?? null),
             'type' => $type->value,
             'description' => $data['description'],
             'value' => $data['value'],
@@ -135,6 +138,8 @@ class TransactionService
                 $transaction->{$field} = $data[$field];
             }
         }
+
+        $this->applyExpenseGroupUpdate($transaction, $transaction->workspace, $data);
 
         if (array_key_exists('paid_at', $data)) {
             $transaction->paid_at = $data['paid_at'] ? now() : null;
@@ -223,6 +228,7 @@ class TransactionService
             if (isset($data['category_id'])) {
                 $transaction->category_id = $this->resolveCategoryId($transaction->workspace, $data['category_id']);
             }
+            $this->applyExpenseGroupUpdate($transaction, $transaction->workspace, $data);
             if (isset($data['description'])) {
                 $transaction->description = $data['description'];
             }
@@ -275,6 +281,7 @@ class TransactionService
                 if (isset($data['category_id'])) {
                     $row->category_id = $this->resolveCategoryId($installment->workspace, $data['category_id']);
                 }
+                $this->applyExpenseGroupUpdate($row, $installment->workspace, $data);
                 if (isset($data['date']) && (int) $row->installment_number === (int) $installment->installment_number) {
                     $row->date = $data['date'];
                     $newBill = $this->resolveBill($card, Carbon::parse($data['date']), $installment->created_by);
@@ -361,6 +368,7 @@ class TransactionService
                 'credit_card_id' => $card->id,
                 'credit_card_bill_id' => $bill->id,
                 'category_id' => $categoryId,
+                'expense_group_id' => $this->resolveExpenseGroupId($workspace, $data['expense_group_id'] ?? null),
                 'type' => 'expense',
                 'description' => $data['description'],
                 'value' => $data['value'],
@@ -414,6 +422,7 @@ class TransactionService
                     'credit_card_id' => $card->id,
                     'credit_card_bill_id' => $bill->id,
                     'category_id' => $categoryId,
+                    'expense_group_id' => $this->resolveExpenseGroupId($workspace, $data['expense_group_id'] ?? null),
                     'type' => 'expense',
                     'description' => $this->installmentDescription($data['description'], $i, $count),
                     'value' => $value,
@@ -472,6 +481,7 @@ class TransactionService
                     'credit_card_id' => null,
                     'credit_card_bill_id' => null,
                     'category_id' => $categoryId,
+                    'expense_group_id' => $this->resolveExpenseGroupId($workspace, $data['expense_group_id'] ?? null),
                     'type' => 'expense',
                     'description' => $this->installmentDescription($data['description'], $i, $count),
                     'value' => $value,
@@ -524,6 +534,33 @@ class TransactionService
             ->where('workspace_id', $workspace->id)
             ->firstOrFail()
             ->id;
+    }
+
+    private function resolveExpenseGroupId(Workspace $workspace, ?string $uuid): ?int
+    {
+        if (empty($uuid)) {
+            return null;
+        }
+
+        return ExpenseGroup::where('uuid', $uuid)
+            ->where('workspace_id', $workspace->id)
+            ->first()?->id;
+    }
+
+    private function applyExpenseGroupUpdate(Transaction $transaction, Workspace $workspace, array $data): void
+    {
+        if (array_key_exists('expense_group_id', $data)) {
+            $transaction->expense_group_id = $this->resolveExpenseGroupId($workspace, $data['expense_group_id']);
+        }
+    }
+
+    public function totalsForQuery(Builder $query): array
+    {
+        return [
+            'total' => round((float) (clone $query)->sum('value'), 2),
+            'paid' => round((float) (clone $query)->whereNotNull('paid_at')->sum('value'), 2),
+            'pending' => round((float) (clone $query)->whereNull('paid_at')->sum('value'), 2),
+        ];
     }
 
     private function installmentDescription(string $base, int $number, int $total): string

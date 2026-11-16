@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Requests\UpdateCategoryRequest;
 use App\Http\Resources\CategoryResource;
+use App\Http\Resources\ExpenseGroupResource;
 use App\Models\Category;
 use App\Models\Workspace;
 use App\Services\CategoryService;
@@ -20,10 +21,17 @@ class CategoryController extends Controller
     {
         $this->authorize('viewAny', [Category::class, $workspace]);
 
-        $categories = $workspace->categories()->orderBy('position')->orderBy('name')->get();
+        $categories = $workspace->categories()
+            ->with('expenseGroup')
+            ->orderBy('position')
+            ->orderBy('name')
+            ->get();
 
         return inertia('Categories/Index', [
             'categories' => CategoryResource::collection($categories),
+            'expenseGroups' => ExpenseGroupResource::collection(
+                $workspace->expenseGroups()->orderBy('name')->get(),
+            ),
         ]);
     }
 
@@ -31,7 +39,11 @@ class CategoryController extends Controller
     {
         $this->authorize('create', [Category::class, $workspace]);
 
-        return inertia('Categories/Create');
+        return inertia('Categories/Create', [
+            'expenseGroups' => ExpenseGroupResource::collection(
+                $workspace->expenseGroups()->orderBy('name')->get(),
+            ),
+        ]);
     }
 
     public function store(StoreCategoryRequest $request, Workspace $workspace, CategoryService $categoryService): RedirectResponse
@@ -56,8 +68,13 @@ class CategoryController extends Controller
 
         $this->authorize('update', [$category, $workspace]);
 
+        $category->load('expenseGroup');
+
         return inertia('Categories/Edit', [
             'category' => new CategoryResource($category),
+            'expenseGroups' => ExpenseGroupResource::collection(
+                $workspace->expenseGroups()->orderBy('name')->get(),
+            ),
         ]);
     }
 

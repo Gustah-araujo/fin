@@ -1,3 +1,24 @@
+/**
+ * Opens the select filter of a column, located by its header text instead
+ * of a positional index (column order changes must not break the spec).
+ */
+function openColumnFilter(columnName) {
+    return cy
+        .get('table thead tr')
+        .eq(0)
+        .contains('th', columnName)
+        .then(($th) => {
+            const columnIndex = $th.index();
+            return cy
+                .get('table thead tr')
+                .eq(1)
+                .children('th')
+                .eq(columnIndex)
+                .find('[data-slot="select-trigger"]')
+                .click();
+        });
+}
+
 describe('DataTable State Persistence', () => {
     let workspaceUuid;
 
@@ -56,8 +77,8 @@ describe('DataTable State Persistence', () => {
         // Wait for the initial table load before applying the filter
         cy.wait('@datatable');
 
-        // Apply category filter (2nd select trigger: account, category, status)
-        cy.get('table thead tr').eq(1).find('[data-slot="select-trigger"]').eq(3).click();
+        // Apply category filter (select located by column header)
+        openColumnFilter('Categoria');
         cy.contains('[role="option"]', 'Alimentação').click();
 
         // Wait for the filtered fetch to finish so the session is saved
@@ -83,8 +104,8 @@ describe('DataTable State Persistence', () => {
         cy.get('[data-testid="sidebar-transactions"]').click();
         cy.contains('Despesas').should('be.visible');
 
-        // Apply category filter (2nd select trigger: account, category, status)
-        cy.get('table thead tr').eq(1).find('[data-slot="select-trigger"]').eq(3).click();
+        // Apply category filter (select located by column header)
+        openColumnFilter('Categoria');
         cy.contains('[role="option"]', 'Alimentação').click();
 
         // Wait for badge to appear
@@ -130,8 +151,8 @@ describe('DataTable State Persistence', () => {
         cy.get('[data-testid="sidebar-transactions"]').click();
         cy.contains('Despesas').should('be.visible');
 
-        // Apply category filter (2nd select trigger: account, category, status)
-        cy.get('table thead tr').eq(1).find('[data-slot="select-trigger"]').eq(3).click();
+        // Apply category filter (select located by column header)
+        openColumnFilter('Categoria');
         cy.contains('[role="option"]', 'Alimentação').click();
 
         // Wait for badge
@@ -151,8 +172,8 @@ describe('DataTable State Persistence', () => {
         cy.get('[data-testid="sidebar-transactions"]').click();
         cy.contains('Despesas').should('be.visible');
 
-        // Apply filter in transactions (2nd select trigger: account, category, status)
-        cy.get('table thead tr').eq(1).find('[data-slot="select-trigger"]').eq(3).click();
+        // Apply filter in transactions (select located by column header)
+        openColumnFilter('Categoria');
         cy.contains('[role="option"]', 'Alimentação').click();
         cy.contains('Categoria: Alimentação').should('be.visible');
 

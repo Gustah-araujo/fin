@@ -20,6 +20,9 @@ import { AccountFields } from '@/Components/Transactions/AccountFields';
 import { CardExpenseFields } from '@/Components/Transactions/CardExpenseFields';
 import { InstallmentFields } from '@/Components/Transactions/InstallmentFields';
 import { ValueField } from '@/Components/Transactions/ValueField';
+import { ExpenseGroupField } from '@/Components/Transactions/ExpenseGroupField';
+import { TagsSelector } from '@/Components/Transactions/TagsSelector';
+import { resolveGroupDisplay } from '@/lib/expense-groups';
 
 interface AccountItem {
     uuid: string;
@@ -34,6 +37,7 @@ interface CategoryItem {
     type: string;
     color: string;
     icon: string | null;
+    expense_group?: { uuid: string; name: string; color: string } | null;
 }
 
 interface TagItem {
@@ -49,11 +53,18 @@ interface CardItem {
     available_limit: number;
 }
 
+interface ExpenseGroupItem {
+    uuid: string;
+    name: string;
+    color: string;
+}
+
 interface Props {
     accounts: AccountItem[];
     cards: CardItem[];
     categories: CategoryItem[];
     tags: TagItem[];
+    expenseGroups: ExpenseGroupItem[];
 }
 
 const WEEKDAYS = [
@@ -66,7 +77,13 @@ const WEEKDAYS = [
     { value: 6, label: 'Sábado' },
 ];
 
-export default function Create({ accounts, cards, categories, tags }: Props) {
+export default function Create({
+    accounts,
+    cards,
+    categories,
+    tags,
+    expenseGroups,
+}: Props) {
     const workspace = useWorkspace();
 
     const today = new Date().toISOString().split('T')[0];
@@ -83,6 +100,7 @@ export default function Create({ accounts, cards, categories, tags }: Props) {
         date: today,
         account_id: '',
         category_id: '',
+        expense_group_id: '',
         tags: [] as string[],
         modality: 'single' as ExpenseModality,
         frequency: 'monthly' as 'weekly' | 'monthly',
@@ -101,6 +119,14 @@ export default function Create({ accounts, cards, categories, tags }: Props) {
 
     const { data, setData, processing, errors } = form;
 
+    const selectedCategory = categories.find(
+        (c) => c.uuid === data.category_id,
+    );
+    const groupDisplay = resolveGroupDisplay(
+        data.expense_group_id,
+        selectedCategory,
+    );
+
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
 
@@ -117,6 +143,7 @@ export default function Create({ accounts, cards, categories, tags }: Props) {
                 account_id: formData.account_id,
                 credit_card_id: formData.credit_card_id,
                 category_id: formData.category_id,
+                expense_group_id: formData.expense_group_id,
                 tags: formData.tags,
             };
 
@@ -300,200 +327,30 @@ export default function Create({ accounts, cards, categories, tags }: Props) {
                                 )}
                             </div>
 
+                            <ExpenseGroupField
+                                value={groupDisplay.value}
+                                onChange={(value) =>
+                                    setData('expense_group_id', value)
+                                }
+                                groups={expenseGroups}
+                                hint={groupDisplay.hint}
+                                error={errors.expense_group_id}
+                            />
+
                             {data.modality === 'recurrence' && (
-                                <div className="space-y-4 rounded-lg border p-3">
-                                    <div className="space-y-2">
-                                        <Label>Frequência</Label>
-                                        <Select
-                                            value={data.frequency}
-                                            onValueChange={(value) =>
-                                                setData(
-                                                    'frequency',
-                                                    value as
-                                                        'weekly' | 'monthly',
-                                                )
-                                            }
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="weekly">
-                                                    Semanal
-                                                </SelectItem>
-                                                <SelectItem value="monthly">
-                                                    Mensal
-                                                </SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.frequency && (
-                                            <p className="text-sm text-destructive">
-                                                {errors.frequency}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    {data.frequency === 'weekly' ? (
-                                        <div className="space-y-2">
-                                            <Label>Dia da semana</Label>
-                                            <Select
-                                                value={String(
-                                                    data.frequency_day,
-                                                )}
-                                                onValueChange={(value) =>
-                                                    setData(
-                                                        'frequency_day',
-                                                        Number(value),
-                                                    )
-                                                }
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {WEEKDAYS.map((day) => (
-                                                        <SelectItem
-                                                            key={day.value}
-                                                            value={String(
-                                                                day.value,
-                                                            )}
-                                                        >
-                                                            {day.label}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            <Label htmlFor="frequency_day">
-                                                Dia do mês
-                                            </Label>
-                                            <Input
-                                                id="frequency_day"
-                                                type="number"
-                                                min="1"
-                                                max="31"
-                                                value={data.frequency_day}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        'frequency_day',
-                                                        Number(e.target.value),
-                                                    )
-                                                }
-                                            />
-                                        </div>
-                                    )}
-                                    {errors.frequency_day && (
-                                        <p className="text-sm text-destructive">
-                                            {errors.frequency_day}
-                                        </p>
-                                    )}
-
-                                    <div className="flex items-center gap-2">
-                                        <Checkbox
-                                            id="has_until_date"
-                                            checked={data.has_until_date}
-                                            onCheckedChange={(checked) =>
-                                                setData(
-                                                    'has_until_date',
-                                                    checked === true,
-                                                )
-                                            }
-                                        />
-                                        <Label
-                                            htmlFor="has_until_date"
-                                            className="text-sm"
-                                        >
-                                            Definir data final
-                                        </Label>
-                                    </div>
-
-                                    {data.has_until_date && (
-                                        <div className="space-y-2">
-                                            <Label htmlFor="until_date">
-                                                Data final
-                                            </Label>
-                                            <Input
-                                                id="until_date"
-                                                type="date"
-                                                value={data.until_date}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        'until_date',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                            />
-                                            {errors.until_date && (
-                                                <p className="text-sm text-destructive">
-                                                    {errors.until_date}
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="buffer_ahead">
-                                            Quantidade de Buffer
-                                        </Label>
-                                        <Input
-                                            id="buffer_ahead"
-                                            type="number"
-                                            min="1"
-                                            max="50"
-                                            value={data.buffer_ahead}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'buffer_ahead',
-                                                    Number(e.target.value),
-                                                )
-                                            }
-                                        />
-                                        <p className="text-xs text-muted-foreground">
-                                            O sistema cria essas
-                                            receitas/despesas automaticamente
-                                            para você poder usar em
-                                            planejamentos e relatórios futuros.
-                                        </p>
-                                    </div>
-                                </div>
+                                <RecurrenceFields
+                                    data={data}
+                                    setData={setData}
+                                    errors={errors}
+                                />
                             )}
 
-                            {tags.length > 0 && (
-                                <div className="space-y-2">
-                                    <Label>Tags</Label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {tags.map((tag) => (
-                                            <div
-                                                key={tag.uuid}
-                                                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md border cursor-pointer text-sm transition-colors ${
-                                                    data.tags.includes(tag.uuid)
-                                                        ? 'bg-primary text-primary-foreground border-primary'
-                                                        : 'bg-background hover:bg-accent'
-                                                }`}
-                                                onClick={() =>
-                                                    toggleTag(tag.uuid)
-                                                }
-                                            >
-                                                <span
-                                                    className="w-2.5 h-2.5 rounded-full"
-                                                    style={{
-                                                        backgroundColor:
-                                                            tag.color,
-                                                    }}
-                                                />
-                                                {tag.name}
-                                            </div>
-                                        ))}
-                                    </div>
-                                    {errors.tags && (
-                                        <p className="text-sm text-destructive">
-                                            {errors.tags}
-                                        </p>
-                                    )}
-                                </div>
-                            )}
+                            <TagsSelector
+                                tags={tags}
+                                selected={data.tags}
+                                onToggle={toggleTag}
+                                error={errors.tags}
+                            />
 
                             <div className="flex items-center gap-3 pt-2">
                                 <Button type="submit" disabled={processing}>
@@ -514,5 +371,141 @@ export default function Create({ accounts, cards, categories, tags }: Props) {
                 </Card>
             </div>
         </AuthenticatedLayout>
+    );
+}
+
+interface RecurrenceFieldsData {
+    frequency: 'weekly' | 'monthly';
+    frequency_day: number;
+    until_date: string;
+    has_until_date: boolean;
+    buffer_ahead: number;
+}
+
+interface RecurrenceFieldsProps {
+    data: RecurrenceFieldsData;
+    setData: (key: string, value: string | number | boolean) => void;
+    errors: Record<string, string>;
+}
+
+function RecurrenceFields({ data, setData, errors }: RecurrenceFieldsProps) {
+    return (
+        <div className="space-y-4 rounded-lg border p-3">
+            <div className="space-y-2">
+                <Label>Frequência</Label>
+                <Select
+                    value={data.frequency}
+                    onValueChange={(value) =>
+                        setData('frequency', value as 'weekly' | 'monthly')
+                    }
+                >
+                    <SelectTrigger>
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="weekly">Semanal</SelectItem>
+                        <SelectItem value="monthly">Mensal</SelectItem>
+                    </SelectContent>
+                </Select>
+                {errors.frequency && (
+                    <p className="text-sm text-destructive">
+                        {errors.frequency}
+                    </p>
+                )}
+            </div>
+
+            {data.frequency === 'weekly' ? (
+                <div className="space-y-2">
+                    <Label>Dia da semana</Label>
+                    <Select
+                        value={String(data.frequency_day)}
+                        onValueChange={(value) =>
+                            setData('frequency_day', Number(value))
+                        }
+                    >
+                        <SelectTrigger>
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {WEEKDAYS.map((day) => (
+                                <SelectItem
+                                    key={day.value}
+                                    value={String(day.value)}
+                                >
+                                    {day.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            ) : (
+                <div className="space-y-2">
+                    <Label htmlFor="frequency_day">Dia do mês</Label>
+                    <Input
+                        id="frequency_day"
+                        type="number"
+                        min="1"
+                        max="31"
+                        value={data.frequency_day}
+                        onChange={(e) =>
+                            setData('frequency_day', Number(e.target.value))
+                        }
+                    />
+                </div>
+            )}
+            {errors.frequency_day && (
+                <p className="text-sm text-destructive">
+                    {errors.frequency_day}
+                </p>
+            )}
+
+            <div className="flex items-center gap-2">
+                <Checkbox
+                    id="has_until_date"
+                    checked={data.has_until_date}
+                    onCheckedChange={(checked) =>
+                        setData('has_until_date', checked === true)
+                    }
+                />
+                <Label htmlFor="has_until_date" className="text-sm">
+                    Definir data final
+                </Label>
+            </div>
+
+            {data.has_until_date && (
+                <div className="space-y-2">
+                    <Label htmlFor="until_date">Data final</Label>
+                    <Input
+                        id="until_date"
+                        type="date"
+                        value={data.until_date}
+                        onChange={(e) => setData('until_date', e.target.value)}
+                    />
+                    {errors.until_date && (
+                        <p className="text-sm text-destructive">
+                            {errors.until_date}
+                        </p>
+                    )}
+                </div>
+            )}
+
+            <div className="space-y-2">
+                <Label htmlFor="buffer_ahead">Quantidade de Buffer</Label>
+                <Input
+                    id="buffer_ahead"
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={data.buffer_ahead}
+                    onChange={(e) =>
+                        setData('buffer_ahead', Number(e.target.value))
+                    }
+                />
+                <p className="text-xs text-muted-foreground">
+                    O sistema cria essas receitas/despesas automaticamente para
+                    você poder usar em planejamentos e relatórios futuros.
+                </p>
+            </div>
+        </div>
     );
 }

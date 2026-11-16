@@ -23,6 +23,7 @@ class Transaction extends Model
         'credit_card_id',
         'credit_card_bill_id',
         'category_id',
+        'expense_group_id',
         'type',
         'description',
         'value',
@@ -80,6 +81,32 @@ class Transaction extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function expenseGroup(): BelongsTo
+    {
+        return $this->belongsTo(ExpenseGroup::class);
+    }
+
+    public function effectiveExpenseGroup(): ?ExpenseGroup
+    {
+        if ($this->expense_group_id !== null) {
+            return $this->relationLoaded('expenseGroup')
+                ? $this->expenseGroup
+                : $this->expenseGroup()->first();
+        }
+
+        $category = $this->relationLoaded('category')
+            ? $this->category
+            : $this->category()->first();
+
+        if ($category === null) {
+            return null;
+        }
+
+        return $category->relationLoaded('expenseGroup')
+            ? $category->expenseGroup
+            : $category->expenseGroup()->first();
     }
 
     public function tags(): MorphToMany
