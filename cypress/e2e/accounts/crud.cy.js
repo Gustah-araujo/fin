@@ -65,7 +65,7 @@ describe('Account CRUD', () => {
         cy.contains('Conta Editada').should('be.visible');
     });
 
-    it('deletes an account', () => {
+    it('deletes an account after confirming the modal', () => {
         cy.get('[data-testid="sidebar-accounts"]').click();
         cy.contains('Nova Conta').click();
         cy.get('#name').type('Para Excluir');
@@ -82,6 +82,27 @@ describe('Account CRUD', () => {
             .contains('button', 'Excluir')
             .click({ force: true });
 
+        cy.get('[data-testid="delete-account-dialog"]')
+            .should('be.visible')
+            .contains('Para Excluir');
+
+        cy.get('[data-testid="delete-account-confirm"]').click();
+        cy.assertToast('success', 'arquivada');
+
         cy.contains('Para Excluir').should('not.exist');
+    });
+
+    it('keeps the account when canceling the delete modal', () => {
+        cy.get('[data-testid="sidebar-accounts"]').click();
+        cy.contains('Conta Editada')
+            .closest('[data-slot="card"]')
+            .contains('button', 'Excluir')
+            .click({ force: true });
+
+        cy.get('[data-testid="delete-account-dialog"]').should('be.visible');
+        cy.get('[data-testid="delete-account-cancel"]').click();
+        cy.get('[data-testid="delete-account-dialog"]').should('not.exist');
+
+        cy.contains('Conta Editada').should('be.visible');
     });
 });
