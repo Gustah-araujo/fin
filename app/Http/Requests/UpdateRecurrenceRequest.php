@@ -165,7 +165,6 @@ class UpdateRecurrenceRequest extends FormRequest
             'value.numeric' => 'O valor deve ser um número.',
             'value.gt' => 'O valor deve ser maior que zero.',
             'value.max' => 'O valor excede o limite permitido.',
-            'account_id.required' => 'A conta é obrigatória.',
             'account_id.exists' => 'A conta selecionada é inválida.',
             'category_id.required' => 'A categoria é obrigatória.',
             'category_id.exists' => 'A categoria selecionada é inválida.',

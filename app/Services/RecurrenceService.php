@@ -40,7 +40,7 @@ class RecurrenceService
      */
     public function create(Workspace $workspace, array $data, User $user): Recurrence
     {
-        $accountId = $this->resolveAccountId($workspace, $data['account_id']);
+        $accountId = $this->resolveAccountId($workspace, $data['account_id'] ?? null);
         $categoryId = $this->resolveCategoryId($workspace, $data['category_id']);
 
         $startDate = Carbon::parse($data['start_date']);
@@ -88,7 +88,7 @@ class RecurrenceService
     public function createWithFirstInstance(Workspace $workspace, array $data, User $user): array
     {
         return DB::transaction(function () use ($workspace, $data, $user) {
-            $accountId = $this->resolveAccountId($workspace, $data['account_id']);
+            $accountId = $this->resolveAccountId($workspace, $data['account_id'] ?? null);
             $categoryId = $this->resolveCategoryId($workspace, $data['category_id']);
 
             $startDate = Carbon::parse($data['start_date']);
@@ -334,14 +334,26 @@ class RecurrenceService
                 ->whereDate('date', '>=', today())
                 ->get();
 
+            $accountIds = [];
+
             foreach ($futureTransactions as $transaction) {
+                $wasPaid = $transaction->paid_at !== null;
+                $oldAccountId = $transaction->account_id;
+
                 $this->applySharedFields($transaction, $data);
                 $transaction->save();
 
                 if (! empty($data['tags'])) {
                     $this->syncTags($transaction, $recurrence->workspace, $data['tags']);
                 }
+
+                $accountIds = array_merge(
+                    $accountIds,
+                    $this->accountsToRecalculate($transaction, $data, $wasPaid, $oldAccountId),
+                );
             }
+
+            $this->recalculateAccounts(array_unique($accountIds));
         });
     }
 
@@ -810,11 +822,13 @@ class RecurrenceService
 
     private function resolveForeignKeyIds(Recurrence $recurrence, array $data): array
     {
-        if (isset($data['account_id'])) {
-            $data['account_id'] = Account::where('uuid', $data['account_id'])
-                ->where('workspace_id', $recurrence->workspace_id)
-                ->firstOrFail()
-                ->id;
+        if (array_key_exists('account_id', $data)) {
+            $data['account_id'] = empty($data['account_id'])
+                ? null
+                : Account::where('uuid', $data['account_id'])
+                    ->where('workspace_id', $recurrence->workspace_id)
+                    ->firstOrFail()
+                    ->id;
         }
 
         if (isset($data['category_id'])) {
@@ -876,6 +890,14 @@ class RecurrenceService
     private function applyEditableFields(Recurrence $recurrence, array $data): void
     {
         foreach (['description', 'value', 'account_id', 'category_id', 'until_date', 'buffer_ahead'] as $field) {
+            if ($field === 'account_id') {
+                if (array_key_exists($field, $data)) {
+                    $recurrence->account_id = $data[$field];
+                }
+
+                continue;
+            }
+
             if (! isset($data[$field])) {
                 continue;
             }
@@ -1007,6 +1029,14 @@ class RecurrenceService
     private function applySharedFields(Model $model, array $data): void
     {
         foreach (['description', 'value', 'account_id', 'category_id'] as $field) {
+            if ($field === 'account_id') {
+                if (array_key_exists($field, $data)) {
+                    $model->account_id = $data[$field];
+                }
+
+                continue;
+            }
+
             if (isset($data[$field])) {
                 $model->{$field} = $data[$field];
             }
@@ -1019,8 +1049,15 @@ class RecurrenceService
             return [];
         }
 
-        if (isset($data['account_id']) && (int) $data['account_id'] !== $oldAccountId) {
-            return [$oldAccountId, (int) $data['account_id']];
+        if (array_key_exists('account_id', $data)) {
+            $newAccountId = $data['account_id'];
+
+            if ($newAccountId !== $oldAccountId) {
+                return array_values(array_filter(
+                    [$oldAccountId, $newAccountId],
+                    static fn (?int $accountId): bool => $accountId !== null,
+                ));
+            }
         }
 
         if ($transaction->account) {
@@ -1047,9 +1084,14 @@ class RecurrenceService
 
     /**
      * Resolve an account UUID to its internal ID, scoped to workspace.
+     * Returns null when no UUID is provided (transactions without account).
      */
-    private function resolveAccountId(Workspace $workspace, string $uuid): int
+    private function resolveAccountId(Workspace $workspace, ?string $uuid): ?int
     {
+        if (empty($uuid)) {
+            return null;
+        }
+
         return Account::where('uuid', $uuid)
             ->where('workspace_id', $workspace->id)
             ->firstOrFail()
@@ -1219,7 +1261,7 @@ class RecurrenceService
         $creditCardId = $data['credit_card_id'] ?? null;
 
         if (! $creditCardId) {
-            return [$this->resolveAccountId($workspace, $data['account_id']), null];
+            return [$this->resolveAccountId($workspace, $data['account_id'] ?? null), null];
         }
 
         if (! empty($data['account_id'])) {
