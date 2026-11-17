@@ -1,10 +1,13 @@
+import { useState } from 'react';
 import { Link, useForm } from '@inertiajs/react';
+import { toast } from 'sonner';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/format-currency';
+import DeleteAccountDialog from '@/Components/Accounts/DeleteAccountDialog';
 
 interface Account {
     uuid: string;
@@ -33,16 +36,26 @@ const typeLabels: Record<string, string> = {
 
 export default function Index({ accounts }: Props) {
     const workspace = useWorkspace();
-    const { delete: destroy } = useForm();
+    const { delete: destroy, processing } = useForm();
+    const [accountToDelete, setAccountToDelete] = useState<Account | null>(
+        null,
+    );
 
-    function handleDelete(accountUuid: string) {
+    function handleDelete() {
+        if (!accountToDelete) return;
+
         destroy(
             route('accounts.destroy', {
                 workspace: workspace.uuid,
-                account: accountUuid,
+                account: accountToDelete.uuid,
             }),
             {
-                onSuccess: () => window.location.reload(),
+                onSuccess: () => {
+                    setAccountToDelete(null);
+                    window.location.reload();
+                },
+                onError: () =>
+                    toast.error('Erro ao excluir a conta. Tente novamente.'),
             },
         );
     }
@@ -136,7 +149,7 @@ export default function Index({ accounts }: Props) {
                                             variant="destructive"
                                             size="sm"
                                             onClick={() =>
-                                                handleDelete(account.uuid)
+                                                setAccountToDelete(account)
                                             }
                                         >
                                             Excluir
@@ -147,6 +160,15 @@ export default function Index({ accounts }: Props) {
                         ))}
                     </div>
                 )}
+
+                <DeleteAccountDialog
+                    account={accountToDelete}
+                    processing={processing}
+                    onOpenChange={(open) => {
+                        if (!open) setAccountToDelete(null);
+                    }}
+                    onConfirm={handleDelete}
+                />
             </div>
         </AuthenticatedLayout>
     );

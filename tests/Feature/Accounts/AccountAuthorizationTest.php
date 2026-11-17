@@ -84,4 +84,29 @@ class AccountAuthorizationTest extends TestCase
 
         $response->assertNotFound();
     }
+
+    public function test_cannot_delete_account_from_other_workspace(): void
+    {
+        $user = User::factory()->create();
+        $workspaceA = Workspace::factory()->create();
+        $workspaceA->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
+
+        $workspaceB = Workspace::factory()->create();
+        $workspaceB->members()->attach($user, ['role' => WorkspaceRole::Admin->value]);
+
+        $accountInB = Account::factory()->create([
+            'workspace_id' => $workspaceB->id,
+            'created_by' => $user->id,
+        ]);
+
+        // Try to delete workspace B's account via workspace A's URL
+        $response = $this->actingAs($user)
+            ->delete(route('accounts.destroy', [$workspaceA, $accountInB]));
+
+        $response->assertNotFound();
+        $this->assertDatabaseHas('accounts', [
+            'id' => $accountInB->id,
+            'deleted_at' => null,
+        ]);
+    }
 }
