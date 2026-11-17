@@ -41,6 +41,7 @@ export function AccountFields({ accounts, form }: AccountFieldsProps) {
                     <SelectValue placeholder="Selecione a conta" />
                 </SelectTrigger>
                 <SelectContent>
+                    <SelectItem value="">Sem conta</SelectItem>
                     {accounts.map((account) => (
                         <SelectItem key={account.id} value={account.id}>
                             {account.name} ({account.type}) — Saldo:{' '}

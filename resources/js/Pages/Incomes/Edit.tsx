@@ -178,6 +178,9 @@ export default function Edit({
                                         <SelectValue placeholder="Selecione a conta" />
                                     </SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="">
+                                            Sem conta
+                                        </SelectItem>
                                         {accounts.map((account) => (
                                             <SelectItem
                                                 key={account.uuid}

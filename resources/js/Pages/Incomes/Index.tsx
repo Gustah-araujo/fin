@@ -278,7 +278,12 @@ export default function Index({
                 key: 'account',
                 header: 'Conta',
                 filter: { type: 'select', options: accountOptions },
-                cell: (row) => row.account?.name ?? '—',
+                cell: (row) =>
+                    row.account ? (
+                        row.account.name
+                    ) : (
+                        <span className="text-muted-foreground">Sem conta</span>
+                    ),
             },
             {
                 key: 'category',

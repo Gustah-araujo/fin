@@ -15,7 +15,7 @@ class IncomeValidationTest extends IncomeTestCase
         $response = $this->actingAs($this->user)
             ->post(route('incomes.store', $this->workspace), []);
 
-        $response->assertSessionHasErrors(['description', 'value', 'date', 'account_id', 'category_id']);
+        $response->assertSessionHasErrors(['description', 'value', 'date', 'category_id']);
     }
 
     public function test_expense_category_is_rejected(): void

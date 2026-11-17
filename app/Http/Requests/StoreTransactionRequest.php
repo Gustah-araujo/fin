@@ -41,6 +41,7 @@ class StoreTransactionRequest extends FormRequest
             'installments' => ['nullable', 'integer', 'min:1', 'max:48'],
             'total_value' => ['nullable', 'numeric', 'min:0.01'],
             'installment_day' => ['nullable', 'integer', 'min:1', 'max:31'],
+            'is_paid' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -62,8 +63,6 @@ class StoreTransactionRequest extends FormRequest
             'value.max' => 'O valor excede o limite permitido.',
             'date.required' => 'A data é obrigatória.',
             'date.date' => 'A data informada é inválida.',
-            'account_id.required_without' => 'Uma transação deve ter uma conta ou cartão selecionado.',
-            'credit_card_id.required_without' => 'Uma transação deve ter uma conta ou cartão selecionado.',
             'category_id.required' => 'A categoria é obrigatória.',
             'category_id.exists' => 'A categoria selecionada é inválida.',
             'expense_group_id.exists' => 'O grupo de despesa selecionado é inválido.',

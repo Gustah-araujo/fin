@@ -134,7 +134,7 @@ class CardUnifiedExpenseCreationTest extends CardTestCase
         $response->assertSessionHasErrors(['account_id']);
     }
 
-    public function test_neither_account_nor_card_rejected(): void
+    public function test_neither_account_nor_card_is_accepted_for_single_expense(): void
     {
         [$user, $workspace] = $this->createWorkspaceWithMember();
         $category = $this->createExpenseCategory($workspace, $user);
@@ -147,7 +147,15 @@ class CardUnifiedExpenseCreationTest extends CardTestCase
                 'category_id' => $category->uuid,
             ]);
 
-        $response->assertSessionHasErrors(['account_id']);
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect(route('transactions.index', $workspace));
+
+        $this->assertDatabaseHas('transactions', [
+            'workspace_id' => $workspace->id,
+            'account_id' => null,
+            'credit_card_id' => null,
+            'description' => 'Sem fonte',
+        ]);
     }
 
     public function test_installments_require_total_value(): void

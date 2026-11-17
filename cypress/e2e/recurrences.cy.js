@@ -38,7 +38,7 @@ describe('Recurrence management', () => {
 
         cy.selectCombobox('#category_id', 'Sem Categoria');
 
-        cy.get('[data-slot="switch"]').click();
+        cy.get('#is_recurring').click();
 
         cy.contains('Criar Receita').click({ force: true });
         cy.assertToast('success', 'criada');

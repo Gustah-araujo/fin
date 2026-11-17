@@ -26,7 +26,7 @@ class StoreIncomeRequest extends FormRequest
             'description' => ['required', 'string', 'max:255'],
             'value' => ['required', 'numeric', 'gt:0', 'max:999999999.99'],
             'date' => ['required', 'date'],
-            'account_id' => ['required', 'exists:accounts,uuid'],
+            'account_id' => ['nullable', 'exists:accounts,uuid'],
             'category_id' => ['required', 'exists:categories,uuid'],
             'tags' => ['sometimes', 'array'],
             'tags.*' => ['string', 'exists:tags,uuid'],
@@ -35,6 +35,7 @@ class StoreIncomeRequest extends FormRequest
             'frequency_day' => ['required_if:is_recurring,true', 'integer'],
             'until_date' => ['nullable', 'date', new AfterOrEqualDateRule('date')],
             'buffer_ahead' => ['sometimes', 'integer', 'min:1', 'max:50'],
+            'is_paid' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -183,7 +184,6 @@ class StoreIncomeRequest extends FormRequest
             'value.max' => 'O valor excede o limite permitido.',
             'date.required' => 'A data é obrigatória.',
             'date.date' => 'A data informada é inválida.',
-            'account_id.required' => 'A conta é obrigatória.',
             'account_id.exists' => 'A conta selecionada é inválida.',
             'category_id.required' => 'A categoria é obrigatória.',
             'category_id.exists' => 'A categoria selecionada é inválida.',

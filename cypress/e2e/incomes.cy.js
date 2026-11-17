@@ -43,7 +43,6 @@ describe('Income CRUD', () => {
 
         cy.contains('A descrição é obrigatória').should('be.visible');
         cy.contains('O valor é obrigatório').should('be.visible');
-        cy.contains('A conta é obrigatória').should('be.visible');
         cy.contains('A categoria é obrigatória').should('be.visible');
     });
 
@@ -100,7 +99,7 @@ describe('Income CRUD', () => {
 
         cy.selectCombobox('#category_id', 'Sem Categoria');
 
-        cy.get('[data-slot="switch"]').click();
+        cy.get('#is_recurring').click();
 
         cy.contains('Criar Receita').click({ force: true });
         cy.assertToast('success', 'criada');

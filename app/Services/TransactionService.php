@@ -41,28 +41,25 @@ class TransactionService
             ]);
         }
 
-        $accountId = Account::where('uuid', $data['account_id'])
-            ->where('workspace_id', $workspace->id)
-            ->firstOrFail()
-            ->id;
-
         $categoryId = Category::where('uuid', $data['category_id'])
             ->where('workspace_id', $workspace->id)
             ->firstOrFail()
             ->id;
 
+        $isPaid = ! empty($data['is_paid']);
+
         $transactionData = [
             'uuid' => Str::orderedUuid()->toString(),
             'workspace_id' => $workspace->id,
             'created_by' => $creator->id,
-            'account_id' => $accountId,
+            'account_id' => $this->resolveAccountId($workspace, $data['account_id'] ?? null),
             'category_id' => $categoryId,
             'expense_group_id' => $this->resolveExpenseGroupId($workspace, $data['expense_group_id'] ?? null),
             'type' => $type->value,
             'description' => $data['description'],
             'value' => $data['value'],
             'date' => $data['date'],
-            'paid_at' => null,
+            'paid_at' => $isPaid ? now() : null,
         ];
 
         if ($type === TransactionType::Income) {
@@ -79,7 +76,33 @@ class TransactionService
             $this->syncTags($transaction, $data['tags']);
         }
 
+        $this->recalculateAfterCreation($transaction, $isPaid);
+
         return $transaction;
+    }
+
+    private function resolveAccountId(Workspace $workspace, ?string $uuid): ?int
+    {
+        if (empty($uuid)) {
+            return null;
+        }
+
+        return Account::where('uuid', $uuid)
+            ->where('workspace_id', $workspace->id)
+            ->firstOrFail()
+            ->id;
+    }
+
+    private function recalculateAfterCreation(Transaction $transaction, bool $isPaid): void
+    {
+        if (! $isPaid || $transaction->account_id === null) {
+            return;
+        }
+
+        $account = Account::find($transaction->account_id);
+        if ($account) {
+            $this->accountService->recalculateBalance($account);
+        }
     }
 
     public function monthlyTotals(Workspace $workspace, ?string $month): array
@@ -119,7 +142,7 @@ class TransactionService
         $wasPaid = $transaction->paid_at !== null;
         $oldValue = (float) $transaction->value;
 
-        if (isset($data['account_id'])) {
+        if (array_key_exists('account_id', $data) && $data['account_id'] !== null) {
             $data['account_id'] = Account::where('uuid', $data['account_id'])
                 ->where('workspace_id', $transaction->workspace_id)
                 ->firstOrFail()
@@ -134,7 +157,7 @@ class TransactionService
         }
 
         foreach ($fieldsToUpdate as $field) {
-            if (isset($data[$field])) {
+            if (array_key_exists($field, $data)) {
                 $transaction->{$field} = $data[$field];
             }
         }
@@ -591,7 +614,7 @@ class TransactionService
     private function paidTransactionChanged(float $oldValue, ?int $oldAccountId, array $data): bool
     {
         $valueChanged = isset($data['value']) && (float) $data['value'] !== $oldValue;
-        $accountChanged = isset($data['account_id']) && (int) $data['account_id'] !== $oldAccountId;
+        $accountChanged = array_key_exists('account_id', $data) && $data['account_id'] !== $oldAccountId;
 
         return $valueChanged || $accountChanged;
     }

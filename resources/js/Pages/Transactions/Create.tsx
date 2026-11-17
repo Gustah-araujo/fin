@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import {
     Select,
     SelectContent,
@@ -102,6 +103,7 @@ export default function Create({
         category_id: '',
         expense_group_id: '',
         tags: [] as string[],
+        is_paid: false,
         modality: 'single' as ExpenseModality,
         frequency: 'monthly' as 'weekly' | 'monthly',
         frequency_day: 1,
@@ -140,12 +142,16 @@ export default function Create({
                 value: formData.value,
                 date: formData.date,
                 payment_method: formData.payment_method,
-                account_id: formData.account_id,
+                account_id: formData.account_id || null,
                 credit_card_id: formData.credit_card_id,
                 category_id: formData.category_id,
                 expense_group_id: formData.expense_group_id,
                 tags: formData.tags,
             };
+
+            if (formData.modality === 'single') {
+                payload.is_paid = formData.is_paid;
+            }
 
             if (formData.modality === 'recurrence') {
                 payload.is_recurring = true;
@@ -289,6 +295,26 @@ export default function Create({
                                     form={form}
                                     preselectedCardId={cardIdParam}
                                 />
+                            )}
+
+                            {data.modality === 'single' && (
+                                <div className="flex items-center justify-between rounded-lg border p-3">
+                                    <div className="space-y-0.5">
+                                        <Label htmlFor="is_paid">
+                                            Já foi paga?
+                                        </Label>
+                                        <p className="text-xs text-muted-foreground">
+                                            Marcar como paga hoje
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        id="is_paid"
+                                        checked={data.is_paid}
+                                        onCheckedChange={(checked) =>
+                                            setData('is_paid', checked)
+                                        }
+                                    />
+                                </div>
                             )}
 
                             {data.modality === 'installment' && (

@@ -10,6 +10,7 @@ use App\Enums\WorkspaceRole;
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\FinPendingMutation;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Support\Str;
@@ -181,5 +182,106 @@ class ConfirmTransactionToolTest extends TestCase
 
         $this->assertArrayHasKey('error', $response);
         $this->assertDatabaseCount('transactions', 0);
+    }
+
+    public function test_confirm_persists_transaction_without_account(): void
+    {
+        $pending = $this->createPending([
+            'payload' => [
+                'type' => 'expense',
+                'description' => 'Almoço de trabalho',
+                'value' => 42.50,
+                'date' => '2026-01-20',
+                'category_id' => $this->category->uuid,
+                'tags' => [],
+            ],
+        ]);
+
+        $response = json_decode($this->tool()->handle(new Request([
+            'pending_id' => $pending->uuid,
+        ])), true);
+
+        $this->assertArrayNotHasKey('error', $response);
+        $this->assertArrayHasKey('transaction_uuid', $response);
+
+        $transaction = Transaction::query()
+            ->where('workspace_id', $this->workspaceA->id)
+            ->where('description', 'Almoço de trabalho')
+            ->firstOrFail();
+
+        $this->assertNull($transaction->account_id);
+        $this->assertNull($transaction->paid_at);
+    }
+
+    public function test_confirm_persists_paid_transaction_and_recalculates_account_balance(): void
+    {
+        $initialBalance = (float) $this->account->current_balance;
+
+        $pending = $this->createPending([
+            'payload' => [
+                'type' => 'expense',
+                'description' => 'Almoço de trabalho',
+                'value' => 42.50,
+                'date' => '2026-01-20',
+                'account_id' => $this->account->uuid,
+                'category_id' => $this->category->uuid,
+                'tags' => [],
+                'is_paid' => true,
+            ],
+        ]);
+
+        $response = json_decode($this->tool()->handle(new Request([
+            'pending_id' => $pending->uuid,
+        ])), true);
+
+        $this->assertArrayNotHasKey('error', $response);
+        $this->assertArrayHasKey('transaction_uuid', $response);
+
+        $transaction = Transaction::query()
+            ->where('workspace_id', $this->workspaceA->id)
+            ->where('description', 'Almoço de trabalho')
+            ->firstOrFail();
+
+        $this->assertNotNull($transaction->paid_at);
+        $this->assertSame($this->account->id, $transaction->account_id);
+
+        $this->account->refresh();
+        $this->assertEquals($initialBalance - 42.50, (float) $this->account->current_balance);
+    }
+
+    public function test_confirm_persists_paid_transaction_without_account_without_balance_side_effect(): void
+    {
+        $pending = $this->createPending([
+            'payload' => [
+                'type' => 'expense',
+                'description' => 'Almoço de trabalho',
+                'value' => 42.50,
+                'date' => '2026-01-20',
+                'category_id' => $this->category->uuid,
+                'tags' => [],
+                'is_paid' => true,
+            ],
+        ]);
+
+        $response = json_decode($this->tool()->handle(new Request([
+            'pending_id' => $pending->uuid,
+        ])), true);
+
+        $this->assertArrayNotHasKey('error', $response);
+        $this->assertArrayHasKey('transaction_uuid', $response);
+
+        $transaction = Transaction::query()
+            ->where('workspace_id', $this->workspaceA->id)
+            ->where('description', 'Almoço de trabalho')
+            ->firstOrFail();
+
+        $this->assertNotNull($transaction->paid_at);
+        $this->assertNull($transaction->account_id);
+
+        $this->account->refresh();
+        $this->assertEquals(
+            (float) $this->account->initial_balance,
+            (float) $this->account->current_balance,
+        );
     }
 }
