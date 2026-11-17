@@ -56,7 +56,7 @@ describe('Planning (Planejamento Futuro)', () => {
         cy.selectCombobox('#category_id', 'Sem Categoria');
 
         // Make it recurring
-        cy.get('[data-slot="switch"]').click();
+        cy.get('#is_recurring').click();
         cy.contains('Criar Receita').click({ force: true });
         cy.assertToast('success', 'criada');
         cy.url().should('include', '/incomes');
@@ -91,7 +91,7 @@ describe('Planning (Planejamento Futuro)', () => {
 
         cy.selectCombobox('#account_id', 'Conta Principal');
         cy.selectCombobox('#category_id', 'Sem Categoria');
-        cy.get('[data-slot="switch"]').click();
+        cy.get('#is_recurring').click();
         cy.contains('Criar Receita').click({ force: true });
         cy.assertToast('success', 'criada');
         cy.url().should('include', '/incomes');
@@ -121,7 +121,7 @@ describe('Planning (Planejamento Futuro)', () => {
 
         cy.selectCombobox('#account_id', 'Conta Principal');
         cy.selectCombobox('#category_id', 'Sem Categoria');
-        cy.get('[data-slot="switch"]').click();
+        cy.get('#is_recurring').click();
         cy.contains('Criar Receita').click({ force: true });
         cy.assertToast('success', 'criada');
         cy.url().should('include', '/incomes');
@@ -187,7 +187,7 @@ describe('Planning (Planejamento Futuro)', () => {
 
         cy.selectCombobox('#account_id', 'Conta Principal');
         cy.selectCombobox('#category_id', 'Sem Categoria');
-        cy.get('[data-slot="switch"]').click();
+        cy.get('#is_recurring').click();
         cy.contains('Criar Receita').click({ force: true });
         cy.assertToast('success', 'criada');
         cy.url().should('include', '/incomes');
@@ -233,7 +233,7 @@ describe('Planning (Planejamento Futuro)', () => {
 
         cy.selectCombobox('#account_id', 'Conta Principal');
         cy.selectCombobox('#category_id', 'Sem Categoria');
-        cy.get('[data-slot="switch"]').click();
+        cy.get('#is_recurring').click();
         cy.contains('Criar Receita').click({ force: true });
         cy.assertToast('success', 'criada');
         cy.url().should('include', '/incomes');
