@@ -12,6 +12,7 @@ use App\Models\FinAssistantRun;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\Ai\Enums\MessageStatus;
@@ -109,19 +110,22 @@ class FinAssistantService
             $workspace = Workspace::findOrFail($run->workspace_id);
             $conversation = Conversation::findOrFail($run->conversation_id);
 
-            $history = $this->buildHistory($conversation);
+            $rows = $this->windowMessages($conversation);
 
             $promptContent = '';
             $historyMessages = [];
 
-            foreach ($history as $index => $message) {
-                if ($message->role === MessageRole::User) {
-                    $promptContent = (string) $message->content;
-                    $historyMessages = array_slice($history, 0, $index);
+            foreach ($rows as $index => $row) {
+                if ($row->role === MessageRole::User->value) {
+                    $promptContent = (string) $row->content;
+                    $historyMessages = $rows
+                        ->take($index)
+                        ->map(fn (ConversationMessage $message): Message => new Message($message->role, $message->content))
+                        ->all();
                 }
             }
 
-            $attachmentFiles = $this->hydrateAttachments($conversation);
+            $attachmentFiles = $this->hydrateWindowAttachments($rows, $workspace);
 
             if ($attachmentFiles !== [] && trim($promptContent) === '') {
                 $promptContent = self::EMPTY_CONTENT_FALLBACK_PROMPT;
@@ -157,6 +161,18 @@ class FinAssistantService
      */
     public function buildHistory(Conversation $conversation, ?int $limit = null): array
     {
+        return $this->windowMessages($conversation, $limit)
+            ->map(fn (ConversationMessage $message): Message => new Message($message->role, $message->content))
+            ->all();
+    }
+
+    /**
+     * Fetch the recent completed-message window of a conversation, oldest first.
+     *
+     * @return Collection<int, ConversationMessage>
+     */
+    private function windowMessages(Conversation $conversation, ?int $limit = null): Collection
+    {
         $limit = $limit ?? (int) config('ai.fin.context_window');
 
         return $conversation->messages()
@@ -165,9 +181,7 @@ class FinAssistantService
             ->limit($limit)
             ->get()
             ->reverse()
-            ->values()
-            ->map(fn (ConversationMessage $message): Message => new Message($message->role, $message->content))
-            ->all();
+            ->values();
     }
 
     /**
@@ -212,25 +226,35 @@ class FinAssistantService
     }
 
     /**
-     * Rebuild the SDK files attached to the last user message of the conversation.
+     * Rebuild the SDK files attached to every user message inside the history
+     * window, deduplicated by path, keeping the first occurrence order.
      *
+     * @param  Collection<int, ConversationMessage>  $rows
      * @return list<File>
      */
-    private function hydrateAttachments(Conversation $conversation): array
+    private function hydrateWindowAttachments(Collection $rows, Workspace $workspace): array
     {
-        $lastUserMessage = $conversation->messages()
-            ->where('role', MessageRole::User->value)
-            ->orderByDesc('id')
-            ->first();
-
         $files = [];
 
-        foreach ($lastUserMessage?->attachments ?? [] as $metadata) {
-            if (($file = $this->attachments->hydrate((array) $metadata)) !== null) {
-                $files[] = $file;
+        foreach ($rows as $row) {
+            if ($row->role !== MessageRole::User->value) {
+                continue;
+            }
+
+            foreach ($row->attachments ?? [] as $raw) {
+                $metadata = (array) $raw;
+                $path = (string) ($metadata['path'] ?? '');
+
+                if ($path === '' || array_key_exists($path, $files)) {
+                    continue;
+                }
+
+                if (($file = $this->attachments->hydrate($metadata, $workspace)) !== null) {
+                    $files[$path] = $file;
+                }
             }
         }
 
-        return $files;
+        return array_values($files);
     }
 }

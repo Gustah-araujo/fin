@@ -113,3 +113,102 @@ describe('Fin Memory Integration', () => {
         cy.get('[data-testid="fin-input"]').should('not.be.disabled');
     });
 });
+
+describe('Fin Attachment Persistence', () => {
+    let workspaceUuid;
+
+    afterEach(() => {
+        if (workspaceUuid) {
+            cy.finCleanup(workspaceUuid);
+        }
+    });
+
+    // Multi-round attachment persistence: the backend re-sends the
+    // attachments of ALL previous user messages (within the history window)
+    // to the LLM on every round, so the user can answer a confirmation
+    // question without re-uploading the file. This E2E validates the UI
+    // journey: the round-1 attachment chip stays visible in the history
+    // after a round-2 message that carries no files.
+    it('keeps the first message attachment visible in history after a follow-up message without files', () => {
+        cy.registerAndCreateWorkspace('Fin Anexos Workspace').then((uuid) => {
+            workspaceUuid = uuid;
+
+            cy.visit(`/w/${uuid}/fin`);
+
+            // Intercept the polling GET instead of the multipart POST: same
+            // reason as fin.cy.js — cy.intercept re-serializes request bodies
+            // as UTF-8 text, which corrupts binary upload payloads. Waiting
+            // for the first poll proves the POST completed.
+            cy.intercept('GET', '**/fin/runs/*').as('pollRun');
+
+            cy.get('[data-testid="fin-new-conversation"]').click();
+            cy.get('[data-testid="fin-attachment-input"]').selectFile(
+                'cypress/fixtures/sample.pdf',
+                { force: true },
+            );
+
+            cy.get('[data-testid="fin-attachment-chip"]')
+                .should('be.visible')
+                .and('contain', 'sample.pdf');
+
+            // Round 1: send the message WITH the file attached.
+            cy.get('[data-testid="fin-input"]').type(
+                'Analise este extrato e cadastre as despesas',
+            );
+            cy.get('[data-testid="fin-send"]').click();
+
+            cy.wait('@pollRun');
+            cy.get('[data-testid="fin-conversation-item"]').should(
+                'have.length',
+                1,
+            );
+            cy.get('[data-testid="fin-attachment-chip"]').should('not.exist');
+
+            // Round 1 completes via the real FinAssistantService with a
+            // faked agent response.
+            cy.finResponse(uuid, {
+                response:
+                    'Encontrei as despesas no anexo. Confirma o cadastro?',
+            });
+
+            cy.contains('Encontrei as despesas no anexo.', {
+                timeout: 10000,
+            }).should('be.visible');
+
+            // The user message's attachment chip is rendered in history.
+            cy.get('[data-testid="fin-message-attachments"]')
+                .should('be.visible')
+                .and('contain', 'sample.pdf');
+
+            // Round 2: follow-up WITHOUT re-uploading the file (the bug
+            // scenario — before the fix this round lost the attachment).
+            cy.get('[data-testid="fin-input"]').should('not.be.disabled');
+            cy.get('[data-testid="fin-input"]').type('Pode cadastrar');
+            cy.get('[data-testid="fin-send"]').click();
+
+            cy.wait('@pollRun');
+
+            // Round 2 completes via the real FinAssistantService as well.
+            cy.finResponse(uuid, {
+                response:
+                    'Cadastro efetuado com base no extrato anexado anteriormente.',
+            });
+
+            cy.contains('Cadastro efetuado com base no extrato', {
+                timeout: 10000,
+            }).should('be.visible');
+
+            // Exactly one user message carries attachments, and it is still
+            // the round-1 one with sample.pdf.
+            cy.get('[data-testid="fin-message-attachments"]')
+                .should('have.length', 1)
+                .and('contain', 'sample.pdf');
+
+            // The round-2 user message has no attachment chip of its own.
+            cy.get('[data-testid="message-bubble"][data-role="user"]')
+                .contains('Pode cadastrar')
+                .find('[data-testid="fin-message-attachments"]')
+                .should('not.exist');
+        });
+    });
+});

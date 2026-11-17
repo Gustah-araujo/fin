@@ -13,6 +13,7 @@ use App\Models\FinAssistantRun;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\FinAssistantService;
+use App\Services\FinAttachmentService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Queue;
@@ -33,6 +34,8 @@ class FinAssistantServiceTest extends TestCase
 
     private FinAssistantService $service;
 
+    private FinAttachmentService $attachments;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -42,6 +45,7 @@ class FinAssistantServiceTest extends TestCase
         $this->workspace->members()->attach($this->user, ['role' => WorkspaceRole::Admin->value]);
 
         $this->service = app(FinAssistantService::class);
+        $this->attachments = app(FinAttachmentService::class);
     }
 
     private function createRun(Conversation $conversation): FinAssistantRun
@@ -53,6 +57,13 @@ class FinAssistantServiceTest extends TestCase
             'user_id' => $this->user->id,
             'status' => FinRunStatus::Pending,
         ]);
+    }
+
+    private function persistUserMessageWithAttachment(Conversation $conversation, UploadedFile $file, string $content = ''): void
+    {
+        $metadata = $this->attachments->serialize($this->attachments->store($this->workspace, $file));
+
+        $this->service->persistUserMessage($conversation, $this->workspace, $content, [$metadata]);
     }
 
     public function test_create_conversation_persists_participant_title_and_creator(): void
@@ -318,5 +329,115 @@ class FinAssistantServiceTest extends TestCase
 
         $this->assertSame('Qual o meu saldo?', $captured['prompt']);
         $this->assertSame([], $captured['attachments']);
+    }
+
+    public function test_run_rehydrates_attachments_from_previous_user_messages_in_window(): void
+    {
+        Queue::fake();
+        Storage::fake('local');
+
+        $conversation = $this->service->createConversation($this->workspace, $this->user, 'Orçamento mensal');
+
+        $this->persistUserMessageWithAttachment($conversation, UploadedFile::fake()->create('extrato.pdf', 100), 'Analise o extrato');
+        $this->service->persistAssistantMessage($conversation, $this->workspace, 'Confere com o lançamento a seguir?');
+        $this->service->persistUserMessage($conversation, $this->workspace, 'Pode cadastrar');
+
+        $run = $this->createRun($conversation);
+
+        $captured = null;
+
+        FinancialAssistantAgent::fake(function (string $prompt, Collection $attachments) use (&$captured) {
+            $captured = ['prompt' => $prompt, 'attachments' => $attachments->all()];
+
+            return 'Resposta falsa.';
+        });
+
+        $this->service->run($run);
+
+        $captured = $captured ?? ['prompt' => '', 'attachments' => []];
+
+        $this->assertSame('Pode cadastrar', $captured['prompt']);
+        $this->assertCount(1, $captured['attachments']);
+        $this->assertInstanceOf(StoredDocument::class, $captured['attachments'][0]);
+        $this->assertSame('extrato.pdf', $captured['attachments'][0]->name());
+
+        $run->refresh();
+
+        $this->assertSame(FinRunStatus::Completed, $run->status);
+    }
+
+    public function test_run_includes_attachments_from_multiple_rounds_in_window(): void
+    {
+        Queue::fake();
+        Storage::fake('local');
+
+        $conversation = $this->service->createConversation($this->workspace, $this->user, 'Orçamento mensal');
+
+        $this->persistUserMessageWithAttachment($conversation, UploadedFile::fake()->create('extrato.pdf', 100), 'Analise o extrato');
+        $this->service->persistAssistantMessage($conversation, $this->workspace, 'Certo, vi o extrato.');
+
+        $this->persistUserMessageWithAttachment($conversation, UploadedFile::fake()->image('nota.png'), 'Analise a nota');
+        $this->service->persistAssistantMessage($conversation, $this->workspace, 'Certo, vi a nota.');
+
+        $this->service->persistUserMessage($conversation, $this->workspace, 'Confirma o cadastro');
+
+        $run = $this->createRun($conversation);
+
+        $captured = null;
+
+        FinancialAssistantAgent::fake(function (string $prompt, Collection $attachments) use (&$captured) {
+            $captured = ['prompt' => $prompt, 'attachments' => $attachments->all()];
+
+            return 'Resposta falsa.';
+        });
+
+        $this->service->run($run);
+
+        $captured = $captured ?? ['prompt' => '', 'attachments' => []];
+
+        $this->assertCount(2, $captured['attachments']);
+        $this->assertInstanceOf(StoredDocument::class, $captured['attachments'][0]);
+        $this->assertSame('extrato.pdf', $captured['attachments'][0]->name());
+        $this->assertInstanceOf(StoredImage::class, $captured['attachments'][1]);
+        $this->assertSame('nota.png', $captured['attachments'][1]->name());
+    }
+
+    public function test_run_drops_attachments_outside_history_window(): void
+    {
+        Queue::fake();
+        Storage::fake('local');
+
+        config(['ai.fin.context_window' => 3]);
+
+        $conversation = $this->service->createConversation($this->workspace, $this->user, 'Orçamento mensal');
+
+        // Rows oldest-first: [u1, a1, u2, a2, u3]. A window of 3 keeps only the
+        // last 3 rows [u2, a2, u3], so u1 (and its pdf attachment) falls outside.
+        $this->persistUserMessageWithAttachment($conversation, UploadedFile::fake()->create('extrato.pdf', 100), 'Analise o extrato');
+        $this->service->persistAssistantMessage($conversation, $this->workspace, 'Certo, vi o extrato.');
+        $this->service->persistUserMessage($conversation, $this->workspace, 'Outra pergunta');
+        $this->service->persistAssistantMessage($conversation, $this->workspace, 'Outra resposta.');
+        $this->service->persistUserMessage($conversation, $this->workspace, 'Pode cadastrar');
+
+        $run = $this->createRun($conversation);
+
+        $captured = null;
+
+        FinancialAssistantAgent::fake(function (string $prompt, Collection $attachments) use (&$captured) {
+            $captured = ['prompt' => $prompt, 'attachments' => $attachments->all()];
+
+            return 'Resposta falsa.';
+        });
+
+        $this->service->run($run);
+
+        $captured = $captured ?? ['prompt' => '', 'attachments' => []];
+
+        $this->assertSame('Pode cadastrar', $captured['prompt']);
+        $this->assertSame([], $captured['attachments']);
+
+        $run->refresh();
+
+        $this->assertSame(FinRunStatus::Completed, $run->status);
     }
 }

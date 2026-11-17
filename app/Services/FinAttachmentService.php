@@ -58,10 +58,18 @@ class FinAttachmentService
     /**
      * Rebuild an SDK file instance from persisted metadata.
      *
+     * When a workspace is provided, metadata whose path points outside
+     * `fin/{workspace-uuid}/` is rejected (defense in depth against
+     * cross-workspace attachment reuse).
+     *
      * @param  array<string, mixed>  $metadata
      */
-    public function hydrate(array $metadata): ?File
+    public function hydrate(array $metadata, ?Workspace $workspace = null): ?File
     {
+        if ($workspace !== null && ! str_starts_with((string) ($metadata['path'] ?? ''), "fin/{$workspace->uuid}/")) {
+            return null;
+        }
+
         try {
             return File::fromArray($metadata);
         } catch (InvalidArgumentException) {
