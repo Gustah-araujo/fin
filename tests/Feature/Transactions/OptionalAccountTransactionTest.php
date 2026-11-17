@@ -7,6 +7,7 @@ namespace Tests\Feature\Transactions;
 use App\Enums\WorkspaceRole;
 use App\Models\Account;
 use App\Models\Category;
+use App\Models\Recurrence;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Workspace;
@@ -282,8 +283,10 @@ class OptionalAccountTransactionTest extends TestCase
         $this->assertNotEquals($otherWorkspace->id, $transaction->workspace_id);
     }
 
-    public function test_recurring_expense_still_requires_account_or_card(): void
+    public function test_recurring_expense_can_be_created_without_account_or_card(): void
     {
+        $account = $this->createAccount(1000);
+
         $response = $this->actingAs($this->user)
             ->post(route('transactions.store', $this->workspace), [
                 'description' => 'Recorrente sem conta',
@@ -295,11 +298,73 @@ class OptionalAccountTransactionTest extends TestCase
                 'frequency_day' => 10,
             ]);
 
-        $response->assertSessionHasErrors(['account_id']);
+        $response->assertRedirect(route('transactions.index', $this->workspace));
+        $response->assertSessionHasNoErrors();
+
+        $recurrence = Recurrence::where('workspace_id', $this->workspace->id)->first();
+
+        $this->assertNotNull($recurrence);
+        $this->assertNull($recurrence->account_id);
+        $this->assertNull($recurrence->credit_card_id);
+
+        $instances = Transaction::where('recurrence_id', $recurrence->id)->get();
+
+        $this->assertGreaterThan(0, $instances->count());
+
+        foreach ($instances as $instance) {
+            $this->assertNull($instance->account_id);
+            $this->assertNull($instance->paid_at);
+        }
+
+        $this->assertEquals(1000, (float) $account->fresh()->current_balance);
     }
 
-    public function test_installment_expense_still_requires_account_or_card(): void
+    public function test_recurring_income_can_be_created_without_account_or_card(): void
     {
+        $incomeCategory = Category::factory()->create([
+            'workspace_id' => $this->workspace->id,
+            'created_by' => $this->user->id,
+            'type' => 'income',
+        ]);
+
+        $account = $this->createAccount(1000);
+
+        $response = $this->actingAs($this->user)
+            ->post(route('incomes.store', $this->workspace), [
+                'description' => 'Salário recorrente',
+                'value' => 1000,
+                'date' => now()->format('Y-m-d'),
+                'category_id' => $incomeCategory->uuid,
+                'is_recurring' => true,
+                'frequency' => 'monthly',
+                'frequency_day' => 10,
+            ]);
+
+        $response->assertRedirect(route('incomes.index', $this->workspace));
+        $response->assertSessionHasNoErrors();
+
+        $recurrence = Recurrence::where('workspace_id', $this->workspace->id)->first();
+
+        $this->assertNotNull($recurrence);
+        $this->assertNull($recurrence->account_id);
+        $this->assertNull($recurrence->credit_card_id);
+        $this->assertEquals('income', $recurrence->type->value);
+
+        $instances = Transaction::where('recurrence_id', $recurrence->id)->get();
+
+        $this->assertGreaterThan(0, $instances->count());
+
+        foreach ($instances as $instance) {
+            $this->assertNull($instance->account_id);
+        }
+
+        $this->assertEquals(1000, (float) $account->fresh()->current_balance);
+    }
+
+    public function test_installment_expense_can_be_created_without_account_or_card(): void
+    {
+        $account = $this->createAccount(1000);
+
         $response = $this->actingAs($this->user)
             ->post(route('transactions.store', $this->workspace), [
                 'description' => 'Parcelado sem conta',
@@ -310,6 +375,95 @@ class OptionalAccountTransactionTest extends TestCase
                 'total_value' => 300,
             ]);
 
-        $response->assertSessionHasErrors(['account_id']);
+        $response->assertRedirect(route('transactions.index', $this->workspace));
+        $response->assertSessionHasNoErrors();
+
+        $transactions = Transaction::where('description', 'like', 'Parcelado sem conta%')->get();
+
+        $this->assertCount(3, $transactions);
+
+        $groupId = $transactions->first()->installment_group_id;
+
+        $this->assertNotNull($groupId);
+
+        foreach ($transactions as $transaction) {
+            $this->assertNull($transaction->account_id);
+            $this->assertNull($transaction->credit_card_id);
+            $this->assertEquals($groupId, $transaction->installment_group_id);
+        }
+
+        $first = $transactions->sortBy('installment_number')->first();
+
+        $payResponse = $this->actingAs($this->user)
+            ->post(route('transactions.pay', [$this->workspace, $first]));
+
+        $payResponse->assertRedirect();
+        $payResponse->assertSessionHasNoErrors();
+
+        $this->assertNotNull($first->fresh()->paid_at);
+        $this->assertEquals(1000, (float) $account->fresh()->current_balance);
+    }
+
+    public function test_recurrence_can_be_updated_to_have_no_account(): void
+    {
+        $account = $this->createAccount(1000);
+
+        $today = now();
+
+        $createResponse = $this->actingAs($this->user)
+            ->post(route('transactions.store', $this->workspace), [
+                'description' => 'Recorrente com conta',
+                'value' => 100,
+                'date' => $today->format('Y-m-d'),
+                'account_id' => $account->uuid,
+                'category_id' => $this->category->uuid,
+                'is_recurring' => true,
+                'frequency' => 'monthly',
+                'frequency_day' => $today->day,
+            ]);
+
+        $createResponse->assertRedirect(route('transactions.index', $this->workspace));
+
+        $recurrence = Recurrence::where('workspace_id', $this->workspace->id)->first();
+
+        $this->assertNotNull($recurrence);
+        $this->assertEquals($account->id, $recurrence->account_id);
+
+        $paidInstance = Transaction::where('recurrence_id', $recurrence->id)
+            ->whereNull('deleted_at')
+            ->whereDate('date', '>=', $today->toDateString())
+            ->orderBy('date')
+            ->first();
+
+        $this->assertNotNull($paidInstance);
+
+        $payResponse = $this->actingAs($this->user)
+            ->post(route('transactions.pay', [$this->workspace, $paidInstance]));
+
+        $payResponse->assertRedirect();
+        $this->assertEquals(900, (float) $account->fresh()->current_balance);
+
+        $updateResponse = $this->actingAs($this->user)
+            ->put(route('recurrences.update', [$this->workspace, $recurrence]), [
+                'account_id' => null,
+                'propagate_to_future' => true,
+            ]);
+
+        $updateResponse->assertRedirect(route('recurrences.index', $this->workspace));
+        $updateResponse->assertSessionHasNoErrors();
+
+        $this->assertNull($recurrence->fresh()->account_id);
+
+        $instances = Transaction::where('recurrence_id', $recurrence->id)
+            ->whereNull('deleted_at')
+            ->get();
+
+        $this->assertGreaterThan(0, $instances->count());
+
+        foreach ($instances as $instance) {
+            $this->assertNull($instance->fresh()->account_id);
+        }
+
+        $this->assertEquals(1000, (float) $account->fresh()->current_balance);
     }
 }

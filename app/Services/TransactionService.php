@@ -479,10 +479,7 @@ class TransactionService
         $categoryId = $this->resolveCategoryId($workspace, $data['category_id']);
 
         DB::transaction(function () use ($workspace, $creator, $data, $groupId, $baseValue, $remainder, $count, $firstDate, $categoryId) {
-            $accountId = Account::where('uuid', $data['account_id'])
-                ->where('workspace_id', $workspace->id)
-                ->firstOrFail()
-                ->id;
+            $accountId = $this->resolveAccountId($workspace, $data['account_id'] ?? null);
 
             $installmentDay = isset($data['installment_day']) && is_numeric($data['installment_day'])
                 ? (int) $data['installment_day']

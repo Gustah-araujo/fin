@@ -113,6 +113,7 @@ function PaymentMethodField({
                             <SelectValue placeholder="Selecione a conta" />
                         </SelectTrigger>
                         <SelectContent>
+                            <SelectItem value="">Sem conta</SelectItem>
                             {accounts.map((account) => (
                                 <SelectItem
                                     key={account.uuid}
@@ -146,7 +147,7 @@ export default function Edit({
 }: Props) {
     const workspace = useWorkspace();
 
-    const { data, setData, put, processing, errors } = useForm({
+    const { data, setData, put, processing, errors, transform } = useForm({
         description: recurrence.description,
         value: String(recurrence.value),
         account_id: recurrence.account?.uuid ?? '',
@@ -163,6 +164,10 @@ export default function Edit({
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
+        transform((formData) => ({
+            ...formData,
+            account_id: formData.account_id || null,
+        }));
         put(
             route('recurrences.update', {
                 workspace: workspace.uuid,
