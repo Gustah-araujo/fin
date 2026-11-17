@@ -83,8 +83,16 @@ function formatDate(dateStr: string): string {
     return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR');
 }
 
-function getTagStyle(color: string): string {
-    return `background-color: ${color}20; color: ${color}; border-color: ${color}40`;
+function getTagStyle(color: string | null | undefined): React.CSSProperties {
+    if (!color) {
+        return {};
+    }
+
+    return {
+        backgroundColor: `${color}20`,
+        color: color,
+        borderColor: `${color}40`,
+    };
 }
 
 export default function Index({
@@ -312,11 +320,7 @@ export default function Index({
                                 <Badge
                                     key={tag.uuid}
                                     variant="outline"
-                                    style={
-                                        getTagStyle(
-                                            tag.color,
-                                        ) as React.CSSProperties
-                                    }
+                                    style={getTagStyle(tag.color)}
                                     className="text-xs"
                                 >
                                     {tag.name}
