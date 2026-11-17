@@ -113,4 +113,47 @@ class FinAttachmentServiceTest extends TestCase
         $this->assertNull($this->service->hydrate(['type' => 'stored-image']));
         $this->assertNull($this->service->hydrate(['type' => 'stored-document']));
     }
+
+    public function test_hydrate_rejects_metadata_path_outside_workspace(): void
+    {
+        $metadata = [
+            'type' => 'stored-document',
+            'name' => 'x.pdf',
+            'path' => 'fin/other-workspace-uuid/xyz.pdf',
+            'disk' => 'local',
+        ];
+
+        $this->assertNull($this->service->hydrate($metadata, $this->workspace));
+    }
+
+    public function test_hydrate_accepts_metadata_path_within_workspace(): void
+    {
+        $metadata = [
+            'type' => 'stored-document',
+            'name' => 'x.pdf',
+            'path' => "fin/{$this->workspace->uuid}/xyz.pdf",
+            'disk' => 'local',
+        ];
+
+        $hydrated = $this->service->hydrate($metadata, $this->workspace);
+
+        $this->assertInstanceOf(File::class, $hydrated);
+        $this->assertInstanceOf(StoredDocument::class, $hydrated);
+        $this->assertSame("fin/{$this->workspace->uuid}/xyz.pdf", $hydrated->path);
+    }
+
+    public function test_hydrate_without_workspace_keeps_previous_behavior(): void
+    {
+        $metadata = [
+            'type' => 'stored-document',
+            'name' => 'x.pdf',
+            'path' => 'fin/other-workspace-uuid/xyz.pdf',
+            'disk' => 'local',
+        ];
+
+        $hydrated = $this->service->hydrate($metadata, null);
+
+        $this->assertInstanceOf(File::class, $hydrated);
+        $this->assertInstanceOf(StoredDocument::class, $hydrated);
+    }
 }
