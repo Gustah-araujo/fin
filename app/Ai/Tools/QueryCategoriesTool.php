@@ -31,7 +31,7 @@ class QueryCategoriesTool implements Tool
     /**
      * Execute the tool.
      *
-     * @SuppressWarnings(PHPMD.StaticAccess)
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function handle(Request $request): string
     {
