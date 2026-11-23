@@ -1,0 +1,17 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 9
+    paths:
+        - app/
+        - routes/
+        - database/
+
+    excludePaths:
+        analyse:
+            - database/migrations/*
+
+    ignoreErrors:
+        # Enums referenced dynamically through values coming from user input
+        - '#Offset [\w\.]+ on array#'
