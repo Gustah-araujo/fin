@@ -56,6 +56,8 @@
             "@php artisan config:clear --ansi @no_additional_args",
             "@php artisan test"
         ],
+        "test-coverage": "@php vendor/bin/phpunit --coverage-clover coverage/clover.xml",
+        "coverage-check": "@php artisan coverage:check",
         "format": [
             "@php vendor/bin/pint"
         ],
