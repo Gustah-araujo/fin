@@ -22,11 +22,17 @@ class FinMessageController extends Controller
 
         $this->authorize('view', [$conversation, $workspace]);
 
+        $user = $request->user();
+
+        abort_unless($user !== null, 401);
+
+        $content = $request->validated('content');
+
         $run = $service->sendMessage(
             $workspace,
-            $request->user(),
+            $user,
             $conversation,
-            $request->validated('content'),
+            is_string($content) ? $content : null,
             $request->file('attachments', []),
         );
 

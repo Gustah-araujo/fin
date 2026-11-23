@@ -44,7 +44,7 @@ class QueryTagsTool implements Tool
                 'name' => $t->name,
                 'color' => $t->color,
             ])->all(),
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     private function resolveWorkspaceId(): int

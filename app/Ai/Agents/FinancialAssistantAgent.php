@@ -51,7 +51,9 @@ class FinancialAssistantAgent extends BaseAgent
      */
     public function model(): string
     {
-        return (string) config('ai.fin.model');
+        $model = config('ai.fin.model');
+
+        return is_string($model) ? $model : '';
     }
 
     /**

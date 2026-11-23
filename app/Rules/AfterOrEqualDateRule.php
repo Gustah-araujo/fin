@@ -40,7 +40,7 @@ class AfterOrEqualDateRule implements ValidationRule
 
         $reference = $request->input($this->field);
 
-        if (strtotime($value) < strtotime($reference)) {
+        if (! is_string($value) || ! is_string($reference) || strtotime($value) < strtotime($reference)) {
             $fail('A data final deve ser maior ou igual à data inicial.');
         }
     }

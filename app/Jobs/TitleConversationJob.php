@@ -22,11 +22,13 @@ class TitleConversationJob implements ShouldQueue
 
         $firstMessage = $conversation->messages()->where('role', 'user')->orderBy('id')->first();
 
-        if ($firstMessage === null) {
+        $prompt = $firstMessage?->content;
+
+        if ($prompt === null) {
             return;
         }
 
-        $response = (new FinTitleAgent($this->workspace))->prompt($firstMessage->content);
+        $response = (new FinTitleAgent($this->workspace))->prompt($prompt);
 
         $title = trim((string) $response->text);
 

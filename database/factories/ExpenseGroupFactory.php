@@ -6,6 +6,9 @@ use App\Models\ExpenseGroup;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
+/**
+ * @extends Factory<ExpenseGroup>
+ */
 class ExpenseGroupFactory extends Factory
 {
     protected $model = ExpenseGroup::class;

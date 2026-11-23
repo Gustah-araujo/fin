@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Ai\Agents\ScheduledFinancialAnalysisAgent;
+use App\Models\User;
 use App\Models\Workspace;
 use App\Notifications\Workspace\FinancialInsightNotification;
 use Laravel\Ai\Responses\StructuredAgentResponse;
@@ -22,20 +23,30 @@ class FinancialAnalysisService
         $agent = new ScheduledFinancialAnalysisAgent($workspace);
         $response = $agent->prompt('Analise as finanças recentes do workspace e identifique insights.');
 
-        $data = $response instanceof StructuredAgentResponse ? $response->structured : $response;
-        $insights = $data['insights'] ?? [];
+        $structured = $response instanceof StructuredAgentResponse
+            ? $response->structured
+            : [];
+
+        $rawInsights = $structured['insights'] ?? [];
+        $insights = is_array($rawInsights) ? $rawInsights : [];
 
         foreach ($insights as $insight) {
+            if (! is_array($insight)) {
+                continue;
+            }
+
             app(AgentMemoryService::class)->create($workspace, [
-                'title' => $insight['title'],
-                'content' => $insight['description'],
-                'type' => $insight['type'],
+                'title' => $insight['title'] ?? null,
+                'content' => $insight['description'] ?? null,
+                'type' => $insight['type'] ?? null,
                 'source' => ScheduledFinancialAnalysisAgent::class,
             ]);
         }
 
         if (count($insights) > 0) {
-            $workspace->members->each->notify(new FinancialInsightNotification($workspace, count($insights)));
+            $workspace->members->each(
+                fn (User $member) => $member->notify(new FinancialInsightNotification($workspace, count($insights)))
+            );
         }
 
         return count($insights);

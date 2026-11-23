@@ -39,7 +39,8 @@ jobs:
       - name: Install NPM Dependencies
         run: npm ci
 
-      - name: Run Composer Quality (Pint + PHPMD)
+      # Pint + PHPMD + PHPStan (composer quality inclui o "analyze")
+      - name: Run Composer Quality
         run: composer quality
 
       - name: Run NPM Quality (ESLint + Prettier)
@@ -80,12 +81,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # PCOV habilitado: extensão nativa de cobertura (muito mais rápida que Xdebug)
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           extensions: mbstring, pdo, pdo_mysql, bcmath
-          coverage: none
+          coverage: pcov
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -112,8 +114,11 @@ jobs:
           php artisan config:clear
           php artisan migrate --force
 
-      - name: Run PHPUnit Tests
-        run: php artisan test
+      # Cobertura nativa do Laravel: reporta % no output e FALHA se ficar abaixo do piso
+      # --min=85 é o piso seguro (baseline local era 87.9% com SQLite).
+      # Após a primeira run, ajuste este valor para o % observado no CI e vá subindo gradualmente.
+      - name: Run PHPUnit Tests (coverage gate)
+        run: php artisan test --coverage --min=85
 
   e2e-tests:
     name: "🖥️ E2E Tests (Cypress)"

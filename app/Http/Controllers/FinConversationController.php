@@ -32,11 +32,17 @@ class FinConversationController extends Controller
     {
         $this->authorize('create', [Conversation::class, $workspace]);
 
+        $user = $request->user();
+
+        abort_unless($user !== null, 401);
+
+        $content = $request->validated('content');
+
         [$conversation, $run] = $service->startConversation(
             $workspace,
-            $request->user(),
+            $user,
             'Nova conversa',
-            $request->validated('content'),
+            is_string($content) ? $content : null,
             $request->file('attachments', []),
         );
 

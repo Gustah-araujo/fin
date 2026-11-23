@@ -8,9 +8,12 @@ use App\Enums\RecurrenceFrequency;
 use App\Enums\TransactionType;
 use App\Models\Account;
 use App\Models\Category;
+use App\Models\Recurrence;
 use App\Models\Tag;
+use App\Models\Workspace;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
+use Illuminate\Validation\Validator;
 
 class UpdateRecurrenceRequest extends FormRequest
 {
@@ -19,6 +22,9 @@ class UpdateRecurrenceRequest extends FormRequest
         return true;
     }
 
+    /**
+     * @return array<string, list<string|object>>
+     */
     public function rules(): array
     {
         return [
@@ -38,10 +44,14 @@ class UpdateRecurrenceRequest extends FormRequest
         ];
     }
 
-    public function withValidator($validator): void
+    public function withValidator(Validator $validator): void
     {
-        $validator->after(function ($validator) {
+        $validator->after(function (Validator $validator): void {
             $workspace = $this->route('workspace');
+
+            if (! $workspace instanceof Workspace) {
+                return;
+            }
 
             $this->validateAccount($validator, $workspace);
             $this->validateCategory($validator, $workspace);
@@ -50,7 +60,7 @@ class UpdateRecurrenceRequest extends FormRequest
         });
     }
 
-    private function validateAccount($validator, $workspace): void
+    private function validateAccount(Validator $validator, Workspace $workspace): void
     {
         if (! $this->filled('account_id')) {
             return;
@@ -75,7 +85,7 @@ class UpdateRecurrenceRequest extends FormRequest
         }
     }
 
-    private function validateCategory($validator, $workspace): void
+    private function validateCategory(Validator $validator, Workspace $workspace): void
     {
         if (! $this->filled('category_id')) {
             return;
@@ -95,31 +105,44 @@ class UpdateRecurrenceRequest extends FormRequest
 
         $recurrence = $this->route('recurrence');
 
-        if ($recurrence->type === TransactionType::Expense && $category->type === TransactionType::Income) {
+        if (! $recurrence instanceof Recurrence) {
+            return;
+        }
+
+        if ($this->typeIs($recurrence->type, TransactionType::Expense) && $this->typeIs($category->type, TransactionType::Income)) {
             $validator->errors()->add('category_id', 'Esta categoria não aceita despesas.');
         }
 
-        if ($recurrence->type === TransactionType::Income && $category->type === TransactionType::Expense) {
+        if ($this->typeIs($recurrence->type, TransactionType::Income) && $this->typeIs($category->type, TransactionType::Expense)) {
             $validator->errors()->add('category_id', 'Esta categoria não aceita receitas.');
         }
     }
 
-    private function validateTags($validator, $workspace): void
+    private function typeIs(mixed $type, TransactionType $expected): bool
+    {
+        return $type instanceof TransactionType
+            ? $type === $expected
+            : $type === $expected->value;
+    }
+
+    private function validateTags(Validator $validator, Workspace $workspace): void
     {
         if (! $this->filled('tags')) {
             return;
         }
 
-        $tagCount = Tag::whereIn('uuid', $this->input('tags'))
+        $tags = $this->input('tags');
+
+        $tagCount = Tag::whereIn('uuid', $tags)
             ->where('workspace_id', $workspace->id)
             ->count();
 
-        if ($tagCount !== count($this->input('tags'))) {
+        if ($tagCount !== (is_array($tags) ? count($tags) : 0)) {
             $validator->errors()->add('tags', 'Uma ou mais tags são inválidas.');
         }
     }
 
-    private function validateFrequencyDay($validator): void
+    private function validateFrequencyDay(Validator $validator): void
     {
         if (! $this->filled('frequency_day')) {
             return;
@@ -131,7 +154,7 @@ class UpdateRecurrenceRequest extends FormRequest
             return;
         }
 
-        $day = (int) $this->input('frequency_day');
+        $day = $this->dayValue();
 
         $this->validateDayRange($validator, $frequency, $day);
     }
@@ -139,13 +162,37 @@ class UpdateRecurrenceRequest extends FormRequest
     private function resolveFrequency(): ?RecurrenceFrequency
     {
         if ($this->filled('frequency')) {
-            return RecurrenceFrequency::tryFrom((string) $this->input('frequency'));
+            $frequencyInput = $this->input('frequency');
+
+            return is_string($frequencyInput) ? RecurrenceFrequency::tryFrom($frequencyInput) : null;
         }
 
-        return $this->route('recurrence')?->frequency;
+        $recurrence = $this->route('recurrence');
+
+        if (! $recurrence instanceof Recurrence) {
+            return null;
+        }
+
+        return $this->frequencyFromModel($recurrence->frequency);
     }
 
-    private function validateDayRange($validator, RecurrenceFrequency $frequency, int $day): void
+    private function frequencyFromModel(mixed $frequency): ?RecurrenceFrequency
+    {
+        if ($frequency instanceof RecurrenceFrequency) {
+            return $frequency;
+        }
+
+        return is_string($frequency) ? RecurrenceFrequency::tryFrom($frequency) : null;
+    }
+
+    private function dayValue(): int
+    {
+        $day = $this->input('frequency_day');
+
+        return is_numeric($day) ? (int) $day : 0;
+    }
+
+    private function validateDayRange(Validator $validator, RecurrenceFrequency $frequency, int $day): void
     {
         if ($frequency === RecurrenceFrequency::Weekly && ($day < 0 || $day > 6)) {
             $validator->errors()->add('frequency_day', 'Dia da semana inválido.');
@@ -156,6 +203,9 @@ class UpdateRecurrenceRequest extends FormRequest
         }
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function messages(): array
     {
         return [

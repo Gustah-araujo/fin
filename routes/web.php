@@ -111,12 +111,16 @@ Route::middleware(['auth', 'verified', 'ensure.admin'])->prefix('admin')->name('
 // Test-only admin seeding endpoint (non-production only)
 if (! app()->environment('production')) {
     Route::post('testing/create-admin', function () {
+        $email = request()->input('email');
+        $name = request()->input('name', 'Admin E2E');
+        $password = request()->input('password', 'password123');
+
         $user = User::firstOrCreate(
-            ['email' => (string) request()->input('email')],
+            ['email' => is_string($email) ? $email : ''],
             [
                 'uuid' => (string) Str::uuid(),
-                'name' => (string) request()->input('name', 'Admin E2E'),
-                'password' => Hash::make((string) request()->input('password', 'password123')),
+                'name' => is_string($name) ? $name : 'Admin E2E',
+                'password' => Hash::make(is_string($password) ? $password : 'password123'),
             ],
         );
 
@@ -134,12 +138,16 @@ if (! app()->environment('production')) {
 // Routes requiring a workspace
 Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function () {
     Route::get('/', function (Request $request) {
-        $workspace = $request->user()->workspaces()
+        $user = $request->user();
+
+        abort_if($user === null, 401);
+
+        $workspace = $user->workspaces()
             ->wherePivotNotNull('last_visited_at')
             ->orderByPivot('last_visited_at', 'desc')
             ->first();
 
-        if ($workspace) {
+        if ($workspace instanceof Workspace) {
             return redirect()->route('dashboard', ['workspace' => $workspace->uuid]);
         }
 
@@ -237,6 +245,9 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
         if (! app()->environment('production')) {
             Route::post('testing/notifications', function (Workspace $workspace) {
                 $user = request()->user();
+
+                abort_if($user === null, 401);
+
                 $count = request()->input('count', 1);
 
                 for ($i = 0; $i < $count; $i++) {
@@ -261,6 +272,8 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
 
             Route::delete('testing/notifications', function (Workspace $workspace) {
                 $user = request()->user();
+
+                abort_if($user === null, 401);
 
                 DatabaseNotification::where('notifiable_type', User::class)
                     ->where('notifiable_id', $user->id)
@@ -302,11 +315,19 @@ Route::middleware(['auth', 'verified', 'ensure.has.workspace'])->group(function 
 
             Route::post('testing/fin-response', function (Workspace $workspace) {
                 $user = request()->user();
+
+                abort_if($user === null, 401);
+
                 $service = app(FinAssistantService::class);
 
                 $message = request()->input('message');
-                $responseText = (string) request()->input('response', 'Resposta simulada do Fin para fins de teste.');
-                $title = (string) request()->input('title', '');
+
+                $response = request()->input('response', 'Resposta simulada do Fin para fins de teste.');
+                $responseText = is_string($response) ? $response : 'Resposta simulada do Fin para fins de teste.';
+
+                $titleInput = request()->input('title', '');
+                $title = is_string($titleInput) ? $titleInput : '';
+
                 $conversationId = request()->input('conversation_id');
                 $fail = (bool) request()->input('fail', false);
 

@@ -19,11 +19,18 @@ class InviteController extends Controller
     {
         Gate::authorize('invite', $workspace);
 
+        $user = $request->user();
+
+        abort_unless($user !== null, 401);
+
+        $email = $request->validated('email');
+        $role = $request->validated('role');
+
         $invite = $inviteService->invite(
             $workspace,
-            $request->user(),
-            $request->validated()['email'],
-            WorkspaceRole::from($request->validated()['role']),
+            $user,
+            is_string($email) ? $email : '',
+            WorkspaceRole::from(is_string($role) ? $role : ''),
         );
 
         if (! $invite) {
@@ -39,16 +46,28 @@ class InviteController extends Controller
 
     public function accept(Invite $invite, InviteService $inviteService): RedirectResponse
     {
-        $inviteService->accept($invite, request()->user());
+        $user = request()->user();
+
+        abort_unless($user !== null, 401);
+
+        $inviteService->accept($invite, $user);
 
         Toast::success('Você entrou no workspace.');
 
-        return redirect()->route('dashboard', ['workspace' => $invite->workspace->uuid]);
+        $workspace = $invite->workspace;
+
+        abort_unless($workspace instanceof Workspace, 404);
+
+        return redirect()->route('dashboard', ['workspace' => $workspace->uuid]);
     }
 
     public function decline(Invite $invite, InviteService $inviteService): RedirectResponse
     {
-        $inviteService->decline($invite, request()->user());
+        $user = request()->user();
+
+        abort_unless($user !== null, 401);
+
+        $inviteService->decline($invite, $user);
 
         Toast::success('Convite recusado.');
 

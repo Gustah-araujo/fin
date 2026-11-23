@@ -2,11 +2,26 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\TransactionType;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @property string $uuid
+ * @property string $name
+ * @property TransactionType $type
+ * @property string $color
+ * @property string|null $icon
+ * @property int|null $position
+ * @property bool $is_system
+ * @property Carbon|null $created_at
+ */
 class CategoryResource extends JsonResource
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(Request $request): array
     {
         return [

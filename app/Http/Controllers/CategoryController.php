@@ -50,7 +50,11 @@ class CategoryController extends Controller
     {
         $this->authorize('create', [Category::class, $workspace]);
 
-        $categoryService->create($workspace, $request->user(), $request->validated());
+        $user = $request->user();
+
+        abort_unless($user !== null, 401);
+
+        $categoryService->create($workspace, $user, $request->validated());
 
         Toast::success('Categoria criada com sucesso.');
 

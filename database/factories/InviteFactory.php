@@ -10,6 +10,9 @@ use App\Models\Workspace;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
+/**
+ * @extends Factory<Invite>
+ */
 class InviteFactory extends Factory
 {
     protected $model = Invite::class;

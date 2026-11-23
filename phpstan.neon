@@ -1,0 +1,16 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 9
+    stubFiles:
+        - phpstan/stubs/laravel-ai-conversation.stub.php
+
+    paths:
+        - app/
+        - routes/
+        - database/
+
+    excludePaths:
+        analyse:
+            - database/migrations/*

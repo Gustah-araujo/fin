@@ -62,7 +62,11 @@ class CreditCardController extends Controller
             ->get();
 
         // Current cycle bill (the one with the current date's period)
-        $currentBill = $this->billService->findOrCreateBill($card, now(), $card->created_by);
+        $createdBy = $card->created_by;
+
+        abort_unless($createdBy !== null, 500, 'O cartão não possui criador.');
+
+        $currentBill = $this->billService->findOrCreateBill($card, now(), $createdBy);
 
         return inertia('Cards/Show', [
             'card' => new CreditCardResource($card),
@@ -85,7 +89,11 @@ class CreditCardController extends Controller
     {
         $this->authorize('create', [CreditCard::class, $workspace]);
 
-        $card = $service->create($workspace, $request->user(), $request->validated());
+        $user = $request->user();
+
+        abort_unless($user !== null, 401);
+
+        $card = $service->create($workspace, $user, $request->validated());
 
         Toast::success('Cartão criado com sucesso.');
 

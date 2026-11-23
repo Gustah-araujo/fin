@@ -40,7 +40,7 @@ final class TableStateService
     {
         $state = $request->session()->get(self::sessionKey($tableKey));
 
-        if ($state === null) {
+        if (! is_array($state)) {
             return [
                 'filters' => [],
                 'sort' => null,
@@ -48,10 +48,14 @@ final class TableStateService
             ];
         }
 
+        $filters = $state['filters'] ?? [];
+        $sort = $state['sort'] ?? null;
+        $direction = $state['direction'] ?? 'asc';
+
         return [
-            'filters' => $state['filters'] ?? [],
-            'sort' => $state['sort'] ?? null,
-            'direction' => $state['direction'] ?? 'asc',
+            'filters' => self::stringMap(is_array($filters) ? $filters : []),
+            'sort' => is_string($sort) ? $sort : null,
+            'direction' => is_string($direction) ? $direction : 'asc',
         ];
     }
 
@@ -69,5 +73,22 @@ final class TableStateService
     public static function sessionKey(string $tableKey): string
     {
         return self::SESSION_PREFIX.$tableKey;
+    }
+
+    /**
+     * @param  array<mixed>  $filters
+     * @return array<string, string>
+     */
+    private static function stringMap(array $filters): array
+    {
+        $result = [];
+
+        foreach ($filters as $key => $value) {
+            if (is_string($key) && is_string($value)) {
+                $result[$key] = $value;
+            }
+        }
+
+        return $result;
     }
 }

@@ -6,6 +6,9 @@ use App\Models\Workspace;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
+/**
+ * @extends Factory<Workspace>
+ */
 class WorkspaceFactory extends Factory
 {
     protected $model = Workspace::class;

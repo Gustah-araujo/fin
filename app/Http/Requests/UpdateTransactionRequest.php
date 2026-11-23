@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Models\Workspace;
 use App\Services\TransactionValidator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UpdateTransactionRequest extends FormRequest
 {
@@ -15,6 +17,9 @@ class UpdateTransactionRequest extends FormRequest
         return true;
     }
 
+    /**
+     * @return array<string, list<string|object>>
+     */
     public function rules(): array
     {
         return [
@@ -25,7 +30,7 @@ class UpdateTransactionRequest extends FormRequest
             'category_id' => ['sometimes', 'required', 'exists:categories,uuid'],
             'expense_group_id' => ['sometimes', 'nullable', Rule::exists('expense_groups', 'uuid')->where(
                 'workspace_id',
-                (string) ($this->route('workspace')?->getKey() ?? ''),
+                $this->workspaceId(),
             )],
             'tags' => ['sometimes', 'array'],
             'tags.*' => ['string', 'exists:tags,uuid'],
@@ -34,13 +39,23 @@ class UpdateTransactionRequest extends FormRequest
         ];
     }
 
-    public function withValidator($validator): void
+    private function workspaceId(): string
     {
-        $validator->after(function ($validator) {
+        $workspace = $this->route('workspace');
+
+        return $workspace instanceof Workspace ? (string) $workspace->id : '';
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
             TransactionValidator::validateUpdate($validator, $this);
         });
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function messages(): array
     {
         return [

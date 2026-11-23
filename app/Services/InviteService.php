@@ -65,8 +65,14 @@ class InviteService
             throw new HttpException(403, 'Este convite não pertence a você.');
         }
 
+        $workspace = $invite->workspace;
+
+        if ($workspace === null) {
+            throw new HttpException(422, 'O workspace deste convite não existe mais.');
+        }
+
         $this->workspaceService->addMember(
-            $invite->workspace,
+            $workspace,
             $user,
             $invite->role,
         );
@@ -87,6 +93,9 @@ class InviteService
         ])->save();
     }
 
+    /**
+     * @return Collection<int, Invite>
+     */
     public function getPendingInvites(User $user): Collection
     {
         return Invite::with(['workspace', 'inviter'])

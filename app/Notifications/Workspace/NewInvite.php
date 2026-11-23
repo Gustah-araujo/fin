@@ -19,21 +19,24 @@ class NewInvite extends Notification
         private readonly User $inviter,
     ) {}
 
+    /**
+     * @return list<string>
+     */
     public function via(object $notifiable): array
     {
         return ['mail'];
     }
 
-    public function toMail(object $notifiable): MailMessage
+    public function toMail(User $notifiable): MailMessage
     {
-        $workspace = $this->invite->workspace;
+        $workspaceName = $this->invite->workspace?->name;
         $acceptUrl = route('invites.accept', ['invite' => $this->invite->uuid]);
         $declineUrl = route('invites.decline', ['invite' => $this->invite->uuid]);
 
         return (new MailMessage)
-            ->subject("Convite para workspace: {$workspace->name}")
+            ->subject("Convite para workspace: {$workspaceName}")
             ->greeting("Olá, {$notifiable->name}!")
-            ->line("{$this->inviter->name} convidou você para participar do workspace **{$workspace->name}** como **{$this->invite->role->label()}**.")
+            ->line("{$this->inviter->name} convidou você para participar do workspace **{$workspaceName}** como **{$this->invite->role->label()}**.")
             ->action('Aceitar Convite', $acceptUrl)
             ->line('Ou, se preferir, você pode recusar este convite:')
             ->line("Este convite foi enviado por {$this->inviter->email}.")

@@ -10,11 +10,13 @@ use App\Models\CreditCard;
 use App\Models\CreditCardBill;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\Workspace;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class BillService
 {
@@ -23,6 +25,9 @@ class BillService
         private readonly AccountService $accountService,
     ) {}
 
+    /**
+     * @return array{year: int, month: int}
+     */
     public function computeBillPeriod(CreditCard $card, Carbon $date): array
     {
         $closingDay = min($card->closing_day, $date->daysInMonth);
@@ -126,6 +131,10 @@ class BillService
             $workspace = $bill->workspace;
             $card = $bill->creditCard;
 
+            if (! $workspace instanceof Workspace || ! $card instanceof CreditCard) {
+                throw new RuntimeException('Fatura inconsistente: workspace ou cartão não encontrado.');
+            }
+
             $category = $this->creditCardService->ensurePaymentCategory($workspace);
 
             $monthLabel = str_pad((string) $bill->period_month, 2, '0', STR_PAD_LEFT);
@@ -155,7 +164,12 @@ class BillService
             $bill->transactions()->whereNull('deleted_at')->update(['paid_at' => now()]);
 
             $this->accountService->recalculateBalance($account);
-            $this->creditCardService->recalculateAvailableLimit($card->fresh());
+
+            $freshCard = $card->fresh();
+
+            if ($freshCard !== null) {
+                $this->creditCardService->recalculateAvailableLimit($freshCard);
+            }
 
             return $paymentTransaction;
         });
@@ -181,11 +195,17 @@ class BillService
                 $paymentTransaction->delete();
             }
 
-            if ($account) {
+            if ($account instanceof Account) {
                 $this->accountService->recalculateBalance($account);
             }
 
-            $this->creditCardService->recalculateAvailableLimit($card->fresh());
+            if ($card instanceof CreditCard) {
+                $freshCard = $card->fresh();
+
+                if ($freshCard !== null) {
+                    $this->creditCardService->recalculateAvailableLimit($freshCard);
+                }
+            }
         });
     }
 }

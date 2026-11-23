@@ -59,7 +59,8 @@ class RecurrenceController extends Controller
             ...$state['filters'],
         ]);
 
-        $query = $workspace->recurrences()
+        $query = Recurrence::query()
+            ->where('workspace_id', $workspace->id)
             ->with(['account', 'creditCard', 'category', 'tags'])
             ->orderByRaw('next_date IS NULL');
 

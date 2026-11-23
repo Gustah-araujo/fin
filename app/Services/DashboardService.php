@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Category;
+use App\Models\ExpenseGroup;
 use App\Models\Workspace;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
 
 class DashboardService
@@ -18,6 +20,9 @@ class DashboardService
         private readonly TransactionService $transactionService,
     ) {}
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getMonthOverview(Workspace $workspace, ?string $month): array
     {
         $month = $this->resolveMonth($month);
@@ -34,6 +39,11 @@ class DashboardService
         ];
     }
 
+    /**
+     * @param  array{total: float, paid: float, pending: float}  $income
+     * @param  array{total: float, paid: float, pending: float}  $expenses
+     * @return array{balance: float, income: float, expenses: float, pending_count: int, pending_value: float}
+     */
     private function buildKpis(
         Workspace $workspace,
         string $year,
@@ -52,6 +62,9 @@ class DashboardService
         ];
     }
 
+    /**
+     * @return array{count: int, value: float}
+     */
     private function pendingExpenses(Workspace $workspace, string $year, string $monthNumber): array
     {
         $query = $workspace->transactions()
@@ -66,30 +79,34 @@ class DashboardService
         ];
     }
 
+    /**
+     * @return list<array{uuid: string|null, name: string, color: string, total: float, percent: float}>
+     */
     private function aggregateByEffectiveGroup(
         Workspace $workspace,
         string $year,
         string $monthNumber,
         float $monthExpenseTotal,
     ): array {
-        $grouped = $this->monthlyExpenseQuery($workspace, $year, $monthNumber)
+        $rows = $this->monthlyExpenseQuery($workspace, $year, $monthNumber)
             ->leftJoin('categories as c', 't.category_id', '=', 'c.id')
             ->selectRaw('COALESCE(t.expense_group_id, c.expense_group_id) as group_pk_id')
             ->addSelect(DB::raw('SUM(t.value) as total'))
             ->groupBy('group_pk_id')
-            ->pluck('total', 'group_pk_id');
+            ->get();
 
-        $groups = $workspace->expenseGroups()->get(['id', 'uuid', 'name', 'color'])
-            ->mapWithKeys(fn ($group) => [$group->id => [
+        $groups = $workspace->expenseGroups()
+            ->get(['id', 'uuid', 'name', 'color'])
+            ->mapWithKeys(fn (ExpenseGroup $group) => [$group->id => [
                 'uuid' => $group->uuid,
                 'name' => $group->name,
                 'color' => $group->color,
             ]]);
 
-        $slices = collect($grouped)
-            ->map(fn ($total, $groupPkId) => $this->makeSlice(
-                $groupPkId === null ? null : $groups[(int) $groupPkId] ?? null,
-                (float) $total,
+        $slices = $rows
+            ->map(fn (\stdClass $row) => $this->makeSlice(
+                is_int($row->group_pk_id) ? ($groups[$row->group_pk_id] ?? null) : null,
+                self::floatValue($row->total),
                 $monthExpenseTotal,
             ))
             ->sortByDesc('total')
@@ -99,27 +116,30 @@ class DashboardService
         return array_values($slices);
     }
 
+    /**
+     * @return list<array{uuid: string|null, name: string, color: string, group_color: string|null, group_name: string|null, total: float, percent: float}>
+     */
     private function aggregateByCategory(
         Workspace $workspace,
         string $year,
         string $monthNumber,
         float $monthExpenseTotal,
     ): array {
-        $grouped = $this->monthlyExpenseQuery($workspace, $year, $monthNumber)
+        $rows = $this->monthlyExpenseQuery($workspace, $year, $monthNumber)
             ->selectRaw('t.category_id as category_pk_id')
             ->addSelect(DB::raw('SUM(t.value) as total'))
             ->groupBy('category_pk_id')
-            ->pluck('total', 'category_pk_id');
+            ->get();
 
         $categories = $workspace->categories()
             ->with('expenseGroup:id,uuid,name,color')
             ->get(['id', 'uuid', 'name', 'color', 'expense_group_id'])
-            ->mapWithKeys(fn ($category) => [$category->id => $category]);
+            ->mapWithKeys(fn (Category $category) => [$category->id => $category]);
 
-        $slices = collect($grouped)
-            ->map(fn ($total, $categoryPkId) => $this->makeCategorySlice(
-                $categories[(int) $categoryPkId] ?? null,
-                (float) $total,
+        $slices = $rows
+            ->map(fn (\stdClass $row) => $this->makeCategorySlice(
+                is_int($row->category_pk_id) ? ($categories[$row->category_pk_id] ?? null) : null,
+                self::floatValue($row->total),
                 $monthExpenseTotal,
             ))
             ->sortByDesc('total')
@@ -129,7 +149,7 @@ class DashboardService
         return array_values($slices);
     }
 
-    private function monthlyExpenseQuery(Workspace $workspace, string $year, string $monthNumber)
+    private function monthlyExpenseQuery(Workspace $workspace, string $year, string $monthNumber): QueryBuilder
     {
         return DB::table('transactions as t')
             ->where('t.workspace_id', $workspace->id)
@@ -139,6 +159,10 @@ class DashboardService
             ->whereMonth('t.date', (int) $monthNumber);
     }
 
+    /**
+     * @param  array{uuid: string, name: string, color: string}|null  $group
+     * @return array{uuid: string|null, name: string, color: string, total: float, percent: float}
+     */
     private function makeSlice(?array $group, float $total, float $monthExpenseTotal): array
     {
         return [
@@ -150,16 +174,19 @@ class DashboardService
         ];
     }
 
+    /**
+     * @return array{uuid: string|null, name: string, color: string, group_color: string|null, group_name: string|null, total: float, percent: float}
+     */
     private function makeCategorySlice(?Category $category, float $total, float $monthExpenseTotal): array
     {
         $group = $category?->expenseGroup;
 
         return [
-            'uuid' => $category?->uuid,
-            'name' => $category?->name ?? self::NO_GROUP_NAME,
-            'color' => $category?->color ?? self::NO_GROUP_COLOR,
-            'group_color' => $group?->color,
-            'group_name' => $group?->name,
+            'uuid' => $category->uuid ?? null,
+            'name' => $category->name ?? self::NO_GROUP_NAME,
+            'color' => $category->color ?? self::NO_GROUP_COLOR,
+            'group_color' => $group instanceof ExpenseGroup ? $group->color : null,
+            'group_name' => $group instanceof ExpenseGroup ? $group->name : null,
             'total' => round($total, 2),
             'percent' => $this->percent($total, $monthExpenseTotal),
         ];
@@ -186,6 +213,13 @@ class DashboardService
      */
     private function splitMonth(string $month): array
     {
-        return explode('-', $month);
+        $parts = explode('-', $month);
+
+        return [$parts[0], $parts[1] ?? ''];
+    }
+
+    private static function floatValue(mixed $value): float
+    {
+        return is_numeric($value) ? (float) $value : 0.0;
     }
 }

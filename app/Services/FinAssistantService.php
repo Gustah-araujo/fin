@@ -173,7 +173,8 @@ class FinAssistantService
      */
     private function windowMessages(Conversation $conversation, ?int $limit = null): Collection
     {
-        $limit = $limit ?? (int) config('ai.fin.context_window');
+        $configuredLimit = config('ai.fin.context_window');
+        $limit = $limit ?? (is_numeric($configuredLimit) ? (int) $configuredLimit : 0);
 
         return $conversation->messages()
             ->where('status', MessageStatus::Completed->value)

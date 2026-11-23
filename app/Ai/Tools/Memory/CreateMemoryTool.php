@@ -29,7 +29,7 @@ class CreateMemoryTool implements Tool
     /**
      * Execute the tool.
      *
-     * @SuppressWarnings(PHPMD.StaticAccess)
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function handle(Request $request): string
     {
@@ -47,7 +47,7 @@ class CreateMemoryTool implements Tool
             'uuid' => $memory->uuid,
             'title' => $memory->title,
             'type' => $memory->type->value,
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     private function resolveWorkspace(): Workspace

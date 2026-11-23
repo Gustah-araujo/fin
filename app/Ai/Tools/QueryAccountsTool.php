@@ -45,7 +45,7 @@ class QueryAccountsTool implements Tool
                 'type' => $a->type,
                 'current_balance' => (float) $a->current_balance,
             ])->all(),
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     /**

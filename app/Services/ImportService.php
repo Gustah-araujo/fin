@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Contracts\AiParserInterface;
 use App\Enums\TransactionType;
-use App\Facades\Ai;
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\User;
@@ -22,7 +22,7 @@ class ImportService
      */
     public function parseFile(Workspace $workspace, UploadedFile $file): array
     {
-        return Ai::parseFile($workspace, $file);
+        return app(AiParserInterface::class)->parseFile($workspace, $file);
     }
 
     /**
@@ -58,8 +58,13 @@ class ImportService
 
             $transaction = app(TransactionService::class)->create($workspace, $user, $data);
 
-            if (! empty($item['tags'])) {
-                app(TransactionService::class)->syncTags($transaction, $item['tags']);
+            $tags = $item['tags'] ?? null;
+
+            if (is_array($tags) && $tags !== []) {
+                app(TransactionService::class)->syncTags(
+                    $transaction,
+                    array_values(array_filter($tags, is_string(...))),
+                );
             }
 
             $count++;
@@ -68,27 +73,34 @@ class ImportService
         return $count;
     }
 
+    /**
+     * @param  array<string, mixed>  $item
+     */
     private function resolveOrCreateCategory(Workspace $workspace, array $item, TransactionType $type): Category
     {
         // If category_uuid is provided, try to find it
-        if (! empty($item['category_uuid'])) {
-            $existing = Category::where('uuid', $item['category_uuid'])
+        $categoryUuid = $item['category_uuid'] ?? null;
+
+        if (is_string($categoryUuid) && $categoryUuid !== '') {
+            $existing = Category::where('uuid', $categoryUuid)
                 ->where('workspace_id', $workspace->id)
                 ->first();
 
-            if ($existing) {
+            if ($existing instanceof Category) {
                 return $existing;
             }
         }
 
         // If category_name is provided, try to find a matching category
-        if (! empty($item['category_name'])) {
+        $categoryName = $item['category_name'] ?? null;
+
+        if (is_string($categoryName) && $categoryName !== '') {
             $existing = $workspace->categories()
-                ->where('name', $item['category_name'])
+                ->where('name', $categoryName)
                 ->whereIn('type', [$type, TransactionType::Both])
                 ->first();
 
-            if ($existing) {
+            if ($existing instanceof Category) {
                 return $existing;
             }
 
@@ -96,7 +108,7 @@ class ImportService
             return Category::create([
                 'uuid' => Str::orderedUuid()->toString(),
                 'workspace_id' => $workspace->id,
-                'name' => $item['category_name'],
+                'name' => $categoryName,
                 'type' => $type,
                 'color' => '#6b7280',
                 'icon' => null,

@@ -32,7 +32,7 @@ class FinAttachmentService
      *
      * @throws InvalidArgumentException When the file extension is not supported.
      */
-    public function store(Workspace $workspace, UploadedFile $file): File
+    public function store(Workspace $workspace, UploadedFile $file): StoredImage|StoredDocument
     {
         $extension = strtolower($file->getClientOriginalExtension());
 
@@ -50,9 +50,16 @@ class FinAttachmentService
      *
      * @return array{type: string, name: string|null, path: string, disk: string}
      */
-    public function serialize(File $file): array
+    public function serialize(StoredImage|StoredDocument $file): array
     {
-        return $file->toArray();
+        $data = $file->toArray();
+
+        return [
+            'type' => is_string($data['type'] ?? null) ? $data['type'] : '',
+            'name' => is_string($data['name'] ?? null) ? $data['name'] : null,
+            'path' => is_string($data['path'] ?? null) ? $data['path'] : '',
+            'disk' => is_string($data['disk'] ?? null) ? $data['disk'] : '',
+        ];
     }
 
     /**
@@ -66,7 +73,9 @@ class FinAttachmentService
      */
     public function hydrate(array $metadata, ?Workspace $workspace = null): ?File
     {
-        if ($workspace !== null && ! str_starts_with((string) ($metadata['path'] ?? ''), "fin/{$workspace->uuid}/")) {
+        $path = $metadata['path'] ?? '';
+
+        if ($workspace !== null && (! is_string($path) || ! str_starts_with($path, "fin/{$workspace->uuid}/"))) {
             return null;
         }
 
@@ -77,6 +86,9 @@ class FinAttachmentService
         }
     }
 
+    /**
+     * @param  class-string<StoredImage>|class-string<StoredDocument>  $fileClass
+     */
     private function storeAs(Workspace $workspace, UploadedFile $file, string $extension, string $fileClass): StoredImage|StoredDocument
     {
         $path = $file->storeAs(
@@ -84,6 +96,10 @@ class FinAttachmentService
             Str::orderedUuid()->toString().'.'.$extension,
             self::DISK,
         );
+
+        if ($path === false) {
+            throw new InvalidArgumentException('Failed to persist the attachment on the local disk.');
+        }
 
         return new $fileClass($path, self::DISK);
     }

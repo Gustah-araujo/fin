@@ -45,7 +45,7 @@ class QueryTransactionsTool implements Tool
     /**
      * Execute the tool.
      *
-     * @SuppressWarnings(PHPMD.StaticAccess)
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function handle(Request $request): string
     {
@@ -60,7 +60,9 @@ class QueryTransactionsTool implements Tool
     /**
      * Build the base query with all filters applied.
      *
-     * @SuppressWarnings(PHPMD.StaticAccess)
+     * @return Builder<Transaction>
+     *
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     private function buildBaseQuery(Request $request, int $workspaceId): Builder
     {
@@ -85,6 +87,9 @@ class QueryTransactionsTool implements Tool
         return Workspace::where('uuid', $this->workspaceUuid)->firstOrFail()->id;
     }
 
+    /**
+     * @param  Builder<Transaction>  $query
+     */
     private function applyDateRange(Request $request, Builder $query): void
     {
         $startDate = (string) $request->string('start_date');
@@ -100,7 +105,11 @@ class QueryTransactionsTool implements Tool
     }
 
     /**
-     * @SuppressWarnings(PHPMD.StaticAccess)
+     * Apply the transaction type filter when provided.
+     *
+     * @param  Builder<Transaction>  $query
+     *
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     private function applyTypeFilter(Request $request, Builder $query): void
     {
@@ -111,6 +120,9 @@ class QueryTransactionsTool implements Tool
         }
     }
 
+    /**
+     * @param  Builder<Transaction>  $query
+     */
     private function applyUuidFilter(Request $request, Builder $query, string $field): void
     {
         $value = (string) $request->string($field);
@@ -121,7 +133,7 @@ class QueryTransactionsTool implements Tool
     }
 
     /**
-     * @return array{string, string, int}
+     * @return array{string, 'asc'|'desc', int}
      */
     private function resolveOrdering(Request $request): array
     {
@@ -152,7 +164,7 @@ class QueryTransactionsTool implements Tool
                 'category_id' => $t->category_id,
                 'recurrence_id' => $t->recurrence_id,
             ])->all(),
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     /**

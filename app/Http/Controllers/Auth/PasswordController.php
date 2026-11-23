@@ -19,10 +19,13 @@ class PasswordController extends Controller
 
     public function update(UpdatePasswordRequest $request, AuthService $authService): RedirectResponse
     {
-        $authService->changePassword(
-            $request->user(),
-            $request->validated()['password'],
-        );
+        $user = $request->user();
+
+        abort_unless($user !== null, 401);
+
+        $password = $request->validated()['password'];
+
+        $authService->changePassword($user, is_string($password) ? $password : '');
 
         return back()->with('status', 'Senha alterada com sucesso.');
     }

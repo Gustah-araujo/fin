@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Enums\TransactionType;
+use App\Models\Workspace;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -15,6 +16,9 @@ class UpdateCategoryRequest extends FormRequest
         return true;
     }
 
+    /**
+     * @return array<string, list<string|object>>
+     */
     public function rules(): array
     {
         return [
@@ -25,11 +29,21 @@ class UpdateCategoryRequest extends FormRequest
             'position' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'expense_group_id' => ['sometimes', 'nullable', Rule::exists('expense_groups', 'uuid')->where(
                 'workspace_id',
-                (string) ($this->route('workspace')?->getKey() ?? ''),
+                $this->workspaceId(),
             )],
         ];
     }
 
+    private function workspaceId(): string
+    {
+        $workspace = $this->route('workspace');
+
+        return $workspace instanceof Workspace ? (string) $workspace->id : '';
+    }
+
+    /**
+     * @return array<string, string>
+     */
     public function messages(): array
     {
         return [

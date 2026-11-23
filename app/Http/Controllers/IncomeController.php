@@ -65,7 +65,8 @@ class IncomeController extends Controller
             ...$state['filters'],
         ]);
 
-        $query = $workspace->transactions()
+        $query = Transaction::query()
+            ->where('workspace_id', $workspace->id)
             ->where('type', TransactionType::Income)
             ->with(['account', 'category', 'tags', 'recurrence']);
 
@@ -117,17 +118,21 @@ class IncomeController extends Controller
 
         $data = $request->validated();
 
+        $user = $request->user();
+
+        abort_unless($user !== null, 401);
+
         if ($request->boolean('is_recurring')) {
             $data['start_date'] = $data['date'];
             $data['type'] = TransactionType::Income->value;
-            $recurrenceService->createWithBuffer($workspace, $data, $request->user());
+            $recurrenceService->createWithBuffer($workspace, $data, $user);
 
             Toast::success('Recorrência criada com sucesso.');
 
             return redirect()->route('incomes.index', $workspace);
         } else {
             $data['type'] = TransactionType::Income->value;
-            $transactionService->create($workspace, $request->user(), $data);
+            $transactionService->create($workspace, $user, $data);
 
             Toast::success('Receita criada com sucesso.');
 
@@ -166,8 +171,12 @@ class IncomeController extends Controller
         $scope = $data['scope'] ?? 'single';
         unset($data['scope']);
 
+        $user = $request->user();
+
+        abort_unless($user !== null, 401);
+
         if ($scope === 'future' && $transaction->recurrence_id !== null) {
-            $recurrenceService->updateThisAndFuture($transaction, $data, $request->user());
+            $recurrenceService->updateThisAndFuture($transaction, $data, $user);
         } else {
             $transactionService->update($transaction, $data);
         }
