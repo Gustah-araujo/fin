@@ -32,7 +32,7 @@ class QueryRecurrencesTool implements Tool
     /**
      * Execute the tool.
      *
-     * @SuppressWarnings(PHPMD.StaticAccess)
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function handle(Request $request): string
     {
@@ -65,7 +65,7 @@ class QueryRecurrencesTool implements Tool
                 'start_date' => $r->start_date->format('Y-m-d'),
                 'next_date' => $r->next_date?->format('Y-m-d'),
             ])->all(),
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     private function resolveWorkspaceId(): int

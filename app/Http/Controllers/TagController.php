@@ -38,7 +38,11 @@ class TagController extends Controller
     {
         $this->authorize('create', [Tag::class, $workspace]);
 
-        $tagService->create($workspace, $request->user(), $request->validated());
+        $user = $request->user();
+
+        abort_unless($user !== null, 401);
+
+        $tagService->create($workspace, $user, $request->validated());
 
         Toast::success('Tag criada com sucesso.');
 

@@ -14,6 +14,9 @@ class StoreFinConversationRequest extends FormRequest
         return true;
     }
 
+    /**
+     * @return array<string, list<string>>
+     */
     public function rules(): array
     {
         return [
@@ -23,6 +26,9 @@ class StoreFinConversationRequest extends FormRequest
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function messages(): array
     {
         return [

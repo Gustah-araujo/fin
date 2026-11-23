@@ -20,7 +20,6 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Workspace;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -38,15 +37,18 @@ class RecurrenceService
      * Create a recurrence rule without generating the first transaction.
      * Used when start_date > today.
      */
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function create(Workspace $workspace, array $data, User $user): Recurrence
     {
-        $accountId = $this->resolveAccountId($workspace, $data['account_id'] ?? null);
-        $categoryId = $this->resolveCategoryId($workspace, $data['category_id']);
+        $accountId = $this->resolveAccountId($workspace, is_string($data['account_id'] ?? null) ? $data['account_id'] : null);
+        $categoryId = $this->resolveCategoryId($workspace, is_string($data['category_id']) ? $data['category_id'] : '');
 
-        $startDate = Carbon::parse($data['start_date']);
+        $startDate = self::toDate($data['start_date']);
         $today = Carbon::today();
-        $frequency = RecurrenceFrequency::from($data['frequency']);
-        $frequencyDay = (int) $data['frequency_day'];
+        $frequency = RecurrenceFrequency::from(self::toStringValue($data['frequency']));
+        $frequencyDay = self::toIntValue($data['frequency_day']);
 
         // Compute initial next_date
         if ($startDate->lte($today)) {
@@ -66,14 +68,14 @@ class RecurrenceService
             'frequency' => $data['frequency'],
             'frequency_day' => $frequencyDay,
             'start_date' => $startDate,
-            'until_date' => isset($data['until_date']) && $data['until_date'] ? Carbon::parse($data['until_date']) : null,
+            'until_date' => isset($data['until_date']) && $data['until_date'] ? self::toDate($data['until_date']) : null,
             'next_date' => $nextDate,
             'status' => RecurrenceStatus::Active,
             'created_by' => $user->id,
         ]);
 
         if (! empty($data['tags'])) {
-            $this->syncTags($recurrence, $workspace, $data['tags']);
+            $this->syncTags($recurrence, $workspace, self::toStringList($data['tags']));
         }
 
         return $recurrence;
@@ -85,16 +87,23 @@ class RecurrenceService
      *
      * @return array{recurrence: Recurrence, transaction: Transaction}
      */
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{recurrence: Recurrence, transaction: Transaction}
+     */
     public function createWithFirstInstance(Workspace $workspace, array $data, User $user): array
     {
         return DB::transaction(function () use ($workspace, $data, $user) {
-            $accountId = $this->resolveAccountId($workspace, $data['account_id'] ?? null);
-            $categoryId = $this->resolveCategoryId($workspace, $data['category_id']);
+            $accountId = $this->resolveAccountId($workspace, is_string($data['account_id'] ?? null) ? $data['account_id'] : null);
+            $categoryId = $this->resolveCategoryId($workspace, is_string($data['category_id']) ? $data['category_id'] : '');
 
-            $startDate = Carbon::parse($data['start_date']);
+            $startDate = self::toDate($data['start_date']);
             $startDateStr = $startDate->toDateString();
-            $frequency = RecurrenceFrequency::from($data['frequency']);
-            $frequencyDay = (int) $data['frequency_day'];
+            $frequency = RecurrenceFrequency::from(self::toStringValue($data['frequency']));
+            $frequencyDay = self::toIntValue($data['frequency_day']);
 
             // Create recurrence with next_date = start_date (will be advanced after first instance)
             $recurrence = Recurrence::create([
@@ -108,7 +117,7 @@ class RecurrenceService
                 'frequency' => $data['frequency'],
                 'frequency_day' => $frequencyDay,
                 'start_date' => $startDateStr,
-                'until_date' => isset($data['until_date']) && $data['until_date'] ? Carbon::parse($data['until_date']) : null,
+                'until_date' => isset($data['until_date']) && $data['until_date'] ? self::toDate($data['until_date']) : null,
                 'next_date' => $startDateStr,
                 'status' => RecurrenceStatus::Active,
                 'created_by' => $user->id,
@@ -130,33 +139,13 @@ class RecurrenceService
             ]);
 
             // Sync tags to both
-            if (! empty($data['tags'])) {
-                $this->syncTags($recurrence, $workspace, $data['tags']);
-                $this->syncTags($transaction, $workspace, $data['tags']);
-            }
+            $this->syncFirstInstanceTags($recurrence, $transaction, $workspace, $data['tags'] ?? null);
 
             // Advance next_date to next occurrence
-            $nextNextDate = $this->nextOccurrenceAfter($startDate, $frequency, $frequencyDay);
-
-            if ($recurrence->until_date && $nextNextDate->gt($recurrence->until_date)) {
-                $newNextDate = null;
-            } else {
-                $newNextDate = $nextNextDate->toDateString();
-            }
-
-            // Optimistic lock: use whereDate for reliable comparison across DB drivers
-            $affected = Recurrence::where('id', $recurrence->id)
-                ->whereDate('next_date', $startDateStr)
-                ->update(['next_date' => $newNextDate ? Carbon::parse($newNextDate) : null]);
-
-            if ($affected === 0) {
-                throw ValidationException::withMessages([
-                    'recurrence' => 'Recurso já existe. Recarregue e tente novamente.',
-                ]);
-            }
+            $this->advanceFirstNextDate($recurrence, $startDate, $frequency, $frequencyDay, $startDateStr);
 
             return [
-                'recurrence' => $recurrence->fresh(),
+                'recurrence' => $recurrence->fresh() ?? $recurrence,
                 'transaction' => $transaction,
             ];
         });
@@ -169,21 +158,26 @@ class RecurrenceService
      * future occurrences as real Transaction rows. Replaces create() and
      * createWithFirstInstance().
      */
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function createWithBuffer(Workspace $workspace, array $data, User $user): Recurrence
     {
         return DB::transaction(function () use ($workspace, $data, $user) {
-            $categoryId = $this->resolveCategoryId($workspace, $data['category_id']);
+            $categoryId = $this->resolveCategoryId($workspace, is_string($data['category_id']) ? $data['category_id'] : '');
 
-            $startDate = Carbon::parse($data['start_date']);
-            $frequency = RecurrenceFrequency::from($data['frequency']);
-            $frequencyDay = (int) $data['frequency_day'];
-            $bufferAhead = (int) ($data['buffer_ahead'] ?? 12);
+            $startDate = self::toDate($data['start_date']);
+            $frequency = RecurrenceFrequency::from(self::toStringValue($data['frequency']));
+            $frequencyDay = self::toIntValue($data['frequency_day']);
+            $bufferAhead = self::toIntValue($data['buffer_ahead'] ?? 12);
             $untilDate = isset($data['until_date']) && $data['until_date']
-                ? Carbon::parse($data['until_date'])
+                ? self::toDate($data['until_date'])
                 : null;
 
             $type = $data['type'] ?? TransactionType::Income;
-            $typeValue = $type instanceof TransactionType ? $type->value : (string) $type;
+            $typeValue = $type instanceof TransactionType
+                ? $type->value
+                : (is_string($type) ? $type : TransactionType::Income->value);
 
             [$accountId, $card] = $this->resolveRecurrenceTarget($workspace, $data, $startDate);
 
@@ -211,12 +205,44 @@ class RecurrenceService
             $this->insertBufferForRecurrence($recurrence, $card, $typeValue, $dates);
 
             if (! empty($data['tags'])) {
-                $this->syncTags($recurrence, $workspace, $data['tags']);
-                $this->syncTagsToInstances($recurrence, $workspace, $data['tags']);
+                $this->syncTags($recurrence, $workspace, self::toStringList($data['tags']));
+                $this->syncTagsToInstances($recurrence, $workspace, self::toStringList($data['tags']));
             }
 
             return $recurrence;
         });
+    }
+
+    private function syncFirstInstanceTags(Recurrence $recurrence, Transaction $transaction, Workspace $workspace, mixed $tags): void
+    {
+        if (! is_array($tags) || $tags === []) {
+            return;
+        }
+
+        $this->syncTags($recurrence, $workspace, self::toStringList($tags));
+        $this->syncTags($transaction, $workspace, self::toStringList($tags));
+    }
+
+    private function advanceFirstNextDate(Recurrence $recurrence, Carbon $startDate, RecurrenceFrequency $frequency, int $frequencyDay, string $startDateStr): void
+    {
+        $nextNextDate = $this->nextOccurrenceAfter($startDate, $frequency, $frequencyDay);
+
+        if ($recurrence->until_date && $nextNextDate->gt($recurrence->until_date)) {
+            $newNextDate = null;
+        } else {
+            $newNextDate = $nextNextDate->toDateString();
+        }
+
+        // Optimistic lock: use whereDate for reliable comparison across DB drivers
+        $affected = Recurrence::where('id', $recurrence->id)
+            ->whereDate('next_date', $startDateStr)
+            ->update(['next_date' => $newNextDate ? Carbon::parse($newNextDate) : null]);
+
+        if ($affected === 0) {
+            throw ValidationException::withMessages([
+                'recurrence' => 'Recurso já existe. Recarregue e tente novamente.',
+            ]);
+        }
     }
 
     /**
@@ -241,9 +267,7 @@ class RecurrenceService
             return;
         }
 
-        $frequency = $recurrence->frequency instanceof RecurrenceFrequency
-            ? $recurrence->frequency
-            : RecurrenceFrequency::from($recurrence->frequency);
+        $frequency = $recurrence->frequency;
 
         $card = $this->resolveBufferCard($recurrence);
         if ($card === null && $recurrence->credit_card_id) {
@@ -287,7 +311,7 @@ class RecurrenceService
             ->whereDate('date', '>=', today())
             ->max('date');
 
-        return $latestDate
+        return is_string($latestDate) || is_numeric($latestDate)
             ? Carbon::parse($latestDate)->addDay()
             : Carbon::today();
     }
@@ -305,28 +329,37 @@ class RecurrenceService
                 break;
             }
 
-            $transaction = $this->createBufferTransaction($recurrence, $date, $card ?: null);
+            $transaction = $this->createBufferTransaction($recurrence, $date, $card);
             $transaction->tags()->sync($tagIds);
 
-            if ($transaction->credit_card_bill_id) {
+            if ($transaction->credit_card_bill_id !== null) {
                 $affectedBillIds[] = $transaction->credit_card_bill_id;
             }
 
             $date = $this->nextOccurrenceAfter($date, $frequency, $recurrence->frequency_day);
         }
 
-        if (! empty($affectedBillIds)) {
-            $this->recalculateAffectedBills(array_unique($affectedBillIds));
-            $this->creditCardService->recalculateAvailableLimit($card->fresh());
+        if ($affectedBillIds !== [] && $card !== null) {
+            $this->recalculateAffectedBills(array_values(array_unique($affectedBillIds)));
+            $this->recalculateCardLimit($card);
         }
     }
 
     /**
      * Propagate rule field changes to all future instances of the recurrence.
      */
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function propagateToFuture(Recurrence $recurrence, array $data): void
     {
         DB::transaction(function () use ($recurrence, $data) {
+            $workspace = $recurrence->workspace;
+
+            if (! $workspace instanceof Workspace) {
+                return;
+            }
+
             $data = $this->resolveForeignKeyIds($recurrence, $data);
 
             $futureTransactions = Transaction::where('recurrence_id', $recurrence->id)
@@ -334,6 +367,7 @@ class RecurrenceService
                 ->whereDate('date', '>=', today())
                 ->get();
 
+            /** @var list<int> $accountIds */
             $accountIds = [];
 
             foreach ($futureTransactions as $transaction) {
@@ -344,7 +378,7 @@ class RecurrenceService
                 $transaction->save();
 
                 if (! empty($data['tags'])) {
-                    $this->syncTags($transaction, $recurrence->workspace, $data['tags']);
+                    $this->syncTags($transaction, $workspace, self::toStringList($data['tags']));
                 }
 
                 $accountIds = array_merge(
@@ -377,23 +411,39 @@ class RecurrenceService
             throw new RecurrenceGenerationException('A recorrência não possui próxima data.');
         }
 
-        $recurrence->load(['account' => fn ($q) => $q->withTrashed()]);
-
-        if ($recurrence->account?->trashed()) {
-            throw new RecurrenceGenerationException('A conta vinculada foi arquivada.');
-        }
+        $this->assertLinkedAccountAvailable($recurrence);
 
         $generationDate = $this->scheduledDateForPeriod($today, $recurrence->frequency, $recurrence->frequency_day);
 
-        if ($recurrence->until_date && ($today->gt($recurrence->until_date) || $generationDate->gt($recurrence->until_date))) {
-            throw new RecurrenceGenerationException('A recorrência já atingiu sua data final.');
-        }
+        $this->assertWithinUntilDate($recurrence, $today, $generationDate);
 
         if ($this->hasTransactionInPeriod($recurrence, $today)) {
             throw new RecurrenceGenerationException('Já existe uma transação gerada para este período.');
         }
 
-        return $this->createGeneratedInstance($recurrence, $generationDate, $advanceNextDate);
+        $instance = $this->createGeneratedInstance($recurrence, $generationDate, $advanceNextDate);
+
+        if ($instance === null) {
+            throw new RecurrenceGenerationException('Não foi possível gerar a transação deste período.');
+        }
+
+        return $instance;
+    }
+
+    private function assertLinkedAccountAvailable(Recurrence $recurrence): void
+    {
+        $recurrence->load(['account' => fn ($q) => $q->withTrashed()]);
+
+        if ($recurrence->account?->trashed()) {
+            throw new RecurrenceGenerationException('A conta vinculada foi arquivada.');
+        }
+    }
+
+    private function assertWithinUntilDate(Recurrence $recurrence, Carbon $today, Carbon $generationDate): void
+    {
+        if ($recurrence->until_date && ($today->gt($recurrence->until_date) || $generationDate->gt($recurrence->until_date))) {
+            throw new RecurrenceGenerationException('A recorrência já atingiu sua data final.');
+        }
     }
 
     /**
@@ -418,9 +468,7 @@ class RecurrenceService
                 break;
             }
 
-            $frequency = $recurrence->frequency instanceof RecurrenceFrequency
-                ? $recurrence->frequency
-                : RecurrenceFrequency::from($recurrence->frequency);
+            $frequency = $recurrence->frequency;
 
             $nextNext = $this->nextOccurrenceAfter($recurrence->next_date, $frequency, $recurrence->frequency_day);
 
@@ -496,19 +544,11 @@ class RecurrenceService
     /**
      * Recompute the next_date from today respecting frequency and until_date.
      */
-    public function recomputeNextDate(Recurrence $recurrence): ?Carbon
+    public function recomputeNextDate(Recurrence $recurrence): ?\Illuminate\Support\Carbon
     {
         $today = Carbon::today();
         $frequency = $recurrence->frequency;
         $frequencyDay = $recurrence->frequency_day;
-
-        if ($frequency instanceof RecurrenceFrequency) {
-            // Already an enum instance
-        } elseif (is_string($frequency)) {
-            $frequency = RecurrenceFrequency::from($frequency);
-        } else {
-            return null;
-        }
 
         $nextDate = $this->nextOccurrenceOnOrAfter($today, $frequency, $frequencyDay);
 
@@ -521,6 +561,9 @@ class RecurrenceService
 
     /**
      * Update recurrence rule fields and recompute next_date when needed.
+     */
+    /**
+     * @param  array<string, mixed>  $data
      */
     public function updateRule(Recurrence $recurrence, array $data): Recurrence
     {
@@ -543,10 +586,10 @@ class RecurrenceService
         $recurrence->save();
 
         if (! empty($data['tags'])) {
-            $this->syncTags($recurrence, $recurrence->workspace, $data['tags']);
+            $this->syncTagsForRecurrence($recurrence, $recurrence, self::toStringList($data['tags']));
         }
 
-        return $recurrence->fresh();
+        return $recurrence->fresh() ?? $recurrence;
     }
 
     /**
@@ -593,6 +636,9 @@ class RecurrenceService
      * Dispatch a background job to update the current transaction, the parent recurrence,
      * and all future instances. Returns immediately — the actual work runs asynchronously.
      */
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function updateThisAndFuture(Transaction $transaction, array $data, User $user): void
     {
         dispatch(new ApplyRecurrenceScopeChangeJob(
@@ -606,6 +652,9 @@ class RecurrenceService
     /**
      * Apply the "Esta e futuras" update synchronously inside a DB::transaction.
      * Called by ApplyRecurrenceScopeChangeJob.
+     */
+    /**
+     * @param  array<string, mixed>  $data
      */
     public function applyUpdateThisAndFuture(Transaction $transaction, array $data, User $user): void
     {
@@ -687,8 +736,26 @@ class RecurrenceService
     }
 
     /**
+     * Sync tags on a given model using the recurrence's workspace, when it exists.
+     *
+     * @param  array<int, string>|null  $tagUuids
+     */
+    private function syncTagsForRecurrence(Recurrence|Transaction $model, Recurrence $recurrence, ?array $tagUuids): void
+    {
+        $workspace = $recurrence->workspace;
+
+        if ($workspace === null) {
+            return;
+        }
+
+        $this->syncTags($model, $workspace, $tagUuids);
+    }
+
+    /**
      * Sync tags on a given model (Recurrence or Transaction) by resolving
      * tag UUIDs within the workspace.
+     *
+     * @param  array<int, string>|null  $tagUuids
      */
     public function syncTags(Recurrence|Transaction $model, Workspace $workspace, ?array $tagUuids): void
     {
@@ -706,63 +773,15 @@ class RecurrenceService
 
     // ── Private helpers ─────────────────────────────────────────────────
 
-    /**
-     * Determine whether a recurrence is eligible to generate an instance today.
-     * Logs a warning and mutates state (exhaustion) when generation is blocked.
-     */
-    private function canGenerate(Recurrence $recurrence, Carbon $today): bool
-    {
-        if ($recurrence->status !== RecurrenceStatus::Active) {
-            Log::warning("Recurrence {$recurrence->uuid}: status is not active, skipping");
-
-            return false;
-        }
-
-        if ($recurrence->trashed()) {
-            Log::warning("Recurrence {$recurrence->uuid}: is soft-deleted, skipping");
-
-            return false;
-        }
-
-        if ($recurrence->next_date === null) {
-            return false;
-        }
-
-        $recurrence->load(['account' => fn ($q) => $q->withTrashed()]);
-
-        if ($recurrence->account?->trashed()) {
-            Log::warning("Recurrence {$recurrence->uuid}: linked account is archived, skipping");
-
-            return false;
-        }
-
-        return $this->markExhaustedIfPastEnd($recurrence) && $this->isDue($recurrence, $today);
-    }
-
-    /**
-     * Mark the recurrence as exhausted (next_date = null) when it has passed its end date.
-     * Returns false when the recurrence was exhausted, true otherwise.
-     */
-    private function markExhaustedIfPastEnd(Recurrence $recurrence): bool
-    {
-        if ($recurrence->until_date && $recurrence->next_date->gt($recurrence->until_date)) {
-            $recurrence->next_date = null;
-            $recurrence->save();
-
-            return false;
-        }
-
-        return true;
-    }
-
-    private function isDue(Recurrence $recurrence, Carbon $today): bool
-    {
-        return $recurrence->next_date->lte($today);
-    }
-
     private function createGeneratedInstance(Recurrence $recurrence, Carbon $generationDate, bool $advanceNextDate = false): ?Transaction
     {
-        $originalNextDateStr = $recurrence->next_date->toDateString();
+        $originalNextDate = $recurrence->next_date;
+
+        if ($originalNextDate === null) {
+            return null;
+        }
+
+        $originalNextDateStr = $originalNextDate->toDateString();
 
         try {
             return DB::transaction(function () use ($recurrence, $generationDate, $originalNextDateStr, $advanceNextDate) {
@@ -820,18 +839,22 @@ class RecurrenceService
         }
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
     private function resolveForeignKeyIds(Recurrence $recurrence, array $data): array
     {
         if (array_key_exists('account_id', $data)) {
             $data['account_id'] = empty($data['account_id'])
                 ? null
-                : Account::where('uuid', $data['account_id'])
+                : Account::where('uuid', is_string($data['account_id']) ? $data['account_id'] : '')
                     ->where('workspace_id', $recurrence->workspace_id)
                     ->firstOrFail()
                     ->id;
         }
 
-        if (isset($data['category_id'])) {
+        if (isset($data['category_id']) && is_string($data['category_id'])) {
             $data['category_id'] = Category::where('uuid', $data['category_id'])
                 ->where('workspace_id', $recurrence->workspace_id)
                 ->firstOrFail()
@@ -841,15 +864,18 @@ class RecurrenceService
         return $data;
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     private function applyStartDate(Recurrence $recurrence, array $data): void
     {
         if (! isset($data['start_date'])) {
             return;
         }
 
-        $newStartDate = Carbon::parse($data['start_date']);
+        $newStartDate = self::toDate($data['start_date']);
 
-        if ($recurrence->start_date && $recurrence->start_date->isSameDay($newStartDate)) {
+        if ($recurrence->start_date->isSameDay($newStartDate)) {
             return;
         }
 
@@ -866,15 +892,18 @@ class RecurrenceService
      * Reject changing a card recurrence's start_date when any occurrence between
      * the new start_date and today would fall on a bill that is already PAID.
      */
+    /**
+     * @param  array<string, mixed>  $data
+     */
     private function validateUpdatePaidBillCollision(Recurrence $recurrence, array $data): void
     {
         if (! isset($data['start_date']) || ! $recurrence->credit_card_id) {
             return;
         }
 
-        $newStartDate = Carbon::parse($data['start_date']);
+        $newStartDate = self::toDate($data['start_date']);
 
-        if ($recurrence->start_date && $recurrence->start_date->isSameDay($newStartDate)) {
+        if ($recurrence->start_date->isSameDay($newStartDate)) {
             return;
         }
 
@@ -887,39 +916,64 @@ class RecurrenceService
         $this->validatePaidBillCollision($card, $newStartDate);
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     private function applyEditableFields(Recurrence $recurrence, array $data): void
     {
-        foreach (['description', 'value', 'account_id', 'category_id', 'until_date', 'buffer_ahead'] as $field) {
-            if ($field === 'account_id') {
-                if (array_key_exists($field, $data)) {
-                    $recurrence->account_id = $data[$field];
-                }
+        $this->applyEditableContentFields($recurrence, $data);
+        $this->applyEditableScheduleFields($recurrence, $data);
+    }
 
-                continue;
-            }
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function applyEditableContentFields(Recurrence $recurrence, array $data): void
+    {
+        if (isset($data['description']) && is_string($data['description'])) {
+            $recurrence->description = $data['description'];
+        }
 
-            if (! isset($data[$field])) {
-                continue;
-            }
+        if (isset($data['value']) && is_numeric($data['value'])) {
+            $recurrence->value = (float) $data['value'];
+        }
 
-            if ($field === 'until_date') {
-                $recurrence->until_date = $data[$field] ? Carbon::parse($data[$field]) : null;
-            } else {
-                $recurrence->{$field} = $data[$field];
-            }
+        if (isset($data['buffer_ahead'])) {
+            $recurrence->buffer_ahead = self::toIntValue($data['buffer_ahead']);
         }
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function applyEditableScheduleFields(Recurrence $recurrence, array $data): void
+    {
+        if (array_key_exists('account_id', $data) && (is_int($data['account_id']) || $data['account_id'] === null)) {
+            $recurrence->account_id = $data['account_id'];
+        }
+
+        if (isset($data['category_id']) && is_int($data['category_id'])) {
+            $recurrence->category_id = $data['category_id'];
+        }
+
+        if (isset($data['until_date'])) {
+            $recurrence->until_date = $data['until_date'] ? self::toDate($data['until_date']) : null;
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
     private function applyScheduleFields(Recurrence $recurrence, array $data): bool
     {
         $changed = false;
 
-        if (isset($data['frequency'])) {
-            $recurrence->frequency = $data['frequency'];
+        if (isset($data['frequency']) && is_string($data['frequency'])) {
+            $recurrence->frequency = RecurrenceFrequency::from($data['frequency']);
             $changed = true;
         }
 
-        if (isset($data['frequency_day'])) {
+        if (isset($data['frequency_day']) && is_numeric($data['frequency_day'])) {
             $recurrence->frequency_day = (int) $data['frequency_day'];
             $changed = true;
         }
@@ -927,9 +981,12 @@ class RecurrenceService
         return $changed;
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     private function exhaustIfUntilDatePassed(Recurrence $recurrence, array $data): void
     {
-        if (! isset($data['until_date']) || ! $recurrence->next_date) {
+        if (! isset($data['until_date']) || $recurrence->next_date === null) {
             return;
         }
 
@@ -940,9 +997,7 @@ class RecurrenceService
 
     private function recomputeNextDateAfterScheduleChange(Recurrence $recurrence): void
     {
-        $frequency = $recurrence->frequency instanceof RecurrenceFrequency
-            ? $recurrence->frequency
-            : RecurrenceFrequency::from($recurrence->frequency);
+        $frequency = $recurrence->frequency;
 
         $newNextDate = $this->nextOccurrenceOnOrAfter(Carbon::today(), $frequency, $recurrence->frequency_day);
 
@@ -966,6 +1021,10 @@ class RecurrenceService
         return $recurrence;
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     * @return list<int>
+     */
     private function updateCurrentTransaction(Transaction $transaction, Recurrence $recurrence, array $data): array
     {
         $wasPaid = $transaction->paid_at !== null;
@@ -975,22 +1034,29 @@ class RecurrenceService
         $transaction->save();
 
         if (! empty($data['tags'])) {
-            $this->syncTags($transaction, $recurrence->workspace, $data['tags']);
+            $this->syncTagsForRecurrence($transaction, $recurrence, self::toStringList($data['tags']));
         }
 
         return $this->accountsToRecalculate($transaction, $data, $wasPaid, $oldAccountId);
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     private function updateRecurrence(Recurrence $recurrence, array $data): void
     {
         $this->applySharedFields($recurrence, $data);
         $recurrence->save();
 
         if (! empty($data['tags'])) {
-            $this->syncTags($recurrence, $recurrence->workspace, $data['tags']);
+            $this->syncTagsForRecurrence($recurrence, $recurrence, self::toStringList($data['tags']));
         }
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     * @return list<int>
+     */
     private function updateFutureTransactions(Transaction $transaction, Recurrence $recurrence, array $data): array
     {
         $futureTransactions = Transaction::where('recurrence_id', $recurrence->id)
@@ -1011,6 +1077,10 @@ class RecurrenceService
         return $accountIds;
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     * @return list<int>
+     */
     private function updateOneFutureTransaction(Transaction $futureTransaction, Recurrence $recurrence, array $data): array
     {
         $wasPaid = $futureTransaction->paid_at !== null;
@@ -1020,29 +1090,53 @@ class RecurrenceService
         $futureTransaction->save();
 
         if (! empty($data['tags'])) {
-            $this->syncTags($futureTransaction, $recurrence->workspace, $data['tags']);
+            $this->syncTagsForRecurrence($futureTransaction, $recurrence, self::toStringList($data['tags']));
         }
 
         return $this->accountsToRecalculate($futureTransaction, $data, $wasPaid, $oldAccountId);
     }
 
-    private function applySharedFields(Model $model, array $data): void
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function applySharedFields(Recurrence|Transaction $model, array $data): void
     {
-        foreach (['description', 'value', 'account_id', 'category_id'] as $field) {
-            if ($field === 'account_id') {
-                if (array_key_exists($field, $data)) {
-                    $model->account_id = $data[$field];
-                }
+        $this->applySharedContentFields($model, $data);
+        $this->applySharedRelationFields($model, $data);
+    }
 
-                continue;
-            }
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function applySharedContentFields(Recurrence|Transaction $model, array $data): void
+    {
+        if (isset($data['description'])) {
+            $model->description = is_string($data['description']) ? $data['description'] : '';
+        }
 
-            if (isset($data[$field])) {
-                $model->{$field} = $data[$field];
-            }
+        if (isset($data['value']) && is_numeric($data['value'])) {
+            $model->value = (float) $data['value'];
         }
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function applySharedRelationFields(Recurrence|Transaction $model, array $data): void
+    {
+        if (array_key_exists('account_id', $data) && (is_int($data['account_id']) || $data['account_id'] === null)) {
+            $model->account_id = $data['account_id'];
+        }
+
+        if (isset($data['category_id']) && is_int($data['category_id'])) {
+            $model->category_id = $data['category_id'];
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return list<int>
+     */
     private function accountsToRecalculate(Transaction $transaction, array $data, bool $wasPaid, ?int $oldAccountId): array
     {
         if (! $wasPaid) {
@@ -1054,29 +1148,32 @@ class RecurrenceService
 
             if ($newAccountId !== $oldAccountId) {
                 return array_values(array_filter(
-                    [$oldAccountId, $newAccountId],
+                    [$oldAccountId, is_int($newAccountId) ? $newAccountId : null],
                     static fn (?int $accountId): bool => $accountId !== null,
                 ));
             }
         }
 
-        if ($transaction->account) {
+        if ($transaction->account && $transaction->account_id !== null) {
             return [$transaction->account_id];
         }
 
         return [];
     }
 
+    /**
+     * @param  array<int, int|null>  $accountIds
+     */
     private function recalculateAccounts(array $accountIds): void
     {
-        $accountIds = array_filter(
-            array_unique($accountIds),
-            static fn ($accountId): bool => $accountId !== null,
-        );
+        foreach (array_unique($accountIds) as $accountId) {
+            if ($accountId === null) {
+                continue;
+            }
 
-        foreach ($accountIds as $accountId) {
             $account = Account::find($accountId);
-            if ($account) {
+
+            if ($account instanceof Account) {
                 $this->accountService->recalculateBalance($account);
             }
         }
@@ -1256,12 +1353,19 @@ class RecurrenceService
      *
      * @return array{int|null, CreditCard|null}
      */
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{int|null, CreditCard|null}
+     */
     private function resolveRecurrenceTarget(Workspace $workspace, array $data, Carbon $startDate): array
     {
         $creditCardId = $data['credit_card_id'] ?? null;
 
         if (! $creditCardId) {
-            return [$this->resolveAccountId($workspace, $data['account_id'] ?? null), null];
+            return [
+                $this->resolveAccountId($workspace, is_string($data['account_id'] ?? null) ? $data['account_id'] : null),
+                null,
+            ];
         }
 
         if (! empty($data['account_id'])) {
@@ -1270,7 +1374,7 @@ class RecurrenceService
             ]);
         }
 
-        $installments = isset($data['installments']) ? (int) $data['installments'] : 1;
+        $installments = isset($data['installments']) && is_numeric($data['installments']) ? (int) $data['installments'] : 1;
         if ($installments > 1) {
             throw ValidationException::withMessages([
                 'installments' => 'Despesas recorrentes em cartão não podem ser parceladas.',
@@ -1295,14 +1399,19 @@ class RecurrenceService
     {
         if ($card) {
             $this->insertCardBufferTransactions($recurrence, $card, $type, $dates);
-            $this->recalculateAffectedBills(
-                Transaction::where('recurrence_id', $recurrence->id)
-                    ->whereNotNull('credit_card_bill_id')
-                    ->distinct()
-                    ->pluck('credit_card_bill_id')
-                    ->toArray()
-            );
-            $this->creditCardService->recalculateAvailableLimit($card->fresh());
+            $billIds = [];
+
+            foreach (Transaction::where('recurrence_id', $recurrence->id)
+                ->whereNotNull('credit_card_bill_id')
+                ->distinct()
+                ->pluck('credit_card_bill_id') as $billId) {
+                if (is_int($billId)) {
+                    $billIds[] = $billId;
+                }
+            }
+
+            $this->recalculateAffectedBills($billIds);
+            $this->recalculateCardLimit($card);
         } else {
             $this->insertBufferTransactions($recurrence, $type, $dates);
         }
@@ -1357,7 +1466,8 @@ class RecurrenceService
     {
         foreach ($billIds as $billId) {
             $bill = CreditCardBill::find($billId);
-            if ($bill) {
+
+            if ($bill instanceof CreditCardBill) {
                 $this->billService->recalculateBillTotal($bill);
             }
         }
@@ -1365,6 +1475,8 @@ class RecurrenceService
 
     /**
      * Sync the given tags to every instance of the recurrence.
+     *
+     * @param  array<int, string>  $tagUuids
      */
     private function syncTagsToInstances(Recurrence $recurrence, Workspace $workspace, array $tagUuids): void
     {
@@ -1392,9 +1504,9 @@ class RecurrenceService
     /**
      * Compute the next occurrence strictly after the given date.
      */
-    private function nextOccurrenceAfter(Carbon $date, RecurrenceFrequency $frequency, int $frequencyDay): Carbon
+    private function nextOccurrenceAfter(Carbon $date, RecurrenceFrequency $frequency, int $frequencyDay): \Illuminate\Support\Carbon
     {
-        return match ($frequency) {
+        return \Illuminate\Support\Carbon::instance(match ($frequency) {
             RecurrenceFrequency::Weekly => $date->copy()->next($frequencyDay),
             RecurrenceFrequency::Monthly => (function () use ($date, $frequencyDay) {
                 $next = $date->copy()->addMonthNoOverflow();
@@ -1402,15 +1514,15 @@ class RecurrenceService
 
                 return $next;
             })(),
-        };
+        });
     }
 
     /**
      * Compute the first occurrence on or after the given date.
      */
-    private function nextOccurrenceOnOrAfter(Carbon $date, RecurrenceFrequency $frequency, int $frequencyDay): Carbon
+    private function nextOccurrenceOnOrAfter(Carbon $date, RecurrenceFrequency $frequency, int $frequencyDay): \Illuminate\Support\Carbon
     {
-        return match ($frequency) {
+        return \Illuminate\Support\Carbon::instance(match ($frequency) {
             RecurrenceFrequency::Weekly => (function () use ($date, $frequencyDay) {
                 if ($date->dayOfWeek === $frequencyDay) {
                     return $date;
@@ -1431,38 +1543,7 @@ class RecurrenceService
 
                 return $next;
             })(),
-        };
-    }
-
-    /**
-     * Compute the most recent occurrence on or before the given date.
-     */
-    private function mostRecentOccurrenceOnOrBefore(Carbon $date, RecurrenceFrequency $frequency, int $frequencyDay, ?Carbon $untilDate): Carbon
-    {
-        $boundary = $untilDate && $untilDate->lt($date) ? $untilDate : $date;
-
-        return match ($frequency) {
-            RecurrenceFrequency::Weekly => (function () use ($boundary, $frequencyDay) {
-                if ($boundary->dayOfWeek === $frequencyDay) {
-                    return $boundary;
-                }
-
-                return $boundary->copy()->previous($frequencyDay);
-            })(),
-            RecurrenceFrequency::Monthly => (function () use ($boundary, $frequencyDay) {
-                $targetDay = min($frequencyDay, $boundary->daysInMonth);
-
-                if ($boundary->day >= $targetDay) {
-                    return $boundary->copy()->day($targetDay);
-                }
-
-                // Hasn't reached the target day this month — use last month's
-                $prev = $boundary->copy()->subMonthNoOverflow();
-                $prev->day = min($frequencyDay, $prev->daysInMonth);
-
-                return $prev;
-            })(),
-        };
+        });
     }
 
     /**
@@ -1501,10 +1582,69 @@ class RecurrenceService
     }
 
     /**
+     * Recalculate the available limit of a card after buffer inserts.
+     */
+    private function recalculateCardLimit(?CreditCard $card): void
+    {
+        if ($card === null) {
+            return;
+        }
+
+        $freshCard = $card->fresh();
+
+        if ($freshCard !== null) {
+            $this->creditCardService->recalculateAvailableLimit($freshCard);
+        }
+    }
+
+    /**
      * Find or create the bill for a card + date.
      */
     protected function resolveCardBill(CreditCard $card, Carbon $date): CreditCardBill
     {
-        return $this->billService->findOrCreateBill($card, $date, $card->created_by);
+        return $this->billService->findOrCreateBill($card, $date, $card->created_by ?? 0);
+    }
+
+    private static function toDate(mixed $value): \Illuminate\Support\Carbon
+    {
+        if ($value instanceof \DateTimeInterface) {
+            return \Illuminate\Support\Carbon::instance($value);
+        }
+
+        if (is_string($value) || is_numeric($value)) {
+            return \Illuminate\Support\Carbon::parse($value);
+        }
+
+        throw new \InvalidArgumentException('Invalid date value.');
+    }
+
+    private static function toStringValue(mixed $value): string
+    {
+        return is_string($value) ? $value : '';
+    }
+
+    private static function toIntValue(mixed $value): int
+    {
+        return is_numeric($value) ? (int) $value : 0;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function toStringList(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $strings = [];
+
+        foreach ($value as $item) {
+            if (is_string($item)) {
+                $strings[] = $item;
+            }
+        }
+
+        return $strings;
     }
 }

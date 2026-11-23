@@ -14,6 +14,9 @@ class ApplyRecurrenceScopeChangeJob implements ShouldQueue
 {
     use Queueable;
 
+    /**
+     * @param  array<string, mixed>  $payload
+     */
     public function __construct(
         public string $operation, // 'update' or 'delete'
         public string $transactionUuid,

@@ -3,6 +3,9 @@ includes:
 
 parameters:
     level: 9
+    stubFiles:
+        - phpstan/stubs/laravel-ai-conversation.stub.php
+
     paths:
         - app/
         - routes/
@@ -11,7 +14,3 @@ parameters:
     excludePaths:
         analyse:
             - database/migrations/*
-
-    ignoreErrors:
-        # Enums referenced dynamically through values coming from user input
-        - '#Offset [\w\.]+ on array#'

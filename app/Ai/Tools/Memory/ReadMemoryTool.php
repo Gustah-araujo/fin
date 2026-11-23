@@ -48,7 +48,7 @@ class ReadMemoryTool implements Tool
                 'type' => $memory->type->value,
                 'source' => $memory->source,
             ])->all(),
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     private function resolveWorkspace(): Workspace

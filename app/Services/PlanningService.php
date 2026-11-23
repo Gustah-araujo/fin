@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Enums\TransactionType;
+use App\Models\Category;
 use App\Models\Transaction;
 use App\Models\Workspace;
 use Carbon\Carbon;
@@ -31,7 +32,7 @@ class PlanningService
     /**
      * Return detailed transactions for a specific month, grouped by type.
      *
-     * @return array{expenses: array, incomes: array}
+     * @return array{expenses: array<int, array<string, mixed>>, incomes: array<int, array<string, mixed>>}
      */
     public function getMonthDetail(Workspace $workspace, Carbon $month): array
     {
@@ -49,14 +50,16 @@ class PlanningService
             ->sortBy('date')
             ->values()
             ->map(fn (Transaction $t) => $this->formatTransactionDetail($t))
-            ->toArray();
+            ->values()
+            ->all();
 
         $incomes = $transactions
             ->where('type', TransactionType::Income)
             ->sortBy('date')
             ->values()
             ->map(fn (Transaction $t) => $this->formatTransactionDetail($t))
-            ->toArray();
+            ->values()
+            ->all();
 
         return [
             'expenses' => $expenses,
@@ -69,15 +72,21 @@ class PlanningService
     /**
      * Generate all months in the date range and sum transactions by type per month.
      *
+     * @param  Collection<int, Transaction>  $transactions
      * @return array{month: string, expenses: float, incomes: float, balance: float}[]
      */
     private function summarizeByMonth(Collection $transactions, Carbon $dateStart, Carbon $dateEnd): array
     {
         // Group transactions by month
-        $grouped = $transactions->groupBy(fn ($t) => $t->date instanceof Carbon
-            ? $t->date->format('Y-m')
-            : Carbon::parse($t->date)->format('Y-m')
-        );
+        $grouped = $transactions->groupBy(function (Transaction $t): string {
+            $date = $t->getAttribute('date');
+
+            if ($date instanceof Carbon) {
+                return $date->format('Y-m');
+            }
+
+            return is_string($date) ? Carbon::parse($date)->format('Y-m') : '';
+        });
 
         // Generate every month in the range
         $result = [];
@@ -86,15 +95,13 @@ class PlanningService
 
         while ($current->lte($end)) {
             $monthKey = $current->format('Y-m');
-            $monthTransactions = $grouped->get($monthKey, collect());
+            $monthTransactions = $grouped->get($monthKey);
 
-            $expenses = $monthTransactions
-                ->where('type', TransactionType::Expense)
-                ->sum(fn ($t) => (float) $t->value);
+            $expenses = $monthTransactions?->where('type', TransactionType::Expense)
+                ->sum(fn (Transaction $t): float => self::floatValue($t->getAttribute('value'))) ?? 0.0;
 
-            $incomes = $monthTransactions
-                ->where('type', TransactionType::Income)
-                ->sum(fn ($t) => (float) $t->value);
+            $incomes = $monthTransactions?->where('type', TransactionType::Income)
+                ->sum(fn (Transaction $t): float => self::floatValue($t->getAttribute('value'))) ?? 0.0;
 
             $result[] = [
                 'month' => $monthKey,
@@ -109,14 +116,26 @@ class PlanningService
         return $result;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function formatTransactionDetail(Transaction $t): array
     {
+        $date = $t->getAttribute('date');
+        $type = $t->getAttribute('type');
+        $category = $t->category;
+
         return [
             'description' => $t->description,
-            'value' => (float) $t->value,
-            'category' => $t->category?->name,
-            'date' => $t->date instanceof Carbon ? $t->date->format('Y-m-d') : $t->date,
-            'type' => $t->type->value,
+            'value' => self::floatValue($t->getAttribute('value')),
+            'category' => $category instanceof Category ? $category->name : null,
+            'date' => $date instanceof Carbon ? $date->format('Y-m-d') : (is_string($date) ? $date : ''),
+            'type' => $type instanceof TransactionType ? $type->value : (is_string($type) ? $type : ''),
         ];
+    }
+
+    private static function floatValue(mixed $value): float
+    {
+        return is_numeric($value) ? (float) $value : 0.0;
     }
 }

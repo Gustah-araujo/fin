@@ -28,8 +28,8 @@ trait PersistsTableState
         $sessionState = app(TableStateService::class)->restore($request, $tableKey);
 
         $filters = ! empty($requestFilters) ? $requestFilters : $sessionState['filters'];
-        $sort = $requestSort ?? $sessionState['sort'] ?? null;
-        $direction = $requestDirection ?? $sessionState['direction'] ?? 'asc';
+        $sort = is_string($requestSort) ? $requestSort : $sessionState['sort'];
+        $direction = is_string($requestDirection) ? $requestDirection : $sessionState['direction'];
 
         app(TableStateService::class)->save($request, $tableKey, $filters, $sort, $direction);
 

@@ -21,6 +21,9 @@ class NotificationService
             ->count();
     }
 
+    /**
+     * @return Collection<int, DatabaseNotification>
+     */
     public function getNotifications(User $user, Workspace $workspace, int $limit = 20): Collection
     {
         return DatabaseNotification::where('notifiable_type', User::class)

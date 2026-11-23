@@ -55,7 +55,11 @@ class CreditCardBillController extends Controller
             ->where('workspace_id', $workspace->id)
             ->firstOrFail();
 
-        $billService->payBill($bill, $account, $request->user());
+        $user = $request->user();
+
+        abort_unless($user !== null, 401);
+
+        $billService->payBill($bill, $account, $user);
         Toast::success('Fatura paga com sucesso.');
 
         return redirect()->back();

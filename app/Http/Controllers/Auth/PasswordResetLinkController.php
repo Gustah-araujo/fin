@@ -22,7 +22,9 @@ class PasswordResetLinkController extends Controller
 
     public function store(StoreForgotPasswordRequest $request, AuthService $authService): RedirectResponse
     {
-        $status = $authService->sendPasswordResetLink($request->validated()['email']);
+        $email = $request->validated()['email'];
+
+        $status = $authService->sendPasswordResetLink(is_string($email) ? $email : '');
 
         if ($status === Password::RESET_LINK_SENT) {
             return back()->with('status', 'Se o email existir, um link de recuperação foi enviado.');

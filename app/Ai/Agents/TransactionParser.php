@@ -69,7 +69,7 @@ class TransactionParser implements Agent, HasStructuredOutput, HasTools
      */
     public function workspaceUuid(): string
     {
-        return $this->workspace?->uuid ?? '';
+        return $this->workspace->uuid ?? '';
     }
 
     /**
@@ -77,7 +77,7 @@ class TransactionParser implements Agent, HasStructuredOutput, HasTools
      */
     public function instructions(): Stringable|string
     {
-        $workspaceId = $this->workspace?->uuid ?? 'N/A';
+        $workspaceId = $this->workspace->uuid ?? 'N/A';
         $typeEnum = $this->workspace !== null ? 'enabled' : 'disabled';
 
         return <<<PROMPT

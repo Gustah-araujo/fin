@@ -17,6 +17,9 @@ class WorkspaceService
         private readonly CategoryService $categoryService,
     ) {}
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function create(User $creator, array $data): Workspace
     {
         $workspace = Workspace::create([
@@ -35,6 +38,9 @@ class WorkspaceService
         return $workspace;
     }
 
+    /**
+     * @return Collection<int, Workspace>
+     */
     public function getUserWorkspaces(User $user): Collection
     {
         return $user->workspaces()

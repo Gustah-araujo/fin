@@ -16,6 +16,9 @@ class NotificationController extends Controller
     public function index(Workspace $workspace, NotificationService $service): JsonResponse
     {
         $user = request()->user();
+
+        abort_unless($user !== null, 401);
+
         $notifications = $service->getNotifications($user, $workspace);
 
         return response()->json([
@@ -27,6 +30,9 @@ class NotificationController extends Controller
     public function markAsRead(Workspace $workspace, DatabaseNotification $notification, NotificationService $service): JsonResponse
     {
         $user = request()->user();
+
+        abort_unless($user !== null, 401);
+
         $service->markAsRead($user, $notification);
 
         return response()->json([
@@ -38,6 +44,9 @@ class NotificationController extends Controller
     public function markAllAsRead(Workspace $workspace, NotificationService $service): JsonResponse
     {
         $user = request()->user();
+
+        abort_unless($user !== null, 401);
+
         $service->markAllAsRead($user, $workspace);
 
         Toast::success('Todas as notificações foram marcadas como lidas.');

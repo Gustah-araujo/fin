@@ -8,7 +8,9 @@ use App\Enums\TransactionType;
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\Tag;
+use App\Models\Workspace;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class UpdateIncomeRequest extends FormRequest
 {
@@ -17,6 +19,9 @@ class UpdateIncomeRequest extends FormRequest
         return true;
     }
 
+    /**
+     * @return array<string, list<string>>
+     */
     public function rules(): array
     {
         return [
@@ -31,10 +36,14 @@ class UpdateIncomeRequest extends FormRequest
         ];
     }
 
-    public function withValidator($validator): void
+    public function withValidator(Validator $validator): void
     {
-        $validator->after(function ($validator) {
+        $validator->after(function (Validator $validator): void {
             $workspace = $this->route('workspace');
+
+            if (! $workspace instanceof Workspace) {
+                return;
+            }
 
             $this->validateAccount($validator, $workspace);
             $this->validateCategory($validator, $workspace);
@@ -50,7 +59,7 @@ class UpdateIncomeRequest extends FormRequest
         });
     }
 
-    private function validateAccount($validator, $workspace): void
+    private function validateAccount(Validator $validator, Workspace $workspace): void
     {
         if (! $this->filled('account_id')) {
             return;
@@ -75,7 +84,7 @@ class UpdateIncomeRequest extends FormRequest
         }
     }
 
-    private function validateCategory($validator, $workspace): void
+    private function validateCategory(Validator $validator, Workspace $workspace): void
     {
         if (! $this->filled('category_id')) {
             return;
@@ -93,26 +102,38 @@ class UpdateIncomeRequest extends FormRequest
             $validator->errors()->add('category_id', 'A categoria selecionada não pertence a este workspace.');
         }
 
-        if ($category->type === TransactionType::Expense) {
+        if ($this->categoryTypeIs($category->type, TransactionType::Expense)) {
             $validator->errors()->add('category_id', 'Esta categoria não aceita receitas.');
         }
     }
 
-    private function validateTags($validator, $workspace): void
+    private function categoryTypeIs(mixed $type, TransactionType $expected): bool
+    {
+        return $type instanceof TransactionType
+            ? $type === $expected
+            : $type === $expected->value;
+    }
+
+    private function validateTags(Validator $validator, Workspace $workspace): void
     {
         if (! $this->filled('tags')) {
             return;
         }
 
-        $tagCount = Tag::whereIn('uuid', $this->input('tags'))
+        $tags = $this->input('tags');
+
+        $tagCount = Tag::whereIn('uuid', $tags)
             ->where('workspace_id', $workspace->id)
             ->count();
 
-        if ($tagCount !== count($this->input('tags'))) {
+        if ($tagCount !== (is_array($tags) ? count($tags) : 0)) {
             $validator->errors()->add('tags', 'Uma ou mais tags são inválidas.');
         }
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function messages(): array
     {
         return [

@@ -14,7 +14,9 @@ class FinTitleAgent extends BaseAgent
      */
     public function model(): string
     {
-        return (string) config('ai.fin.title_model');
+        $model = config('ai.fin.title_model');
+
+        return is_string($model) ? $model : '';
     }
 
     /**

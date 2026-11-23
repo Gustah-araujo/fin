@@ -9,15 +9,24 @@ use App\Enums\WorkspaceRole;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @property string $uuid
+ * @property string $email
+ * @property WorkspaceRole $role
+ * @property InviteStatus $status
+ */
 class InviteResource extends JsonResource
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(Request $request): array
     {
         return [
             'uuid' => $this->uuid,
             'email' => $this->email,
-            'role' => $this->role instanceof WorkspaceRole ? $this->role->value : $this->role,
-            'status' => $this->status instanceof InviteStatus ? $this->status->value : $this->status,
+            'role' => $this->role->value,
+            'status' => $this->status->value,
             'inviter' => new UserResource($this->whenLoaded('inviter')),
             'workspace' => new WorkspaceResource($this->whenLoaded('workspace')),
         ];

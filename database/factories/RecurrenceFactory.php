@@ -8,6 +8,9 @@ use App\Enums\TransactionType;
 use App\Models\Recurrence;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<Recurrence>
+ */
 class RecurrenceFactory extends Factory
 {
     protected $model = Recurrence::class;

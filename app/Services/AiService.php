@@ -10,6 +10,7 @@ use App\Models\Workspace;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 use Laravel\Ai\Files\Image;
+use Laravel\Ai\Responses\StructuredAgentResponse;
 use RuntimeException;
 
 class AiService implements AiParserInterface
@@ -29,13 +30,19 @@ class AiService implements AiParserInterface
         $userMessage = 'Extraia as transações financeiras. Classifique cada transação como debit (saída) ou crédito (entrada) baseado no contexto do documento.';
         $attachments = [];
 
+        $csvContent = null;
+
         match ($extension) {
-            'csv', 'txt' => $userMessage .= "\n\nConteúdo:\n".file_get_contents($file->getRealPath()),
-            'html' => $userMessage .= "\n\nConteúdo:\n".strip_tags(file_get_contents($file->getRealPath())),
+            'csv', 'txt' => $csvContent = (string) file_get_contents($file->getRealPath()),
+            'html' => $csvContent = strip_tags((string) file_get_contents($file->getRealPath())),
             'pdf' => $attachments[] = $file,
             'png', 'jpg', 'jpeg', 'webp' => $attachments[] = Image::fromPath($file->getRealPath()),
             default => throw new RuntimeException("Formato de arquivo não suportado: {$extension}."),
         };
+
+        if (is_string($csvContent)) {
+            $userMessage .= "\n\nConteúdo:\n".$csvContent;
+        }
 
         try {
             $response = $agent->prompt($userMessage, attachments: $attachments);
@@ -43,31 +50,80 @@ class AiService implements AiParserInterface
             throw new RuntimeException('AI parsing failed: '.$e->getMessage(), 0, $e);
         }
 
-        return $this->normalizeTransactions($response['transactions']);
+        $structured = $response instanceof StructuredAgentResponse
+            ? $response->structured
+            : [];
+
+        $transactions = $structured['transactions'] ?? [];
+
+        return $this->normalizeTransactions(is_array($transactions) ? array_values($transactions) : []);
     }
 
     /**
      * Normalize structured output into consistent transaction structure.
      *
-     * @param  array<int, array>  $transactions
+     * @param  array<int, mixed>  $transactions
      * @return array<int, array{uuid: string, description: string, value: float, date: string, type: string, category_name: string, category_uuid: string|null, tags: list<string>, is_duplicate: bool}>
      */
     private function normalizeTransactions(array $transactions): array
     {
-        return array_map(fn (array $t): array => [
-            'uuid' => Str::uuid()->toString(),
-            'description' => (string) ($t['description'] ?? ''),
-            'value' => (float) ($t['value'] ?? 0),
-            'date' => (string) ($t['date'] ?? now()->format('Y-m-d')),
-            'type' => (string) ($t['type'] ?? 'debit'),
-            'category_name' => (string) ($t['category_name'] ?? 'Outros'),
-            'category_uuid' => isset($t['category_uuid']) && is_string($t['category_uuid']) && $t['category_uuid'] !== ''
-                ? $t['category_uuid']
-                : null,
-            'tags' => isset($t['tags']) && is_array($t['tags'])
-                ? array_values(array_filter(array_map('strval', $t['tags']), fn (string $tag): bool => $tag !== ''))
-                : [],
-            'is_duplicate' => (bool) ($t['is_duplicate'] ?? false),
-        ], $transactions);
+        $normalized = [];
+
+        foreach ($transactions as $transaction) {
+            if (! is_array($transaction)) {
+                continue;
+            }
+
+            $normalized[] = [
+                'uuid' => Str::uuid()->toString(),
+                'description' => self::stringValue($transaction['description'] ?? null, ''),
+                'value' => self::floatValue($transaction['value'] ?? null),
+                'date' => self::stringValue($transaction['date'] ?? null, now()->format('Y-m-d')),
+                'type' => self::stringValue($transaction['type'] ?? null, 'debit'),
+                'category_name' => self::stringValue($transaction['category_name'] ?? null, 'Outros'),
+                'category_uuid' => is_string($transaction['category_uuid'] ?? null) && $transaction['category_uuid'] !== ''
+                    ? $transaction['category_uuid']
+                    : null,
+                'tags' => is_array($transaction['tags'] ?? null)
+                    ? array_values(array_filter(self::stringList($transaction['tags']), fn (string $tag): bool => $tag !== ''))
+                    : [],
+                'is_duplicate' => (bool) ($transaction['is_duplicate'] ?? false),
+            ];
+        }
+
+        return $normalized;
+    }
+
+    private static function stringValue(mixed $value, string $default): string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+
+        return is_scalar($value) ? (string) $value : $default;
+    }
+
+    private static function floatValue(mixed $value): float
+    {
+        return is_numeric($value) ? (float) $value : 0.0;
+    }
+
+    /**
+     * @param  array<mixed>  $values
+     * @return list<string>
+     */
+    private static function stringList(array $values): array
+    {
+        $strings = [];
+
+        foreach ($values as $value) {
+            if (is_string($value)) {
+                $strings[] = $value;
+            } elseif (is_numeric($value)) {
+                $strings[] = (string) $value;
+            }
+        }
+
+        return $strings;
     }
 }

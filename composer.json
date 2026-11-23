@@ -62,9 +62,13 @@
         "lint": [
             "@php vendor/bin/phpmd app text phpmd.xml"
         ],
+        "analyze": [
+            "@php vendor/bin/phpstan analyse --ansi"
+        ],
         "quality": [
             "@php vendor/bin/pint --test",
-            "@php vendor/bin/phpmd app text phpmd.xml"
+            "@php vendor/bin/phpmd app text phpmd.xml",
+            "@analyze"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",

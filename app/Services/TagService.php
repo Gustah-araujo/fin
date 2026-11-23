@@ -12,26 +12,43 @@ use Illuminate\Validation\ValidationException;
 
 class TagService
 {
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function create(Workspace $workspace, User $creator, array $data): Tag
     {
-        $this->ensureUniqueName($workspace, $data['name']);
+        $name = $data['name'];
+        $color = $data['color'];
+
+        $this->ensureUniqueName($workspace, is_string($name) ? $name : '');
 
         return Tag::create([
             'uuid' => Str::orderedUuid()->toString(),
             'workspace_id' => $workspace->id,
             'created_by' => $creator->id,
-            'name' => $data['name'],
-            'color' => $this->normalizeColor($data['color']),
+            'name' => $name,
+            'color' => $this->normalizeColor(is_string($color) ? $color : ''),
         ]);
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function update(Tag $tag, array $data): Tag
     {
-        if (isset($data['name']) && $data['name'] !== $tag->name) {
-            $this->ensureUniqueName($tag->workspace, $data['name'], $tag->id);
+        if (isset($data['name']) && is_string($data['name']) && $data['name'] !== $tag->name) {
+            $workspace = $tag->workspace;
+
+            if ($workspace === null) {
+                throw ValidationException::withMessages([
+                    'name' => ['Tag não pertence a um workspace válido.'],
+                ]);
+            }
+
+            $this->ensureUniqueName($workspace, $data['name'], $tag->id);
             $tag->name = $data['name'];
         }
-        if (isset($data['color'])) {
+        if (isset($data['color']) && is_string($data['color'])) {
             $tag->color = $this->normalizeColor($data['color']);
         }
 

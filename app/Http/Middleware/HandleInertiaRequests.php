@@ -27,7 +27,7 @@ class HandleInertiaRequests extends Middleware
                     'name' => $user->name,
                     'email' => $user->email,
                     'avatar' => $user->avatar,
-                    'type' => $user->type?->value ?? UserType::Customer->value,
+                    'type' => $this->userTypeValue($user->type),
                 ],
             ];
             $shared['workspaces'] = WorkspaceResource::collection(
@@ -63,5 +63,10 @@ class HandleInertiaRequests extends Middleware
             ->first();
 
         return $workspace ? new WorkspaceResource($workspace) : null;
+    }
+
+    private function userTypeValue(mixed $type): string
+    {
+        return $type instanceof UserType ? $type->value : UserType::Customer->value;
     }
 }

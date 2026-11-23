@@ -37,7 +37,7 @@ class DeleteMemoryTool implements Tool
 
         return json_encode([
             'deleted' => $uuid,
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     private function resolveWorkspace(): Workspace

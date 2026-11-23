@@ -13,11 +13,13 @@ class VerifyEmailController extends Controller
 {
     public function __invoke(EmailVerificationRequest $request, AuthService $authService): RedirectResponse
     {
-        $authService->verifyEmail($request->user());
-
         $user = $request->user();
 
-        if ($user && $user->workspaces()->count() === 0) {
+        abort_unless($user !== null, 401);
+
+        $authService->verifyEmail($user);
+
+        if ($user->workspaces()->count() === 0) {
             return redirect()->route('workspace.create');
         }
 

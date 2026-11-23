@@ -47,7 +47,10 @@ class WorkspaceMemberController extends Controller
     public function updateRole(UpdateMemberRoleRequest $request, Workspace $workspace, User $user, WorkspaceService $workspaceService): RedirectResponse
     {
         Gate::authorize('manageMembers', $workspace);
-        $workspaceService->changeRole($workspace, $user, WorkspaceRole::from($request->validated()['role']));
+
+        $role = $request->validated('role');
+
+        $workspaceService->changeRole($workspace, $user, WorkspaceRole::from(is_string($role) ? $role : ''));
 
         Toast::success('Papel atualizado com sucesso.');
 

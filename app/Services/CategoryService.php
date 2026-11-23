@@ -39,45 +39,73 @@ class CategoryService
         ])->id;
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function create(Workspace $workspace, User $creator, array $data): Category
     {
+        $color = $data['color'];
+        $expenseGroupUuid = $data['expense_group_id'] ?? null;
+
         return Category::create([
             'uuid' => Str::orderedUuid()->toString(),
             'workspace_id' => $workspace->id,
             'created_by' => $creator->id,
             'name' => $data['name'],
             'type' => $data['type'],
-            'color' => $this->normalizeColor($data['color']),
+            'color' => $this->normalizeColor(is_string($color) ? $color : ''),
             'icon' => $data['icon'] ?? null,
             'position' => $data['position'] ?? null,
-            'expense_group_id' => $this->resolveExpenseGroupId($workspace->id, $data['expense_group_id'] ?? null),
+            'expense_group_id' => $this->resolveExpenseGroupId($workspace->id, is_string($expenseGroupUuid) ? $expenseGroupUuid : null),
         ]);
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function update(Category $category, array $data): Category
     {
-        if (isset($data['name'])) {
-            $category->name = $data['name'];
-        }
-        if (isset($data['type'])) {
-            $category->type = $data['type'];
-        }
-        if (isset($data['color'])) {
-            $category->color = $this->normalizeColor($data['color']);
-        }
-        if (array_key_exists('icon', $data)) {
-            $category->icon = $data['icon'] ?: null;
-        }
-        if (array_key_exists('position', $data)) {
-            $category->position = $data['position'];
-        }
-        if (array_key_exists('expense_group_id', $data)) {
-            $category->expense_group_id = $this->resolveExpenseGroupId($category->workspace_id, $data['expense_group_id']);
-        }
+        $this->applyCategoryBasics($category, $data);
+        $this->applyCategoryPlacement($category, $data);
 
         $category->save();
 
         return $category;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function applyCategoryBasics(Category $category, array $data): void
+    {
+        if (isset($data['name']) && is_string($data['name'])) {
+            $category->name = $data['name'];
+        }
+        if (isset($data['type']) && is_string($data['type'])) {
+            $category->type = TransactionType::from($data['type']);
+        }
+        if (isset($data['color']) && is_string($data['color'])) {
+            $category->color = $this->normalizeColor($data['color']);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function applyCategoryPlacement(Category $category, array $data): void
+    {
+        if (array_key_exists('icon', $data)) {
+            $category->icon = (is_string($data['icon']) && $data['icon'] !== '') ? $data['icon'] : null;
+        }
+        if (array_key_exists('position', $data)) {
+            $category->position = is_numeric($data['position']) ? (int) $data['position'] : null;
+        }
+        if (array_key_exists('expense_group_id', $data)) {
+            $category->expense_group_id = $this->resolveExpenseGroupId(
+                $category->workspace_id,
+                is_string($data['expense_group_id']) ? $data['expense_group_id'] : null,
+            );
+        }
     }
 
     public function archive(Category $category): void

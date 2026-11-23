@@ -9,9 +9,11 @@ use App\Enums\TransactionType;
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\Tag;
+use App\Models\Workspace;
 use App\Rules\AfterOrEqualDateRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
+use Illuminate\Validation\Validator;
 
 class StoreIncomeRequest extends FormRequest
 {
@@ -20,6 +22,9 @@ class StoreIncomeRequest extends FormRequest
         return true;
     }
 
+    /**
+     * @return array<string, list<string|object>>
+     */
     public function rules(): array
     {
         return [
@@ -39,10 +44,14 @@ class StoreIncomeRequest extends FormRequest
         ];
     }
 
-    public function withValidator($validator): void
+    public function withValidator(Validator $validator): void
     {
-        $validator->after(function ($validator) {
+        $validator->after(function (Validator $validator): void {
             $workspace = $this->route('workspace');
+
+            if (! $workspace instanceof Workspace) {
+                return;
+            }
 
             $this->validateAccount($validator, $workspace);
             $this->validateCategory($validator, $workspace);
@@ -58,9 +67,11 @@ class StoreIncomeRequest extends FormRequest
         });
     }
 
-    private function validateInstallmentRejection($validator): void
+    private function validateInstallmentRejection(Validator $validator): void
     {
-        if ($this->filled('installments') && (int) $this->input('installments') > 1) {
+        $installments = $this->input('installments');
+
+        if ($this->filled('installments') && is_numeric($installments) && (int) $installments > 1) {
             $validator->errors()->add('installments', 'Receitas não podem ser parceladas.');
         }
 
@@ -73,7 +84,7 @@ class StoreIncomeRequest extends FormRequest
         }
     }
 
-    private function validateAccount($validator, $workspace): void
+    private function validateAccount(Validator $validator, Workspace $workspace): void
     {
         if (! $this->filled('account_id')) {
             return;
@@ -98,7 +109,7 @@ class StoreIncomeRequest extends FormRequest
         }
     }
 
-    private function validateCategory($validator, $workspace): void
+    private function validateCategory(Validator $validator, Workspace $workspace): void
     {
         if (! $this->filled('category_id')) {
             return;
@@ -116,27 +127,36 @@ class StoreIncomeRequest extends FormRequest
             $validator->errors()->add('category_id', 'A categoria selecionada não pertence a este workspace.');
         }
 
-        if ($category->type === TransactionType::Expense) {
+        if ($this->categoryTypeIs($category->type, TransactionType::Expense)) {
             $validator->errors()->add('category_id', 'Esta categoria não aceita receitas.');
         }
     }
 
-    private function validateTags($validator, $workspace): void
+    private function categoryTypeIs(mixed $type, TransactionType $expected): bool
+    {
+        return $type instanceof TransactionType
+            ? $type === $expected
+            : $type === $expected->value;
+    }
+
+    private function validateTags(Validator $validator, Workspace $workspace): void
     {
         if (! $this->filled('tags')) {
             return;
         }
 
-        $tagCount = Tag::whereIn('uuid', $this->input('tags'))
+        $tags = $this->input('tags');
+
+        $tagCount = Tag::whereIn('uuid', $tags)
             ->where('workspace_id', $workspace->id)
             ->count();
 
-        if ($tagCount !== count($this->input('tags'))) {
+        if ($tagCount !== (is_array($tags) ? count($tags) : 0)) {
             $validator->errors()->add('tags', 'Uma ou mais tags são inválidas.');
         }
     }
 
-    private function validateFrequencyDay($validator): void
+    private function validateFrequencyDay(Validator $validator): void
     {
         if (! $this->boolean('is_recurring')) {
             return;
@@ -146,13 +166,21 @@ class StoreIncomeRequest extends FormRequest
             return;
         }
 
-        $frequency = RecurrenceFrequency::tryFrom((string) $this->input('frequency'));
-        $day = (int) $this->input('frequency_day');
+        $frequencyInput = $this->input('frequency');
+        $frequency = is_string($frequencyInput) ? RecurrenceFrequency::tryFrom($frequencyInput) : null;
+        $day = $this->dayValue();
 
         $this->validateDayRange($validator, $frequency, $day);
     }
 
-    private function validateDayRange($validator, ?RecurrenceFrequency $frequency, int $day): void
+    private function dayValue(): int
+    {
+        $day = $this->input('frequency_day');
+
+        return is_numeric($day) ? (int) $day : 0;
+    }
+
+    private function validateDayRange(Validator $validator, ?RecurrenceFrequency $frequency, int $day): void
     {
         if ($frequency === RecurrenceFrequency::Weekly && $this->isInvalidWeekday($day)) {
             $validator->errors()->add('frequency_day', 'Dia da semana inválido.');
@@ -173,6 +201,9 @@ class StoreIncomeRequest extends FormRequest
         return $day < 1 || $day > 31;
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function messages(): array
     {
         return [

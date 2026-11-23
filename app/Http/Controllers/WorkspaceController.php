@@ -25,7 +25,11 @@ class WorkspaceController extends Controller
 
     public function store(StoreWorkspaceRequest $request, WorkspaceService $workspaceService): RedirectResponse
     {
-        $workspace = $workspaceService->create($request->user(), $request->validated());
+        $user = $request->user();
+
+        abort_unless($user !== null, 401);
+
+        $workspace = $workspaceService->create($user, $request->validated());
 
         Toast::success('Workspace criado com sucesso.');
 
@@ -34,24 +38,33 @@ class WorkspaceController extends Controller
 
     public function select(Request $request, WorkspaceService $workspaceService): Response
     {
-        $workspaces = $workspaceService->getUserWorkspaces($request->user());
+        $user = $request->user();
+
+        abort_unless($user !== null, 401);
+
+        $workspaces = $workspaceService->getUserWorkspaces($user);
 
         return inertia('Workspace/Select', [
-            'workspaces' => $workspaces->map(fn ($w) => [
-                'uuid' => $w->uuid,
-                'name' => $w->name,
-                'description' => $w->description,
-                'members_count' => $w->members()->count(),
-                'role' => $w->pivot->role ?? 'admin',
+            'workspaces' => $workspaces->map(fn (Workspace $workspace): array => [
+                'uuid' => $workspace->uuid,
+                'name' => $workspace->name,
+                'description' => $workspace->description,
+                'members_count' => $workspace->members()->count(),
+                'role' => data_get($workspace, 'pivot.role', 'admin'),
             ])->toArray(),
         ]);
     }
 
     public function activate(Request $request, WorkspaceService $workspaceService): RedirectResponse
     {
+        $user = $request->user();
+
+        abort_unless($user !== null, 401);
+
         $workspaceUuid = $request->input('workspace_uuid');
-        $workspace = $request->user()->workspaces()->where('uuid', $workspaceUuid)->firstOrFail();
-        $workspaceService->setLastVisited($workspace, $request->user());
+        $workspace = $user->workspaces()->where('uuid', $workspaceUuid)->firstOrFail();
+
+        $workspaceService->setLastVisited($workspace, $user);
 
         Toast::success('Workspace ativado.');
 

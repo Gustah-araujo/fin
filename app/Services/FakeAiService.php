@@ -28,8 +28,8 @@ class FakeAiService implements AiParserInterface
             );
         }
 
-        $content = file_get_contents($file->getRealPath());
-        $lines = array_filter(array_map('trim', explode("\n", $content)));
+        $content = (string) file_get_contents($file->getRealPath());
+        $lines = array_values(array_filter(array_map('trim', explode("\n", $content))));
 
         if (count($lines) <= 1) {
             return [];

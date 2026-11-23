@@ -4,11 +4,22 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @property string $id
+ * @property string $type
+ * @property array<string, mixed> $data
+ * @property Carbon $created_at
+ * @property Carbon|null $read_at
+ */
 class NotificationResource extends JsonResource
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(Request $request): array
     {
         return [

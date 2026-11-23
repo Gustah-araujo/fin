@@ -47,7 +47,7 @@ class QueryCreditCardsTool implements Tool
                 'closing_day' => (int) $c->closing_day,
                 'due_day' => (int) $c->due_day,
             ])->all(),
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     /**

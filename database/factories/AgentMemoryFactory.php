@@ -7,6 +7,9 @@ namespace Database\Factories;
 use App\Models\AgentMemory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<AgentMemory>
+ */
 class AgentMemoryFactory extends Factory
 {
     protected $model = AgentMemory::class;

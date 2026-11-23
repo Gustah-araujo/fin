@@ -40,8 +40,8 @@ class ValidateTransactionTool implements Tool
     /**
      * Execute the tool.
      *
-     * @SuppressWarnings(PHPMD.StaticAccess)
-     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
+     * @SuppressWarnings("PHPMD.StaticAccess")
+     * @SuppressWarnings("PHPMD.ExcessiveMethodLength")
      */
     public function handle(Request $request): string
     {
@@ -50,12 +50,15 @@ class ValidateTransactionTool implements Tool
         $transaction = $this->resolveTransaction($request, $workspace);
 
         if (is_string($transaction)) {
-            return json_encode(['error' => $transaction]);
+            return json_encode(['error' => $transaction], JSON_THROW_ON_ERROR);
         }
 
         [$type, $description, $value, $date, $account, $category, $tags, $isPaid] = $transaction;
 
         $duplicate = app(DuplicateDetectionService::class)->findDuplicate($workspace, $type, $value, $date, $description);
+
+        $pendingTtl = config('ai.fin.pending_ttl', 30);
+        $pendingTtl = is_numeric($pendingTtl) ? (int) $pendingTtl : 30;
 
         $pending = FinPendingMutation::create([
             'uuid' => Str::orderedUuid()->toString(),
@@ -65,10 +68,10 @@ class ValidateTransactionTool implements Tool
             'type' => $type->value,
             'payload' => $this->buildPayload($isPaid, $type, $description, $value, $date, $account, $category, $tags),
             'status' => FinPendingMutationStatus::Pending,
-            'expires_at' => now()->addMinutes((int) config('ai.fin.pending_ttl', 30)),
+            'expires_at' => now()->addMinutes($pendingTtl),
         ]);
 
-        return json_encode($this->buildResponse($pending, $type, $description, $value, $date, $account, $category, $tags, $isPaid, $duplicate), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        return json_encode($this->buildResponse($pending, $type, $description, $value, $date, $account, $category, $tags, $isPaid, $duplicate), JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     /**
@@ -76,7 +79,7 @@ class ValidateTransactionTool implements Tool
      *
      * @return array{TransactionType, string, float, Carbon, ?Account, Category, list<string>, bool}|string
      *
-     * @SuppressWarnings(PHPMD.StaticAccess)
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     private function resolveTransaction(Request $request, Workspace $workspace): array|string
     {
@@ -126,7 +129,7 @@ class ValidateTransactionTool implements Tool
     /**
      * Parse the transaction date, returning null when invalid.
      *
-     * @SuppressWarnings(PHPMD.StaticAccess)
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     private function resolveDate(string $dateRaw): ?Carbon
     {
@@ -141,7 +144,7 @@ class ValidateTransactionTool implements Tool
      * Resolve the account by UUID. Returns null when no account was provided
      * (account is optional) and false when the provided account is invalid.
      *
-     * @SuppressWarnings(PHPMD.StaticAccess)
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     private function resolveAccount(Workspace $workspace, string $accountUuid): Account|false|null
     {
@@ -157,7 +160,7 @@ class ValidateTransactionTool implements Tool
     /**
      * Resolve the category by UUID, returning null when not found.
      *
-     * @SuppressWarnings(PHPMD.StaticAccess)
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     private function resolveCategory(Workspace $workspace, string $categoryUuid): ?Category
     {
@@ -168,6 +171,9 @@ class ValidateTransactionTool implements Tool
 
     /**
      * Build the pending mutation payload, omitting the account when not linked.
+     *
+     * @param  list<string>  $tags
+     * @return array<string, mixed>
      */
     private function buildPayload(bool $isPaid, TransactionType $type, string $description, float $value, Carbon $date, ?Account $account, Category $category, array $tags): array
     {
@@ -194,7 +200,10 @@ class ValidateTransactionTool implements Tool
     /**
      * Build the tool response for the model.
      *
-     * @SuppressWarnings(PHPMD.StaticAccess)
+     * @param  list<string>  $tags
+     * @return array<string, mixed>
+     *
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     private function buildResponse(FinPendingMutation $pending, TransactionType $type, string $description, float $value, Carbon $date, ?Account $account, Category $category, array $tags, bool $isPaid, ?Transaction $duplicate): array
     {

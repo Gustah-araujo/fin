@@ -17,6 +17,9 @@ class CreditCardService
 {
     private const PAYMENT_CATEGORY_NAME = 'Pagamento de Cartão';
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function create(Workspace $workspace, User $creator, array $data): CreditCard
     {
         $card = CreditCard::create([
@@ -45,27 +48,36 @@ class CreditCardService
         // Use app() to resolve BillService to avoid circular dependency
         // (BillService already injects CreditCardService)
         $billService = app(BillService::class);
+        $createdBy = $card->created_by;
+
+        if ($createdBy === null) {
+            return;
+        }
+
         $now = Carbon::now();
 
         for ($i = 0; $i < 13; $i++) {
             $targetDate = $now->copy()->addMonthsNoOverflow($i);
-            $billService->findOrCreateBill($card, $targetDate, $card->created_by);
+            $billService->findOrCreateBill($card, $targetDate, $createdBy);
         }
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function update(CreditCard $card, array $data): CreditCard
     {
-        if (isset($data['name'])) {
+        if (isset($data['name']) && is_string($data['name'])) {
             $card->name = $data['name'];
         }
-        if (isset($data['closing_day'])) {
-            $card->closing_day = $data['closing_day'];
+        if (isset($data['closing_day']) && is_numeric($data['closing_day'])) {
+            $card->closing_day = (int) $data['closing_day'];
         }
-        if (isset($data['due_day'])) {
-            $card->due_day = $data['due_day'];
+        if (isset($data['due_day']) && is_numeric($data['due_day'])) {
+            $card->due_day = (int) $data['due_day'];
         }
-        if (isset($data['credit_limit'])) {
-            $card->credit_limit = $data['credit_limit'];
+        if (isset($data['credit_limit']) && is_numeric($data['credit_limit'])) {
+            $card->credit_limit = (float) $data['credit_limit'];
             $this->recalculateAvailableLimit($card);
         }
 

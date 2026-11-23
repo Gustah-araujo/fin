@@ -96,8 +96,8 @@ class ImportController extends Controller
                 'category_name' => $item['category_name'],
                 'category_uuid' => $item['category_uuid'],
                 'tags' => $item['tags'],
-                'tag_names' => $item['tag_names'] ?? [],
-                'is_duplicate' => $isDuplicate || ($item['is_duplicate'] ?? false),
+                'tag_names' => [],
+                'is_duplicate' => $isDuplicate || $item['is_duplicate'],
                 'confirm_duplicate' => false,
             ];
         }, $parsed);
@@ -120,11 +120,16 @@ class ImportController extends Controller
     {
         $this->authorize('create', [Transaction::class, $workspace]);
 
+        $user = $request->user();
+
+        abort_unless($user !== null, 401);
+
+        /** @var array<int, array<string, mixed>> $items */
         $items = $request->validated('items');
 
         $count = $this->importService->createTransactions(
             $workspace,
-            $request->user(),
+            $user,
             $items,
         );
 

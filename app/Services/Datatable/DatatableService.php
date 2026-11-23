@@ -6,12 +6,18 @@ namespace App\Services\Datatable;
 
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 final class DatatableService
 {
+    /**
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  Builder<TModel>|Relation<TModel, Model, mixed>  $query
+     */
     public function paginate(Builder|Relation $query, Request $request, DatatableConfig $config, ?Closure $totals = null): JsonResponse
     {
         if ($query instanceof Relation) {
@@ -42,11 +48,16 @@ final class DatatableService
         ]);
     }
 
+    /**
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  Builder<TModel>  $query
+     */
     private function applySearch(Builder $query, Request $request, DatatableConfig $config): void
     {
         $search = $request->input('search');
 
-        if ($search === null || $search === '') {
+        if (! is_string($search) || $search === '') {
             return;
         }
 
@@ -63,6 +74,11 @@ final class DatatableService
         });
     }
 
+    /**
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  Builder<TModel>  $query
+     */
     private function applyFilters(Builder $query, Request $request, DatatableConfig $config): void
     {
         foreach ($config->getFilters() as $key => $filter) {
@@ -75,6 +91,11 @@ final class DatatableService
         }
     }
 
+    /**
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  Builder<TModel>  $query
+     */
     private function applyValueFilter(Builder $query, Request $request, string $key, Filter $filter): void
     {
         $value = $request->input($key);
@@ -84,64 +105,137 @@ final class DatatableService
         }
 
         if ($filter->type === 'text') {
-            $query->where($filter->column, 'like', '%'.$value.'%');
+            $this->applyTextFilter($query, $filter, $value);
 
             return;
         }
 
         if ($filter->type === 'relation') {
-            $query->whereHas($filter->relation, function (Builder $inner) use ($filter, $value): void {
-                $inner->where($filter->relationColumn, $value);
-            });
+            $this->applyRelationFilter($query, $filter, $value);
 
             return;
         }
 
         // select
-        ($filter->apply)($query, (string) $value);
+        $apply = $filter->apply;
+
+        if ($apply instanceof Closure) {
+            $apply($query, self::stringValue($value));
+        }
     }
 
+    /**
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  Builder<TModel>  $query
+     */
+    private function applyTextFilter(Builder $query, Filter $filter, mixed $value): void
+    {
+        $column = $filter->column;
+
+        if ($column !== null && is_string($value)) {
+            $query->where($column, 'like', '%'.$value.'%');
+        }
+    }
+
+    /**
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  Builder<TModel>  $query
+     */
+    private function applyRelationFilter(Builder $query, Filter $filter, mixed $value): void
+    {
+        $relation = $filter->relation;
+        $relationColumn = $filter->relationColumn;
+
+        if ($relation !== null && $relationColumn !== null) {
+            $query->whereHas($relation, function (Builder $inner) use ($relationColumn, $value): void {
+                $inner->where($relationColumn, $value);
+            });
+        }
+    }
+
+    /**
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  Builder<TModel>  $query
+     */
     private function applyNumberRange(Builder $query, Request $request, string $key, Filter $filter): void
     {
+        $column = $filter->column;
         $min = $request->input($key.'_min');
         $max = $request->input($key.'_max');
 
-        if ($min !== null && $min !== '') {
-            $query->where($filter->column, '>=', (float) $min);
+        if ($column === null) {
+            return;
         }
 
-        if ($max !== null && $max !== '') {
-            $query->where($filter->column, '<=', (float) $max);
+        if ($min !== null && $min !== '' && is_numeric($min)) {
+            $query->where($column, '>=', (float) $min);
+        }
+
+        if ($max !== null && $max !== '' && is_numeric($max)) {
+            $query->where($column, '<=', (float) $max);
         }
     }
 
+    /**
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  Builder<TModel>  $query
+     */
     private function applyDateRange(Builder $query, Request $request, string $key, Filter $filter): void
     {
+        $column = $filter->column;
         $from = $request->input($key.'_from');
         $to = $request->input($key.'_to');
 
-        if ($from !== null && $from !== '') {
-            $query->whereDate($filter->column, '>=', $from);
+        if ($column === null) {
+            return;
         }
 
-        if ($to !== null && $to !== '') {
-            $query->whereDate($filter->column, '<=', $to);
+        if ($from !== null && $from !== '' && is_string($from)) {
+            $query->whereDate($column, '>=', $from);
+        }
+
+        if ($to !== null && $to !== '' && is_string($to)) {
+            $query->whereDate($column, '<=', $to);
         }
     }
 
+    /**
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  Builder<TModel>  $query
+     */
     private function applySort(Builder $query, Request $request, DatatableConfig $config): void
     {
         $sortable = $config->sortableColumns();
         $sort = $request->input('sort');
-        $direction = strtolower((string) $request->input('direction', ''));
-        $direction = in_array($direction, ['asc', 'desc'], true) ? $direction : '';
+        $directionInput = $request->input('direction', '');
+        $direction = is_string($directionInput) ? strtolower($directionInput) : '';
+        $direction = match ($direction) {
+            'asc', 'desc' => $direction,
+            default => '',
+        };
 
-        if ($sort === null || ! in_array($sort, $sortable, true)) {
-            $query->orderBy($config->defaultSortColumn(), $config->defaultSortDirection());
+        if (! is_string($sort) || ! in_array($sort, $sortable, true)) {
+            $defaultDirection = $config->defaultSortDirection();
+
+            $query->orderBy($config->defaultSortColumn(), $defaultDirection === 'desc' ? 'desc' : 'asc');
 
             return;
         }
 
-        $query->orderBy($sort, $direction === '' ? 'asc' : $direction);
+        $query->orderBy($sort, $direction === 'desc' ? 'desc' : 'asc');
+    }
+
+    private static function stringValue(mixed $value): string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+
+        return is_numeric($value) ? (string) $value : '';
     }
 }

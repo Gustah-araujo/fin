@@ -61,7 +61,7 @@ class QueryCategoriesTool implements Tool
                 'icon' => $c->icon,
                 'is_system' => $c->is_system,
             ])->all(),
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     private function resolveWorkspaceId(): int

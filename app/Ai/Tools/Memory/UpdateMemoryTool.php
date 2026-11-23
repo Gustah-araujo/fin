@@ -45,7 +45,7 @@ class UpdateMemoryTool implements Tool
             'uuid' => $memory->uuid,
             'title' => $memory->title,
             'type' => $memory->type->value,
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     private function resolveWorkspace(): Workspace

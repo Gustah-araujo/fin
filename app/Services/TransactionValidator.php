@@ -10,6 +10,7 @@ use App\Models\Account;
 use App\Models\Category;
 use App\Models\CreditCard;
 use App\Models\Tag;
+use App\Models\Workspace;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -17,7 +18,11 @@ class TransactionValidator
 {
     public static function validateStore(Validator $validator, FormRequest $request): void
     {
-        $workspace = $request->route('workspace');
+        $workspace = self::resolveWorkspace($request);
+
+        if ($workspace === null) {
+            return;
+        }
 
         self::validateSourceMutualExclusion($validator, $request);
         self::validateCreditCard($validator, $request, $workspace);
@@ -32,11 +37,22 @@ class TransactionValidator
 
     public static function validateUpdate(Validator $validator, FormRequest $request): void
     {
-        $workspace = $request->route('workspace');
+        $workspace = self::resolveWorkspace($request);
+
+        if ($workspace === null) {
+            return;
+        }
 
         self::validateAccountBelongsToWorkspace($validator, $request, $workspace);
         self::validateCategory($validator, $request, $workspace);
         self::validateTags($validator, $request, $workspace);
+    }
+
+    private static function resolveWorkspace(FormRequest $request): ?Workspace
+    {
+        $workspace = $request->route('workspace');
+
+        return $workspace instanceof Workspace ? $workspace : null;
     }
 
     private static function validateSourceMutualExclusion(Validator $validator, FormRequest $request): void
@@ -49,7 +65,7 @@ class TransactionValidator
         }
     }
 
-    private static function validateCreditCard(Validator $validator, FormRequest $request, mixed $workspace): void
+    private static function validateCreditCard(Validator $validator, FormRequest $request, Workspace $workspace): void
     {
         $creditCardId = $request->input('credit_card_id');
 
@@ -66,7 +82,7 @@ class TransactionValidator
 
     private static function validateInstallmentsTotalValue(Validator $validator, FormRequest $request): void
     {
-        $installments = (int) $request->input('installments', 1);
+        $installments = self::intInput($request, 'installments', 1);
 
         if ($installments > 1 && ! $request->input('total_value')) {
             $validator->errors()->add('total_value', 'O valor total é obrigatório para compras parceladas.');
@@ -75,7 +91,7 @@ class TransactionValidator
 
     private static function validateRecurrenceInstallments(Validator $validator, FormRequest $request): void
     {
-        $installments = (int) $request->input('installments', 1);
+        $installments = self::intInput($request, 'installments', 1);
         $isRecurring = $request->boolean('is_recurring');
 
         if (! $isRecurring) {
@@ -97,20 +113,20 @@ class TransactionValidator
 
     private static function validateInstallmentDay(Validator $validator, FormRequest $request): void
     {
-        $installments = (int) $request->input('installments', 1);
+        $installments = self::intInput($request, 'installments', 1);
 
         if ($installments <= 1 || ! $request->filled('installment_day')) {
             return;
         }
 
-        $day = (int) $request->input('installment_day');
+        $day = self::intInput($request, 'installment_day', 0);
 
         if ($day < 1 || $day > 31) {
             $validator->errors()->add('installment_day', 'Dia do mês inválido.');
         }
     }
 
-    private static function validateAccountBelongsToWorkspace(Validator $validator, FormRequest $request, mixed $workspace): void
+    private static function validateAccountBelongsToWorkspace(Validator $validator, FormRequest $request, Workspace $workspace): void
     {
         if (! $request->filled('account_id')) {
             return;
@@ -125,7 +141,7 @@ class TransactionValidator
         }
     }
 
-    private static function validateCategory(Validator $validator, FormRequest $request, mixed $workspace): void
+    private static function validateCategory(Validator $validator, FormRequest $request, Workspace $workspace): void
     {
         if (! $request->filled('category_id')) {
             return;
@@ -148,17 +164,20 @@ class TransactionValidator
         }
     }
 
-    private static function validateTags(Validator $validator, FormRequest $request, mixed $workspace): void
+    private static function validateTags(Validator $validator, FormRequest $request, Workspace $workspace): void
     {
         if (! $request->filled('tags')) {
             return;
         }
 
-        $tagCount = Tag::whereIn('uuid', $request->input('tags'))
+        $tags = $request->input('tags');
+        $tagUuids = is_array($tags) ? $tags : [];
+
+        $tagCount = Tag::whereIn('uuid', $tagUuids)
             ->where('workspace_id', $workspace->id)
             ->count();
 
-        if ($tagCount !== count($request->input('tags'))) {
+        if ($tagCount !== count($tagUuids)) {
             $validator->errors()->add('tags', 'Uma ou mais tags são inválidas.');
         }
     }
@@ -169,8 +188,9 @@ class TransactionValidator
             return;
         }
 
-        $frequency = RecurrenceFrequency::tryFrom((string) $request->input('frequency'));
-        $day = (int) $request->input('frequency_day');
+        $frequencyInput = $request->input('frequency');
+        $frequency = is_string($frequencyInput) ? RecurrenceFrequency::tryFrom($frequencyInput) : null;
+        $day = self::intInput($request, 'frequency_day', 0);
         $error = match ($frequency) {
             RecurrenceFrequency::Weekly => $day < 0 || $day > 6,
             RecurrenceFrequency::Monthly => $day < 1 || $day > 31,
@@ -189,5 +209,12 @@ class TransactionValidator
             RecurrenceFrequency::Monthly => 'Dia do mês inválido.',
             default => 'Dia inválido.',
         };
+    }
+
+    private static function intInput(FormRequest $request, string $key, int $default): int
+    {
+        $value = $request->input($key);
+
+        return is_numeric($value) ? (int) $value : $default;
     }
 }

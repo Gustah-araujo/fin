@@ -68,7 +68,8 @@ class TransactionController extends Controller
             ...$state['filters'],
         ]);
 
-        $query = $workspace->transactions()
+        $query = Transaction::query()
+            ->where('workspace_id', $workspace->id)
             ->with(['account', 'creditCard', 'bill', 'category.expenseGroup', 'expenseGroup', 'tags'])
             ->where('type', TransactionType::Expense);
 
@@ -163,6 +164,10 @@ class TransactionController extends Controller
     ): RedirectResponse {
         $this->authorize('create', [Transaction::class, $workspace]);
 
+        $user = $request->user();
+
+        abort_unless($user !== null, 401);
+
         $data = $request->validated();
 
         if (! empty($data['credit_card_id'])) {
@@ -170,17 +175,17 @@ class TransactionController extends Controller
             if ($request->boolean('is_recurring')) {
                 $data['start_date'] = $data['date'];
                 $data['type'] = TransactionType::Expense->value;
-                $recurrenceService->createWithBuffer($workspace, $data, $request->user());
+                $recurrenceService->createWithBuffer($workspace, $data, $user);
 
                 Toast::success('Recorrência criada com sucesso.');
             } elseif (! empty($data['installments']) && $data['installments'] > 1) {
                 // Card installment purchase
-                $transactionService->createCardInstallment($workspace, $request->user(), $data);
+                $transactionService->createCardInstallment($workspace, $user, $data);
 
                 Toast::success('Despesa parcelada criada com sucesso.');
             } else {
                 // Single card expense
-                $transactionService->createCardExpense($workspace, $request->user(), $data);
+                $transactionService->createCardExpense($workspace, $user, $data);
 
                 Toast::success('Despesa criada com sucesso.');
             }
@@ -189,16 +194,16 @@ class TransactionController extends Controller
             if ($request->boolean('is_recurring')) {
                 $data['start_date'] = $data['date'];
                 $data['type'] = TransactionType::Expense->value;
-                $recurrenceService->createWithBuffer($workspace, $data, $request->user());
+                $recurrenceService->createWithBuffer($workspace, $data, $user);
 
                 Toast::success('Recorrência criada com sucesso.');
             } elseif (! empty($data['installments']) && $data['installments'] > 1) {
-                $transactionService->createAccountInstallment($workspace, $request->user(), $data);
+                $transactionService->createAccountInstallment($workspace, $user, $data);
 
                 Toast::success('Despesa parcelada criada com sucesso.');
             } else {
                 $data['type'] = TransactionType::Expense->value;
-                $transactionService->create($workspace, $request->user(), $data);
+                $transactionService->create($workspace, $user, $data);
 
                 Toast::success('Despesa criada com sucesso.');
             }

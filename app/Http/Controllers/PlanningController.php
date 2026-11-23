@@ -70,7 +70,9 @@ class PlanningController extends Controller
      */
     private function input(Request $request, string $key): ?string
     {
-        return $request->input($key) ?? $request->header($key);
+        $value = $request->input($key) ?? $request->header($key);
+
+        return is_string($value) ? $value : null;
     }
 
     private function validateDateRange(Carbon $dateStart, Carbon $dateEnd): void

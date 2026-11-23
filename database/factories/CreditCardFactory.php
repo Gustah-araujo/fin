@@ -6,6 +6,9 @@ use App\Models\CreditCard;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
+/**
+ * @extends Factory<CreditCard>
+ */
 class CreditCardFactory extends Factory
 {
     protected $model = CreditCard::class;

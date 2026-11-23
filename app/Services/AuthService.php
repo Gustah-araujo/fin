@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Auth\Passwords\PasswordBroker;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -15,13 +16,16 @@ use Laravel\Socialite\Contracts\User as SocialiteUser;
 
 class AuthService
 {
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function register(array $data): User
     {
         $user = User::create([
             'uuid' => Str::orderedUuid()->toString(),
             'name' => $data['name'],
             'email' => $data['email'],
-            'password' => Hash::make($data['password']),
+            'password' => Hash::make(is_string($data['password']) ? $data['password'] : ''),
         ]);
 
         event(new Registered($user));
@@ -29,6 +33,9 @@ class AuthService
         return $user;
     }
 
+    /**
+     * @param  array<string, mixed>  $credentials
+     */
     public function authenticate(array $credentials, bool $remember = false): void
     {
         if (! Auth::attempt($credentials, $remember)) {
@@ -60,9 +67,12 @@ class AuthService
         return Password::sendResetLink(['email' => $email]);
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function resetPassword(array $data): string
     {
-        return Password::reset(
+        $status = Password::reset(
             $data,
             function (User $user, string $password) {
                 $user->forceFill([
@@ -70,6 +80,8 @@ class AuthService
                 ])->save();
             }
         );
+
+        return is_string($status) ? $status : PasswordBroker::PASSWORD_RESET;
     }
 
     public function changePassword(User $user, string $newPassword): void

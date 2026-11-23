@@ -11,6 +11,7 @@ use App\Models\Account;
 use App\Models\Workspace;
 use App\Services\AccountService;
 use App\Support\Toast;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Response;
 
 class AccountController extends Controller
@@ -33,11 +34,15 @@ class AccountController extends Controller
         return inertia('Accounts/Create');
     }
 
-    public function store(StoreAccountRequest $request, Workspace $workspace, AccountService $accountService)
+    public function store(StoreAccountRequest $request, Workspace $workspace, AccountService $accountService): RedirectResponse
     {
         $this->authorize('create', [Account::class, $workspace]);
 
-        $accountService->create($workspace, $request->user(), $request->validated());
+        $user = $request->user();
+
+        abort_unless($user !== null, 401);
+
+        $accountService->create($workspace, $user, $request->validated());
 
         Toast::success('Conta criada com sucesso.');
 
@@ -55,7 +60,7 @@ class AccountController extends Controller
         ]);
     }
 
-    public function update(UpdateAccountRequest $request, Workspace $workspace, Account $account, AccountService $accountService)
+    public function update(UpdateAccountRequest $request, Workspace $workspace, Account $account, AccountService $accountService): RedirectResponse
     {
         abort_if($account->workspace_id !== $workspace->id, 404);
 
@@ -68,7 +73,7 @@ class AccountController extends Controller
         return redirect()->route('accounts.index', $workspace);
     }
 
-    public function destroy(Workspace $workspace, Account $account, AccountService $accountService)
+    public function destroy(Workspace $workspace, Account $account, AccountService $accountService): RedirectResponse
     {
         abort_if($account->workspace_id !== $workspace->id, 404);
 

@@ -13,10 +13,17 @@ class EnsureUserIsAdmin
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user()?->type !== UserType::Admin) {
+        if (! $this->isAdmin($request->user()?->type)) {
             abort(403);
         }
 
         return $next($request);
+    }
+
+    private function isAdmin(mixed $type): bool
+    {
+        return $type instanceof UserType
+            ? $type === UserType::Admin
+            : $type === UserType::Admin->value;
     }
 }

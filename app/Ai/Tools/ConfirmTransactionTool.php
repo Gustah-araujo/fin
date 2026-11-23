@@ -46,17 +46,17 @@ class ConfirmTransactionTool implements Tool
             ->first();
 
         if ($pending === null) {
-            return json_encode(['error' => 'Mutação pendente não encontrada neste workspace.']);
+            return json_encode(['error' => 'Mutação pendente não encontrada neste workspace.'], JSON_THROW_ON_ERROR);
         }
 
         if ($pending->status !== FinPendingMutationStatus::Pending) {
-            return json_encode(['error' => 'Essa mutação já não está mais pendente de confirmação.']);
+            return json_encode(['error' => 'Essa mutação já não está mais pendente de confirmação.'], JSON_THROW_ON_ERROR);
         }
 
         if ($pending->expires_at !== null && $pending->expires_at->isPast()) {
             $pending->update(['status' => FinPendingMutationStatus::Expired]);
 
-            return json_encode(['error' => 'A confirmação expirou. Inicie novamente o cadastro.']);
+            return json_encode(['error' => 'A confirmação expirou. Inicie novamente o cadastro.'], JSON_THROW_ON_ERROR);
         }
 
         $creator = User::findOrFail($this->userId);
@@ -73,7 +73,7 @@ class ConfirmTransactionTool implements Tool
             'description' => $transaction->description,
             'value' => (float) $transaction->value,
             'date' => $transaction->date->format('Y-m-d'),
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     /**

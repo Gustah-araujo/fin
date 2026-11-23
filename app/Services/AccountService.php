@@ -11,6 +11,9 @@ use Illuminate\Support\Str;
 
 class AccountService
 {
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function create(Workspace $workspace, User $creator, array $data): Account
     {
         return Account::create([
@@ -24,17 +27,20 @@ class AccountService
         ]);
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function update(Account $account, array $data): Account
     {
-        if (isset($data['name'])) {
+        if (isset($data['name']) && is_string($data['name'])) {
             $account->name = $data['name'];
         }
-        if (isset($data['type'])) {
+        if (isset($data['type']) && is_string($data['type'])) {
             $account->type = $data['type'];
         }
-        if (isset($data['initial_balance'])) {
-            $account->initial_balance = $data['initial_balance'];
-            $account->current_balance = $data['initial_balance'];
+        if (isset($data['initial_balance']) && is_numeric($data['initial_balance'])) {
+            $account->initial_balance = (float) $data['initial_balance'];
+            $account->current_balance = (float) $data['initial_balance'];
         }
 
         $account->save();
