@@ -130,6 +130,7 @@ jobs:
       - name: Run opencode
         uses: anomalyco/opencode/github@latest
         env:
+          GITHUB_TOKEN: ${{ secrets.OPENCODE_PAT }}
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_GO_API_KEY }}
           OPENCODE_CONFIG_CONTENT: |
             {
@@ -146,3 +147,4 @@ jobs:
             }
         with:
           model: opencode-go/glm-5.3-flash
+          use_github_token: true
